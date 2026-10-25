@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { validationResult } = require('express-validator');
@@ -7,7 +8,7 @@ const { sendWelcomeEmail, sendOTPEmail } = require('../services/emailService');
 const { logSecurityEvent, trackFailedLogin, clearFailedAttempts } = require('../middleware/security');
 
 const signToken = (userId) => jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
-const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+const generateOTP = () => crypto.randomInt(100000, 1000000).toString();
 
 // REGISTER
 const register = async (req, res) => {
