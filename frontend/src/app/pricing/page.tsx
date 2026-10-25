@@ -13,17 +13,17 @@ const PLANS = [
   },
   {
     name:'Growth', monthly:299, annual:239, desc:'For businesses serious about growth', color:'#8b5cf6', popular:true,
-    features:['3 websites','30 SEO audits/month','60 AI content generations/month','Google Ads AI automation','Weekly rank tracking','Full competitor analysis','Social media posts (20/mo)','Weekly email reports','Priority support (12hr)'],
+    features:['3 websites','Everything in Starter','30 SEO audits/month','60 AI content generations/month','Google Ads AI automation','Weekly rank tracking','Full competitor analysis','Social media posts (20/mo)','Weekly email reports','Priority support (12hr)'],
     not:['Meta Ads automation','White-label dashboard'],
   },
   {
     name:'Pro', monthly:499, annual:399, desc:'For power users and marketing teams', color:'#ec4899', popular:false,
-    features:['10 websites','100 SEO audits/month','200 AI content generations/month','Meta Ads AI automation','Auto A/B ad testing','Advanced analytics dashboard','Branded PDF reports','100 social posts/mo','Dedicated support (4hr)'],
+    features:['10 websites','Everything in Growth','100 SEO audits/month','200 AI content generations/month','Meta Ads AI automation','Auto A/B ad testing','Advanced analytics dashboard','Branded PDF reports','100 social posts/mo','Dedicated support (4hr)'],
     not:['White-label dashboard'],
   },
   {
     name:'Agency', monthly:999, annual:799, desc:'For agencies managing client accounts', color:'#f59e0b', popular:false,
-    features:['Unlimited websites','Unlimited SEO audits & AI content','White-label dashboard','Client management portal','Full REST API access','Custom integrations','Unlimited social posts','Custom onboarding call'],
+    features:['Unlimited websites','Everything in Pro','Unlimited SEO audits & AI content','White-label dashboard','Client management portal','Full REST API access','Custom integrations','Unlimited social posts','Custom onboarding call'],
     not:[],
   },
 ];
