@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { billingApi, paymentMethodsApi } from '@/lib/api';
+import { authApi, billingApi, paymentMethodsApi } from '@/lib/api';
 
 const PLANS: Record<string, { name: string; monthly: number; annual: number; description: string; features: string[] }> = {
   starter: { name: 'Starter', monthly: 15, annual: 12, description: 'Essential SEO for one website', features: ['1 website', '5 SEO audits/month', '10 AI content generations/month', 'Competitor analysis'] },
@@ -18,13 +18,14 @@ type BillingDetails = { name: string; email: string; country: string; state: str
 export default function CheckoutPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshUser } = useAuth();
   const planId = params.get('plan') || '';
   const interval = params.get('interval') === 'annual' ? 'annual' : 'monthly';
   const plan = PLANS[planId];
   const [methods, setMethods] = useState<any[]>([]);
   const [provider, setProvider] = useState('');
   const [loading, setLoading] = useState(false);
+  const [freeLoading, setFreeLoading] = useState(false);
   const [error, setError] = useState('');
   const [details, setDetails] = useState<BillingDetails>({ name: '', email: '', country: '', state: '', zip: '', taxNumber: '' });
   const [otherCountryCode, setOtherCountryCode] = useState('');
@@ -55,6 +56,20 @@ export default function CheckoutPage() {
   const price = useMemo(() => plan ? (interval === 'annual' ? plan.annual : plan.monthly) : 0, [plan, interval]);
   const update = (key: keyof BillingDetails) => (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setDetails(current => ({ ...current, [key]: event.target.value }));
+
+  const continueOnFree = async () => {
+    setError('');
+    setFreeLoading(true);
+    try {
+      await authApi.clearSignupPlan();
+      await refreshUser();
+      router.push('/onboarding');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Could not switch to the Free plan. Please try again.');
+    } finally {
+      setFreeLoading(false);
+    }
+  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -160,6 +175,7 @@ export default function CheckoutPage() {
               <button type="submit" disabled={loading || !methods.length} style={{ ...styles.primary, opacity: loading || !methods.length ? .55 : 1 }}>
                 {loading ? 'Connecting securely…' : methods.length ? 'Continue to secure payment →' : 'Secure payment unavailable'}
               </button>
+              {user?.signup_plan && user.plan === 'free' && <button type="button" onClick={continueOnFree} disabled={freeLoading || loading} style={styles.secondary}>{freeLoading ? 'Switching plan…' : 'Continue with Free plan instead'}</button>}
               <p style={styles.privacy}>Card details are entered only on the payment provider’s secure checkout. RankPilot does not store card numbers. The provider may request additional address details to calculate tax and complete payment.</p>
             </form>
           </section>
@@ -217,6 +233,7 @@ const styles: Record<string, React.CSSProperties> = {
   badge: { color: '#86efac', background: 'rgba(74,222,128,.08)', padding: '4px 7px', borderRadius: 6, fontSize: 10 },
   unavailable: { border: '1px solid rgba(251,191,36,.2)', background: 'rgba(251,191,36,.04)', borderRadius: 12, padding: 14 },
   primary: { width: '100%', border: 0, borderRadius: 11, padding: '14px 16px', color: '#fff', background: 'linear-gradient(135deg,#6366f1,#7c3aed)', fontWeight: 800, cursor: 'pointer', marginTop: 3 },
+  secondary: { width: '100%', border: '1px solid rgba(255,255,255,.14)', borderRadius: 11, padding: '12px 16px', color: '#fff', background: 'transparent', fontWeight: 650, cursor: 'pointer' },
   privacy: { color: 'rgba(255,255,255,.38)', fontSize: 11, lineHeight: 1.6 },
   error: { color: '#fca5a5', background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', borderRadius: 10, padding: 12, fontSize: 12 },
   planName: { fontSize: 25, fontWeight: 900, marginBottom: 6 },
