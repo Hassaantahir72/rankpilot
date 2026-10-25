@@ -50,7 +50,7 @@ export default function BillingPage() {
       return;
     }
     if (!priceId) {
-      setMsg('⚠️ Stripe not configured yet. Add your Stripe price IDs to .env.local and restart.');
+      setMsg('⚠️ Stripe checkout is not configured yet. Please contact support.');
       return;
     }
     setLoading(priceId);
