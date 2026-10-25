@@ -55,7 +55,7 @@ const register = async (req, res) => {
       res.status(201).json({ message: 'Account created! Check your email for the 6-digit verification code.', userId: user.id, requiresVerification: true });
     } catch (err) {
       // Keep the device claim if account creation succeeded; only release an unassigned claim on a failed registration.
-      await query('DELETE FROM trial_device_claims WHERE device_hash=$1 AND user_id IS NULL', [deviceHash]).catch(() => {});
+      if (claim) await query('DELETE FROM trial_device_claims WHERE device_hash=$1 AND user_id IS NULL', [deviceHash]).catch(() => {});
       throw err;
     }
   } catch (err) {
