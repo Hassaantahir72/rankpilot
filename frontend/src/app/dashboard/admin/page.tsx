@@ -119,7 +119,10 @@ export default function AdminPage() {
     try {
       const { data } = await adminApi.updatePlan(selectedUser.id, { plan: newPlan, subscription_status: newPlan === 'free' ? 'free' : newPlan === 'trial' ? 'trial' : 'active', ...(newPlan === 'trial' ? { trial_days: Number(trialDays) } : {}) });
       showMsg(data.message || `Plan updated to ${newPlan}`);
-      setNewPlan(''); loadUsers(); loadUserDetail(selectedUser);
+      setNewPlan('');
+      loadUsers();
+      const updatedUser = data.user ? { ...selectedUser, ...data.user } : selectedUser;
+      loadUserDetail(updatedUser);
     } catch (e: any) { showMsg(e.response?.data?.error || 'Failed', 'err'); }
   };
 
@@ -388,7 +391,7 @@ export default function AdminPage() {
                 {selectedUser.trial_ends_at && selectedUser.plan === 'trial' && (
                   <p style={{ fontSize:11,color:'rgba(255,255,255,0.4)',marginTop:8 }}>Trial ends: {new Date(selectedUser.trial_ends_at).toLocaleString()}</p>
                 )}
-                {selectedUser.has_stripe_subscription && <p style={{ fontSize:11,color:'#fbbf24',marginTop:8 }}>Stripe manages this subscription. Use the billing portal below to change the plan or cancel; direct database overrides are disabled.</p>}
+                {(selectedUser.has_stripe_subscription || selectedUser.has_provider_subscription) && <p style={{ fontSize:11,color:'#fbbf24',marginTop:8 }}>The payment provider manages this subscription. Use the billing portal above to change the plan, update payment details, or cancel; direct database overrides are disabled.</p>}
               </div>
 
               {/* Quick actions */}
