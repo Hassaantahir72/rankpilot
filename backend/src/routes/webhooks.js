@@ -21,16 +21,27 @@ const getStripe = () => {
   return require('stripe')(process.env.STRIPE_SECRET_KEY);
 };
 
-const getPlanMap = () => Object.fromEntries([
-  [process.env.STRIPE_PRICE_STARTER, 'starter'],
-  [process.env.STRIPE_PRICE_GROWTH, 'growth'],
-  [process.env.STRIPE_PRICE_PRO, 'pro'],
-  [process.env.STRIPE_PRICE_AGENCY, 'agency'],
-  [process.env.STRIPE_PRICE_STARTER_ANNUAL, 'starter'],
-  [process.env.STRIPE_PRICE_GROWTH_ANNUAL, 'growth'],
-  [process.env.STRIPE_PRICE_PRO_ANNUAL, 'pro'],
-  [process.env.STRIPE_PRICE_AGENCY_ANNUAL, 'agency'],
-].filter(([priceId]) => typeof priceId === 'string' && priceId.startsWith('price_')));
+const getPlanMap = () => {
+  const configured = [
+    [process.env.STRIPE_PRICE_STARTER, 'starter'],
+    [process.env.STRIPE_PRICE_GROWTH, 'growth'],
+    [process.env.STRIPE_PRICE_PRO, 'pro'],
+    [process.env.STRIPE_PRICE_AGENCY, 'agency'],
+    [process.env.STRIPE_PRICE_STARTER_ANNUAL, 'starter'],
+    [process.env.STRIPE_PRICE_GROWTH_ANNUAL, 'growth'],
+    [process.env.STRIPE_PRICE_PRO_ANNUAL, 'pro'],
+    [process.env.STRIPE_PRICE_AGENCY_ANNUAL, 'agency'],
+  ].filter(([priceId]) => typeof priceId === 'string' && priceId.startsWith('price_'));
+  const map = Object.create(null);
+  const ambiguous = new Set();
+  for (const [priceId, plan] of configured) {
+    if (map[priceId] && map[priceId] !== plan) ambiguous.add(priceId);
+    else map[priceId] = plan;
+  }
+  // Fail closed if an operator accidentally assigns one Stripe Price ID to multiple plans.
+  for (const priceId of ambiguous) delete map[priceId];
+  return map;
+};
 
 const getFrontendBaseUrl = () => {
   const configured = process.env.FRONTEND_URL;
