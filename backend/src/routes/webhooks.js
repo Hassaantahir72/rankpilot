@@ -16,16 +16,16 @@ router.post('/stripe', async (req, res) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  const planMap = {
-    [process.env.STRIPE_PRICE_STARTER]: 'starter',
-    [process.env.STRIPE_PRICE_GROWTH]:  'growth',
-    [process.env.STRIPE_PRICE_PRO]:     'pro',
-    [process.env.STRIPE_PRICE_AGENCY]:  'agency',
-    [process.env.STRIPE_PRICE_STARTER_ANNUAL]: 'starter',
-    [process.env.STRIPE_PRICE_GROWTH_ANNUAL]: 'growth',
-    [process.env.STRIPE_PRICE_PRO_ANNUAL]: 'pro',
-    [process.env.STRIPE_PRICE_AGENCY_ANNUAL]: 'agency',
-  };
+  const planMap = Object.fromEntries([
+    [process.env.STRIPE_PRICE_STARTER, 'starter'],
+    [process.env.STRIPE_PRICE_GROWTH, 'growth'],
+    [process.env.STRIPE_PRICE_PRO, 'pro'],
+    [process.env.STRIPE_PRICE_AGENCY, 'agency'],
+    [process.env.STRIPE_PRICE_STARTER_ANNUAL, 'starter'],
+    [process.env.STRIPE_PRICE_GROWTH_ANNUAL, 'growth'],
+    [process.env.STRIPE_PRICE_PRO_ANNUAL, 'pro'],
+    [process.env.STRIPE_PRICE_AGENCY_ANNUAL, 'agency'],
+  ].filter(([priceId]) => Boolean(priceId)));
 
   try {
     switch (event.type) {
@@ -34,7 +34,8 @@ router.post('/stripe', async (req, res) => {
         const userId = session.metadata?.userId;
         const priceId = session.metadata?.priceId;
         if (userId) {
-          const plan = planMap[priceId] || 'starter';
+          const plan = planMap[priceId];
+          if (!plan) throw new Error('Checkout completed with an unconfigured Stripe price ID.');
           await query('UPDATE users SET plan=$1,subscription_status=$$active$$,stripe_customer_id=$2,stripe_subscription_id=$3,stripe_price_id=$4,updated_at=NOW() WHERE id=$5',
             [plan, session.customer, session.subscription, priceId, userId]);
           await query('INSERT INTO billing_history (id,user_id,stripe_invoice_id,amount,currency,status,plan,created_at) VALUES ($1,$2,$3,$4,$5,$$paid$$,$6,NOW())',
@@ -63,7 +64,8 @@ router.post('/stripe', async (req, res) => {
       case 'customer.subscription.updated': {
         const sub = event.data.object;
         const priceId = sub.items?.data?.[0]?.price?.id;
-        const plan = planMap[priceId] || 'starter';
+        const plan = planMap[priceId];
+        if (!plan) throw new Error('Subscription updated with an unconfigured Stripe price ID.');
         await query('UPDATE users SET plan=$1,subscription_status=$2,stripe_price_id=$3,updated_at=NOW() WHERE stripe_subscription_id=$4',
           [plan, sub.status, priceId, sub.id]);
         break;
