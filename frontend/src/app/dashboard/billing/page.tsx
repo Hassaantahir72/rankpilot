@@ -7,10 +7,10 @@ import { UsageBar } from '@/components/dashboard/PlanGate';
 
 const PLANS = [
   { id:'free',    name:'Free',    price:0,   desc:'Get started',              color:'#6b7280', priceId: '' },
-  { id:'starter', name:'Starter', price:99,  desc:'For single businesses',    color:'#6366f1', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || '' },
-  { id:'growth',  name:'Growth',  price:299, desc:'For growing teams',        color:'#8b5cf6', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH || '' },
-  { id:'pro',     name:'Pro',     price:499, desc:'For power marketers',      color:'#ec4899', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || '' },
-  { id:'agency',  name:'Agency',  price:999, desc:'For agencies',             color:'#f59e0b', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || '' },
+  { id:'starter', name:'Starter', price:99, annualPrice:79, desc:'For single businesses', color:'#6366f1', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_ANNUAL || '' },
+  { id:'growth',  name:'Growth',  price:299, annualPrice:239, desc:'For growing teams', color:'#8b5cf6', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH_ANNUAL || '' },
+  { id:'pro',     name:'Pro',     price:499, annualPrice:399, desc:'For power marketers', color:'#ec4899', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL || '' },
+  { id:'agency',  name:'Agency',  price:999, annualPrice:799, desc:'For agencies', color:'#f59e0b', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY_ANNUAL || '' },
 ];
 
 const FEATURES: Record<string, { free: string; starter: string; growth: string; pro: string; agency: string }> = {
@@ -19,7 +19,7 @@ const FEATURES: Record<string, { free: string; starter: string; growth: string; 
   'AI content / mo':  { free:'2', starter:'20', growth:'60', pro:'200', agency:'Unlimited' },
   'Google Ads':       { free:'—', starter:'—', growth:'✓', pro:'✓', agency:'✓' },
   'Meta Ads':         { free:'—', starter:'—', growth:'—', pro:'✓', agency:'✓' },
-  'Social posts/mo':  { free:'—', starter:'—', growth:'20', pro:'Unlimited', agency:'Unlimited' },
+  'Social posts/mo':  { free:'—', starter:'—', growth:'20', pro:'100', agency:'Unlimited' },
   'Competitor analysis': { free:'—', starter:'✓', growth:'✓', pro:'✓', agency:'✓' },
   'Weekly reports':   { free:'—', starter:'—', growth:'✓', pro:'✓', agency:'✓' },
   'White-label':      { free:'—', starter:'—', growth:'—', pro:'—', agency:'✓' },
@@ -32,6 +32,7 @@ export default function BillingPage() {
   const [msg, setMsg] = useState('');
   const [usage, setUsage] = useState<any>(null);
   const [requestedPlan, setRequestedPlan] = useState('');
+  const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
 
   useEffect(() => {
     // Usage is currently cached client-side; backend usage reporting should replace this.
@@ -41,10 +42,11 @@ export default function BillingPage() {
     }
     const selected = new URLSearchParams(window.location.search).get('plan') || '';
     if (['starter', 'growth', 'pro', 'agency'].includes(selected)) setRequestedPlan(selected);
+    setBillingInterval(new URLSearchParams(window.location.search).get('interval') === 'annual' ? 'annual' : 'monthly');
   }, []);
 
   const upgrade = async (priceId: string) => {
-    if (!priceId || priceId.startsWith('price_s') || priceId.startsWith('price_g') || priceId.startsWith('price_p') || priceId.startsWith('price_a')) {
+    if (!priceId) {
       setMsg('⚠️ Stripe not configured yet. Add your Stripe price IDs to .env.local and restart.');
       return;
     }
@@ -120,12 +122,15 @@ export default function BillingPage() {
             <div key={plan.id} style={{ background: isCurrent || requestedPlan === plan.id ? `${plan.color}12` : 'rgba(255,255,255,0.02)', border: `1px solid ${isCurrent || requestedPlan === plan.id ? plan.color + '70' : 'rgba(255,255,255,0.08)'}`, borderRadius: 14, padding: '20px 16px', position: 'relative' }}>
               {isCurrent && <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: plan.color, color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 12px', borderRadius: 100, whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>CURRENT</div>}
               {!isCurrent && requestedPlan === plan.id && <div style={{ position: 'absolute', top: -10, right: 10, background: plan.color, color: '#fff', fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 100 }}>SELECTED</div>}
+              {!isCurrent && requestedPlan === plan.id && <div style={{ position: 'absolute', top: -10, right: 10, background: plan.color, color: '#fff', fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 100 }}>SELECTED</div>}
               <p style={{ fontSize: 11, fontWeight: 700, color: plan.color, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{plan.name}</p>
-              <p style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Plus Jakarta Sans',sans-serif", marginBottom: 4 }}>${plan.price}<span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(255,255,255,0.35)' }}>/mo</span></p>
+              <p style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Plus Jakarta Sans',sans-serif", marginBottom: 4 }}>${billingInterval === 'annual' ? (plan.annualPrice ?? 0) : plan.price}<span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(255,255,255,0.35)' }}>/mo</span></p>
+              {billingInterval === 'annual' && plan.id !== 'free' && <p style={{ fontSize: 11, color: '#4ade80', marginBottom: 8 }}>Billed ${(plan.annualPrice ?? 0) * 12}/year</p>}
               <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', marginBottom: 16 }}>{plan.desc}</p>
+              {plan.id !== 'free' && <button type="button" onClick={() => setBillingInterval(v => v === 'monthly' ? 'annual' : 'monthly')} style={{ background: 'none', border: 'none', padding: 0, marginBottom: 12, color: '#a5b4fc', fontSize: 11, cursor: 'pointer' }}>{billingInterval === 'annual' ? 'Switch to monthly billing' : 'Switch to annual billing'}</button>}
               {!isCurrent && (
-                <button onClick={() => upgrade(plan.priceId)} disabled={!!loading} style={{ width: '100%', padding: '9px', background: isDowngrade ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${plan.color},${plan.color}cc)`, border: isDowngrade ? '1px solid rgba(255,255,255,0.1)' : 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', boxShadow: isDowngrade ? 'none' : `0 4px 16px ${plan.color}35` }}>
-                  {loading === plan.priceId ? 'Redirecting...' : !plan.priceId ? 'Configure Stripe' : requestedPlan === plan.id ? 'Continue with this plan' : isDowngrade ? 'Downgrade' : 'Upgrade'}
+                <button onClick={() => upgrade(selectedPriceId)} disabled={!!loading} style={{ width: '100%', padding: '9px', background: isDowngrade ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${plan.color},${plan.color}cc)`, border: isDowngrade ? '1px solid rgba(255,255,255,0.1)' : 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', boxShadow: isDowngrade ? 'none' : `0 4px 16px ${plan.color}35` }}>
+                  {loading === selectedPriceId ? 'Redirecting...' : !selectedPriceId ? 'Configure Stripe' : requestedPlan === plan.id ? 'Continue with this plan' : isDowngrade ? 'Downgrade' : 'Upgrade'}
                 </button>
               )}
             </div>
@@ -161,7 +166,7 @@ export default function BillingPage() {
       </div>
 
       <div style={{ marginTop: 24, textAlign: 'center' }}>
-        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>All paid plans include 14-day free trial · Secure payments via Stripe · Cancel any time</p>
+        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>Secure payments via Stripe · Cancel any time</p>
       </div>
     </div>
   );
