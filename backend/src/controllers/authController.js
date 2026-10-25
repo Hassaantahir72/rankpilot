@@ -186,6 +186,21 @@ const completeOnboarding = async (req, res) => {
   }
 };
 
+// Allow a customer to explicitly abandon a pending paid-plan choice and continue on Free.
+const clearSignupPlan = async (req, res) => {
+  try {
+    const cleared = await queryOne(
+      "UPDATE users SET signup_plan=NULL,signup_interval=NULL,updated_at=NOW() WHERE id=$1 AND plan='free' AND subscription_status='free' AND stripe_subscription_id IS NULL AND provider_subscription_id IS NULL RETURNING id",
+      [req.user.id]
+    );
+    if (!cleared) return res.status(409).json({ error: 'This account already has a subscription or is not eligible to change its pending plan.' });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Clearing pending signup plan failed:', err.message);
+    return res.status(500).json({ error: 'Could not switch to the Free plan.' });
+  }
+};
+
 // FORGOT PASSWORD
 const forgotPassword = async (req, res) => {
   const errors = validationResult(req);
@@ -292,4 +307,4 @@ const logout = async (req, res) => {
   }
 };
 
-module.exports = { register, verifyOTP, resendOTP, login, verifyLoginOTP, getMe, completeOnboarding, forgotPassword, resetPassword, googleAuthUrl, googleCallback, logout };
+module.exports = { register, verifyOTP, resendOTP, login, verifyLoginOTP, getMe, completeOnboarding, clearSignupPlan, forgotPassword, resetPassword, googleAuthUrl, googleCallback, logout };
