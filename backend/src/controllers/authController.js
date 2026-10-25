@@ -19,24 +19,29 @@ const register = async (req, res) => {
     const existing = await queryOne('SELECT id FROM users WHERE email=$1', [email.toLowerCase()]);
     if (existing) return res.status(400).json({ error: 'Email already registered. Please sign in.' });
 
-    // This is a coarse, privacy-preserving anti-abuse signal, not a unique hardware ID.
-    // The client sends only basic platform/display/timezone attributes; only an HMAC is stored.
-    const suppliedSignature = typeof req.body.deviceSignature === 'string' ? req.body.deviceSignature.slice(0, 1000) : '';
-    if (!suppliedSignature) return res.status(400).json({ error: 'Please refresh the page and try signup again.' });
-    const deviceHash = crypto.createHmac('sha256', process.env.JWT_SECRET)
-      .update('rankpilot-trial-device-v1:' + suppliedSignature).digest('hex');
-    const ipValue = String(req.ip || req.socket?.remoteAddress || 'unknown').slice(0, 100);
-    const ipHash = crypto.createHmac('sha256', process.env.JWT_SECRET)
-      .update('rankpilot-trial-ip-v1:' + ipValue).digest('hex');
     const requestedPlan = String(req.body.selectedPlan || '').toLowerCase();
     const paidPlanIntent = ['starter','growth','pro','agency'].includes(requestedPlan);
     const requestedInterval = req.body.selectedInterval === 'annual' ? 'annual' : 'monthly';
-    const claim = await queryOne(
-      'INSERT INTO trial_device_claims (device_hash,ip_hash,created_at) VALUES ($1,$2,NOW()) ON CONFLICT (device_hash) DO NOTHING RETURNING device_hash',
-      [deviceHash, ipHash]
-    );
-    if (!claim && !paidPlanIntent) {
-      return res.status(409).json({ error: 'A free trial has already been claimed from this device. Please sign in or continue with a paid plan.' });
+    let claim = null;
+
+    // Only trial signups consume a trial claim. Abandoned paid signups must not burn the device's free trial.
+    if (!paidPlanIntent) {
+      // This is a coarse, privacy-preserving anti-abuse signal, not a unique hardware ID.
+      // The client sends basic platform/display/timezone attributes; only an HMAC is stored.
+      const suppliedSignature = typeof req.body.deviceSignature === 'string' ? req.body.deviceSignature.slice(0, 1000) : '';
+      if (!suppliedSignature) return res.status(400).json({ error: 'Please refresh the page and try signup again.' });
+      const deviceHash = crypto.createHmac('sha256', process.env.JWT_SECRET)
+        .update('rankpilot-trial-device-v1:' + suppliedSignature).digest('hex');
+      const ipValue = String(req.ip || req.socket?.remoteAddress || 'unknown').slice(0, 100);
+      const ipHash = crypto.createHmac('sha256', process.env.JWT_SECRET)
+        .update('rankpilot-trial-ip-v1:' + ipValue).digest('hex');
+      claim = await queryOne(
+        'INSERT INTO trial_device_claims (device_hash,ip_hash,created_at) VALUES ($1,$2,NOW()) ON CONFLICT (device_hash) DO NOTHING RETURNING device_hash',
+        [deviceHash, ipHash]
+      );
+      if (!claim) {
+        return res.status(409).json({ error: 'A free trial has already been claimed from this device. Please sign in or choose a paid plan.' });
+      }
     }
 
     const userPlan = !paidPlanIntent && Boolean(claim) ? 'trial' : 'free';
