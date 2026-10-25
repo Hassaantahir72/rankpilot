@@ -16,10 +16,11 @@ function SignupForm() {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      const deviceSignature = [navigator.platform || 'unknown', screen.width, screen.height, screen.colorDepth, window.devicePixelRatio || 1, Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown', navigator.language || 'unknown', navigator.hardwareConcurrency || 0, (navigator as any).deviceMemory || 0].join('|');
-      const { data } = await authApi.register({ ...form, deviceSignature });
       const requestedPlan = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('plan') : null;
       const allowedPlans = ['starter', 'growth', 'pro', 'agency'];
+      const selectedPlan = requestedPlan && allowedPlans.includes(requestedPlan) ? requestedPlan : '';
+      const deviceSignature = [navigator.platform || 'unknown', screen.width, screen.height, screen.colorDepth, window.devicePixelRatio || 1, Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown', navigator.language || 'unknown', navigator.hardwareConcurrency || 0, (navigator as any).deviceMemory || 0].join('|');
+      const { data } = await authApi.register({ ...form, deviceSignature, selectedPlan });
       const selectedInterval = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('interval') : null;
       const intervalParam = selectedInterval === 'annual' ? '&interval=annual' : '';
       const planParam = requestedPlan && allowedPlans.includes(requestedPlan) ? `&plan=${encodeURIComponent(requestedPlan)}` : '';
