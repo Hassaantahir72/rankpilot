@@ -28,27 +28,33 @@ const register = async (req, res) => {
     const ipValue = String(req.ip || req.socket?.remoteAddress || 'unknown').slice(0, 100);
     const ipHash = crypto.createHmac('sha256', process.env.JWT_SECRET)
       .update('rankpilot-trial-ip-v1:' + ipValue).digest('hex');
+    const requestedPlan = String(req.body.selectedPlan || '').toLowerCase();
+    const paidPlanIntent = ['starter','growth','pro','agency'].includes(requestedPlan);
     const claim = await queryOne(
       'INSERT INTO trial_device_claims (device_hash,ip_hash,created_at) VALUES ($1,$2,NOW()) ON CONFLICT (device_hash) DO NOTHING RETURNING device_hash',
       [deviceHash, ipHash]
     );
-    if (!claim) return res.status(409).json({ error: 'A free trial has already been claimed from this device. Please sign in or choose a paid plan.' });
+    if (!claim && !paidPlanIntent) {
+      return res.status(409).json({ error: 'A free trial has already been claimed from this device. Please sign in or continue with a paid plan.' });
+    }
 
+    const userPlan = !paidPlanIntent && Boolean(claim) ? 'trial' : 'free';
     try {
       const passwordHash = await bcrypt.hash(password, 12);
       const otp = generateOTP();
       const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
-      const trialEnds = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+      const trialEnds = userPlan === 'trial' ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) : null;
       const userId = uuidv4();
       const user = await queryOne(
         `INSERT INTO users (id,email,name,password_hash,plan,subscription_status,trial_ends_at,email_verified,otp_code,otp_expires_at,otp_attempts,created_at,updated_at)
-         VALUES ($1,$2,$3,$4,'trial','trial',$5,false,$6,$7,0,NOW(),NOW()) RETURNING id,email,name,plan,subscription_status,trial_ends_at,role`,
-        [userId, email.toLowerCase(), name, passwordHash, trialEnds, otp, otpExpires]
+         VALUES ($1,$2,$3,$4,$5,$6,$7,false,$8,$9,0,NOW(),NOW()) RETURNING id,email,name,plan,subscription_status,trial_ends_at,role`,
+        [userId, email.toLowerCase(), name, passwordHash, userPlan, userPlan, trialEnds, otp, otpExpires]
       );
-      await query('UPDATE trial_device_claims SET user_id=$1 WHERE device_hash=$2', [user.id, deviceHash]);
+      if (claim) await query('UPDATE trial_device_claims SET user_id=$1 WHERE device_hash=$2', [user.id, deviceHash]);
       await sendOTPEmail(user.email, user.name, otp, 'verify');
       res.status(201).json({ message: 'Account created! Check your email for the 6-digit verification code.', userId: user.id, requiresVerification: true });
     } catch (err) {
+      // Keep the device claim if account creation succeeded; only release an unassigned claim on a failed registration.
       await query('DELETE FROM trial_device_claims WHERE device_hash=$1 AND user_id IS NULL', [deviceHash]).catch(() => {});
       throw err;
     }
