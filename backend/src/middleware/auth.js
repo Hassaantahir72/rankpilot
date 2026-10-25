@@ -36,9 +36,9 @@ const requireVerified = (req, res, next) => {
 };
 
 const requireSubscription = (req, res, next) => {
-  const { subscription_status, trial_ends_at } = req.user;
-  const trialValid = trial_ends_at && new Date(trial_ends_at) > new Date();
-  if (!trialValid && subscription_status !== 'active' && req.user.plan !== 'free') {
+  const { plan, subscription_status, trial_ends_at } = req.user;
+  const trialValid = plan === 'trial' && trial_ends_at && new Date(trial_ends_at) > new Date();
+  if (!trialValid && subscription_status !== 'active' && plan !== 'free') {
     return res.status(403).json({ error: 'Active subscription required.', code: 'SUBSCRIPTION_REQUIRED' });
   }
   next();
