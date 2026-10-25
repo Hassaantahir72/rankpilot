@@ -228,7 +228,7 @@ const googleCallback = async (req, res) => {
     }
 
     const token = signToken(user);
-    res.redirect(process.env.FRONTEND_URL + '/auth/callback?token=' + token);
+    res.redirect(process.env.FRONTEND_URL + '/auth/callback#token=' + encodeURIComponent(token));
   } catch (err) {
     console.error('Google OAuth error:', err.message);
     res.redirect(process.env.FRONTEND_URL + '/auth/login?error=google_failed');
