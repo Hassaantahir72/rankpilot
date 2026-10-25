@@ -54,10 +54,10 @@ export default function VerifyEmailPage() {
       const { data } = await api.post(endpoint, { userId, otp: code });
       if (data.token) {
         login(data.token, data.user);
-        const selectedPlan = params.get('plan');
+        const selectedPlan = params.get('plan') || data.user?.signup_plan;
         const allowedPlans = ['starter', 'growth', 'pro', 'agency'];
         if (type !== 'login' && selectedPlan && allowedPlans.includes(selectedPlan)) {
-          const selectedInterval = params.get('interval') === 'annual' ? '&interval=annual' : '';
+          const selectedInterval = params.get('interval') === 'annual' || data.user?.signup_interval === 'annual' ? '&interval=annual' : '';
           router.push(`/dashboard/billing?plan=${encodeURIComponent(selectedPlan)}${selectedInterval}`);
         } else if (type !== 'login') {
           router.push('/onboarding?flow=trial');
