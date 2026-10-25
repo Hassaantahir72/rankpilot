@@ -32,7 +32,7 @@ interface PlanGateProps {
 }
 
 export default function PlanGate({ feature, requiredPlan, children, fallback }: PlanGateProps) {
-  const { canUse, user, limits } = useAuth();
+  const { canUse, user } = useAuth();
 
   // canUse may not be available yet — guard against it
   if (typeof canUse !== 'function') return <>{children}</>;
@@ -73,6 +73,41 @@ export default function PlanGate({ feature, requiredPlan, children, fallback }: 
       }}>
         Upgrade Plan →
       </Link>
+    </div>
+  );
+}
+
+interface UsageBarProps {
+  label: string;
+  used: number;
+  max: number;
+  color?: string;
+}
+
+export function UsageBar({ label, used, max, color = '#6366f1' }: UsageBarProps) {
+  const safeMax = Number.isFinite(max) && max > 0 ? max : 0;
+  const safeUsed = Number.isFinite(used) && used > 0 ? used : 0;
+  const percent = safeMax > 0 ? Math.min(100, (safeUsed / safeMax) * 100) : safeUsed > 0 ? 100 : 0;
+  const maxLabel = safeMax === 9999 ? 'Unlimited' : safeMax.toLocaleString();
+
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8, fontSize: 13 }}>
+        <span style={{ color: 'rgba(255,255,255,0.72)' }}>{label}</span>
+        <span style={{ color: 'rgba(255,255,255,0.5)', fontVariantNumeric: 'tabular-nums' }}>
+          {safeUsed.toLocaleString()} / {maxLabel}
+        </span>
+      </div>
+      <div
+        role="progressbar"
+        aria-label={label}
+        aria-valuenow={Math.min(100, percent)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        style={{ height: 7, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}
+      >
+        <div style={{ height: '100%', width: `${percent}%`, borderRadius: 999, background: color, transition: 'width 200ms ease' }} />
+      </div>
     </div>
   );
 }
