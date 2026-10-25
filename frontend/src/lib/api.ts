@@ -48,6 +48,7 @@ export const authApi = {
   resetPassword:  (d: any)           => api.post('/auth/reset-password', d),
   logout:         ()                 => api.post('/auth/logout'),
   completeOnboarding: ()             => api.post('/auth/onboarding/complete'),
+  clearSignupPlan:   ()               => api.post('/auth/signup-plan/clear'),
 };
 
 // ── SEO ───────────────────────────────────────────────────────────
