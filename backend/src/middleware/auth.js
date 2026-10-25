@@ -17,6 +17,7 @@ const authMiddleware = async (req, res, next) => {
 
     // Trial entitlements must expire even if the user's stored plan has not yet been changed.
     if (user.plan === 'trial' && user.trial_ends_at && new Date(user.trial_ends_at) <= new Date()) {
+      await query("UPDATE users SET plan='free',subscription_status='expired',updated_at=NOW() WHERE id=$1 AND plan='trial' AND trial_ends_at <= NOW()", [user.id]);
       user.plan = 'free';
       user.subscription_status = 'expired';
     }
