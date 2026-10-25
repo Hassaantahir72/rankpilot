@@ -181,8 +181,10 @@ const updateUserPlan = async (req, res) => {
 
 const toggleBan = async (req, res) => {
   const { userId } = req.params;
-  const { ban, reason } = req.body;
-  if (ban && !reason) return res.status(400).json({ error: 'Ban reason is required.' });
+  const { ban, reason } = req.body || {};
+  if (typeof ban !== 'boolean') return res.status(400).json({ error: 'Ban must be true or false.' });
+  if (ban && (typeof reason !== 'string' || !reason.trim())) return res.status(400).json({ error: 'Ban reason is required.' });
+  if (reason !== undefined && (typeof reason !== 'string' || reason.length > 500)) return res.status(400).json({ error: 'Ban reason must be 500 characters or fewer.' });
 
   // Prevent banning other admins unless superadmin
   const target = await queryOne('SELECT role FROM users WHERE id=$1', [userId]);
@@ -211,10 +213,11 @@ const updateRole = async (req, res) => {
 
 const resetUserPassword = async (req, res) => {
   const { userId } = req.params;
-  const { newPassword } = req.body;
-  if (!newPassword || newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+  const { newPassword } = req.body || {};
+  if (typeof newPassword !== 'string' || newPassword.length < 8 || newPassword.length > 128) return res.status(400).json({ error: 'Password must be between 8 and 128 characters.' });
   const hash = await bcrypt.hash(newPassword, 12);
-  await query('UPDATE users SET password_hash=$1,updated_at=NOW() WHERE id=$2', [hash, userId]);
+  const updated = await query('UPDATE users SET password_hash=$1,otp_code=NULL,otp_expires_at=NULL,otp_attempts=0,updated_at=NOW() WHERE id=$2', [hash, userId]);
+  if (updated.rowCount !== 1) return res.status(404).json({ error: 'User not found.' });
   await logAction(req.user.id, 'reset_user_password', userId, { adminEmail: req.user.email });
   await logSecurityEvent('admin_password_reset', req.adminIp, req.user.id, { targetUserId: userId });
   res.json({ message: 'Password reset successfully.' });
@@ -222,7 +225,8 @@ const resetUserPassword = async (req, res) => {
 
 const verifyUserEmail = async (req, res) => {
   const { userId } = req.params;
-  await query('UPDATE users SET email_verified=true,otp_code=NULL,otp_expires_at=NULL,updated_at=NOW() WHERE id=$1', [userId]);
+  const updated = await query('UPDATE users SET email_verified=true,otp_code=NULL,otp_expires_at=NULL,otp_attempts=0,updated_at=NOW() WHERE id=$1', [userId]);
+  if (updated.rowCount !== 1) return res.status(404).json({ error: 'User not found.' });
   await logAction(req.user.id, 'force_verify_email', userId, { adminEmail: req.user.email });
   res.json({ message: 'Email verified.' });
 };
@@ -261,7 +265,8 @@ const getSiteSettings = async (req, res) => {
 
 const updateSiteSetting = async (req, res) => {
   const { key } = req.params;
-  const { value } = req.body;
+  const { value } = req.body || {};
+  if (typeof value !== 'string' || value.length > 10000) return res.status(400).json({ error: 'Setting value must be text of 10,000 characters or fewer.' });
   const existing = await queryOne('SELECT key FROM site_settings WHERE key=$1', [key]);
   if (!existing) return res.status(404).json({ error: 'Setting not found.' });
   await query('UPDATE site_settings SET value=$1,updated_by=$2,updated_at=NOW() WHERE key=$3', [value, req.user.id, key]);
