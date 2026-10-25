@@ -4,8 +4,8 @@
  * Runs weekly via cron — alerts users when something changes
  */
 
-const axios = require('axios');
 const cheerio = require('cheerio');
+const safeHttp = require('./safeHttpService');
 const { query, queryOne, queryAll } = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
 
@@ -14,7 +14,7 @@ const HEADERS = { 'User-Agent': 'Mozilla/5.0 (compatible; RankPilotBot/1.0)' };
 // ── TAKE A PAGE SNAPSHOT ──────────────────────────────────────────
 const takeSnapshot = async (url) => {
   try {
-    const res = await axios.get(url, { headers: HEADERS, timeout: 15000, maxRedirects: 5 });
+    const res = await safeHttp.fetchPublicUrl(url, { userAgent: HEADERS['User-Agent'], timeout: 15000, maxBytes: 2 * 1024 * 1024 });
     const $ = cheerio.load(res.data);
     return {
       url, ok: true,
