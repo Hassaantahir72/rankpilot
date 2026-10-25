@@ -4,6 +4,7 @@
  * Uses: axios + cheerio (no paid API needed)
  */
 
+const axios = require('axios');
 const cheerio = require('cheerio');
 const safeHttp = require('./safeHttpService');
 
