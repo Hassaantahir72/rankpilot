@@ -1,5 +1,13 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
+const billingRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many billing requests. Please try again later.' },
+});
 const { authMiddleware, requireVerified } = require('../middleware/auth');
 const { queryOne, query } = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
@@ -202,7 +210,7 @@ router.post('/stripe', async (req, res) => {
 });
 
 // Create a subscription checkout session. Plan and price are allow-listed server-side.
-router.post('/create-checkout', authMiddleware, requireVerified, async (req, res) => {
+router.post('/create-checkout', authMiddleware, requireVerified, billingRateLimit, async (req, res) => {
   const { priceId } = req.body || {};
   const planMap = getPlanMap();
   if (typeof priceId !== 'string' || !planMap[priceId]) {
@@ -273,7 +281,7 @@ router.post('/create-checkout', authMiddleware, requireVerified, async (req, res
 });
 
 // Create a customer-owned billing portal session for subscription and payment-method management.
-router.post('/portal', authMiddleware, requireVerified, async (req, res) => {
+router.post('/portal', authMiddleware, requireVerified, billingRateLimit, async (req, res) => {
   try {
     const stripe = getStripe();
     const frontendUrl = getFrontendBaseUrl();
