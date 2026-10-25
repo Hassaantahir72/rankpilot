@@ -13,12 +13,12 @@ const PLANS = [
   },
   {
     id:'growth', name:'Growth', monthly:29, annual:23, desc:'More capacity for growing businesses', color:'#8b5cf6', popular:true,
-    features:['3 websites','15 SEO audits/month','30 AI content generations/month','Weekly rank tracking','Competitor analysis','Google Ads AI tools','10 social posts/month','Weekly reports','Priority support'],
+    features:['3 websites','15 SEO audits/month','30 AI content generations/month','Weekly rank tracking','Competitor analysis','Google Ads AI tools','10 social posts/month','Weekly reports'],
     not:['Meta Ads tools'],
   },
   {
     id:'pro', name:'Pro', monthly:59, annual:47, desc:'Advanced marketing for active teams', color:'#ec4899', popular:false,
-    features:['5 websites','40 SEO audits/month','80 AI content generations/month','Weekly rank tracking','Google + Meta Ads AI tools','30 social posts/month','Branded PDF reports','Priority support'],
+    features:['5 websites','40 SEO audits/month','80 AI content generations/month','Weekly rank tracking','Google + Meta Ads AI tools','30 social posts/month','Branded PDF reports'],
     not:[],
   },
   {
