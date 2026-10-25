@@ -1,6 +1,20 @@
 const { query, queryOne, queryAll } = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
 
+const lemonVariantIds = () => {
+  const ids = [];
+  for (const plan of ['STARTER','GROWTH','PRO','AGENCY']) {
+    for (const interval of ['MONTHLY','ANNUAL']) ids.push(process.env['LEMONSQUEEZY_VARIANT_' + plan + '_' + interval]);
+  }
+  return ids;
+};
+const hasLemonSqueezyConfig = () => Boolean(
+  process.env.LEMONSQUEEZY_API_KEY &&
+  process.env.LEMONSQUEEZY_STORE_ID &&
+  process.env.LEMONSQUEEZY_WEBHOOK_SECRET &&
+  lemonVariantIds().every(id => typeof id === 'string' && /^\\d+$/.test(id))
+);
+
 const PROVIDERS = {
   safepay: {
     displayName: 'Safepay',
@@ -12,7 +26,7 @@ const PROVIDERS = {
   lemon_squeezy: {
     displayName: 'Lemon Squeezy',
     description: 'International subscriptions',
-    configured: () => Boolean(process.env.LEMONSQUEEZY_API_KEY && process.env.LEMONSQUEEZY_STORE_ID && process.env.LEMONSQUEEZY_WEBHOOK_SECRET && process.env.LEMONSQUEEZY_VARIANT_STARTER_MONTHLY && process.env.LEMONSQUEEZY_VARIANT_GROWTH_MONTHLY && process.env.LEMONSQUEEZY_VARIANT_PRO_MONTHLY && process.env.LEMONSQUEEZY_VARIANT_AGENCY_MONTHLY && process.env.LEMONSQUEEZY_VARIANT_STARTER_ANNUAL && process.env.LEMONSQUEEZY_VARIANT_GROWTH_ANNUAL && process.env.LEMONSQUEEZY_VARIANT_PRO_ANNUAL && process.env.LEMONSQUEEZY_VARIANT_AGENCY_ANNUAL),
+    configured: hasLemonSqueezyConfig,
     adapterReady: () => process.env.LEMONSQUEEZY_ADAPTER_READY === 'true',
   },
   manual_bank_transfer: {
