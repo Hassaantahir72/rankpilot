@@ -28,6 +28,9 @@ ON CONFLICT (plan) DO UPDATE SET
   priority_support=EXCLUDED.priority_support,
   rank_tracking_frequency=EXCLUDED.rank_tracking_frequency;
 
+-- Add revocable session versions without invalidating existing tokens until changed.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;
+
 -- Persist Stripe event IDs so webhook retries cannot apply the same event twice.
 CREATE TABLE IF NOT EXISTS stripe_webhook_events (
   id TEXT PRIMARY KEY,
