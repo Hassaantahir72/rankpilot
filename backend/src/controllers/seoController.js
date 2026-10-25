@@ -4,11 +4,18 @@ const { incrementUsage } = require('../middleware/auth');
 const crawlerService = require('../services/crawlerService');
 const keywordService = require('../services/keywordService');
 const aiService = require('../services/aiService');
+const safeHttp = require('../services/safeHttpService');
 
 // WEBSITES
 const addWebsite = async (req, res) => {
   const { name, url, industry } = req.body;
   if (!name || !url) return res.status(400).json({ error: 'Name and URL are required.' });
+  let normalizedUrl;
+  try {
+    normalizedUrl = await safeHttp.validatePublicUrl(url);
+  } catch (err) {
+    return res.status(400).json({ error: err.message || 'A valid public website URL is required.' });
+  }
 
   const limits = await queryOne('SELECT max_websites FROM plan_limits WHERE plan=$1', [req.user.plan]);
   const count = await queryOne('SELECT COUNT(*) FROM websites WHERE user_id=$1', [req.user.id]);
@@ -18,7 +25,7 @@ const addWebsite = async (req, res) => {
 
   const website = await queryOne(
     'INSERT INTO websites (id,user_id,name,url,industry,status,created_at) VALUES ($1,$2,$3,$4,$5,$$active$$,NOW()) RETURNING *',
-    [uuidv4(), req.user.id, name, url, industry]
+    [uuidv4(), req.user.id, name, normalizedUrl, industry]
   );
   res.status(201).json({ message: 'Website added!', website });
 };
@@ -48,6 +55,7 @@ const runAudit = async (req, res) => {
   }
 
   const auditId = uuidv4();
+  const auditUserId = req.user.id;
   await queryOne('INSERT INTO audits (id,website_id,user_id,status,started_at) VALUES ($1,$2,$3,$$running$$,NOW()) RETURNING id',
     [auditId, websiteId, req.user.id]);
 
@@ -56,7 +64,7 @@ const runAudit = async (req, res) => {
   // Run in background
   setImmediate(async () => {
     try {
-      await incrementUsage(req.user.id, 'audit');
+      await incrementUsage(auditUserId, 'audit');
       const crawlData = await crawlerService.crawlWebsite(website.url);
       const technicalIssuesRaw = await crawlerService.analyzeTechnical(crawlData);
       const technicalIssues = Array.isArray(technicalIssuesRaw) ? technicalIssuesRaw : [];
@@ -81,7 +89,7 @@ const runAudit = async (req, res) => {
         await query(
           `INSERT INTO keywords (id,website_id,user_id,keyword,search_volume,difficulty,cpc,intent,priority,created_at)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW()) ON CONFLICT (website_id,keyword) DO UPDATE SET search_volume=$5,difficulty=$6,updated_at=NOW()`,
-          [uuidv4(), websiteId, req.user.id, kw.keyword, kw.searchVolume||0, kw.difficulty||50, kw.cpc||0, kw.intent||'informational', kw.priority||0]
+          [uuidv4(), websiteId, auditUserId, kw.keyword, kw.searchVolume||0, kw.difficulty||50, kw.cpc||0, kw.intent||'informational', kw.priority||0]
         );
       }
     } catch (err) {
@@ -97,7 +105,7 @@ const calculateScore = (issues, crawlData) => {
   const warnings = issues.filter(i => i.severity === 'warning').length;
   score -= critical * 8;
   score -= warnings * 3;
-  if (crawlData.avgPageSpeed && crawlData.avgPageSpeed < 50) score -= 10;
+  if (crawlData.pageSpeedData?.performance != null && crawlData.pageSpeedData.performance < 50) score -= 10;
   if (!crawlData.hasSitemap) score -= 5;
   if (!crawlData.hasRobots) score -= 3;
   return Math.max(0, Math.min(100, score));
