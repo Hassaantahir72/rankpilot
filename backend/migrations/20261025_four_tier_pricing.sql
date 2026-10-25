@@ -1,6 +1,6 @@
 -- RankPilot pricing refresh: $15 / $29 / $59 / $99 monthly tiers.
 -- Apply this migration to the production PostgreSQL database after reviewing the release.
--- Existing users keep their plan IDs; only plan entitlements are updated.
+-- Existing users keep plan IDs; entitlements, revocable sessions, webhook idempotency, and log scrubbing are updated.
 BEGIN;
 
 INSERT INTO plan_limits
