@@ -42,8 +42,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    if (user && user.onboarding_completed === false && !isAdmin) router.replace('/onboarding');
-  }, [user?.id, user?.onboarding_completed, isAdmin, router]);
+    if (user && user.onboarding_completed === false && !isAdmin && pathname !== '/dashboard/billing') router.replace('/onboarding');
+  }, [user?.id, user?.onboarding_completed, isAdmin, pathname, router]);
   const gatedPages: Array<{ prefix: string; feature: string }> = [
     { prefix: '/dashboard/email-marketing', feature: 'email_marketing' },
     { prefix: '/dashboard/pdf-reports', feature: 'pdf_reports' },
