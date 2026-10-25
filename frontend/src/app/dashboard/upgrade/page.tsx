@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { billingApi } from '@/lib/api';
+import AvailablePaymentMethods from '@/components/billing/AvailablePaymentMethods';
 import { useState } from 'react';
 
 const PLANS = [
@@ -32,19 +33,8 @@ export default function UpgradePage() {
   const [loading, setLoading] = useState('');
   const [error, setError] = useState('');
 
-  const upgrade = async (priceId: string, planId: string) => {
-    if (!priceId) {
-      setError('Stripe price IDs not configured yet. Add them to frontend/.env.local');
-      return;
-    }
-    setLoading(planId);
-    try {
-      const { data } = await billingApi.createCheckout(priceId);
-      window.location.href = data.url;
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to open checkout.');
-    }
-    setLoading('');
+  const upgrade = async (_priceId: string, _planId: string) => {
+    setError('New subscription checkout is not available until a payment provider is configured and its checkout/webhook integration passes sandbox tests. Please contact support.');
   };
 
   const PLAN_ORDER = ['free','trial','starter','growth','pro','agency'];
@@ -66,6 +56,8 @@ export default function UpgradePage() {
           {error}
         </div>
       )}
+
+      <AvailablePaymentMethods compact />
 
       <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:16 }}>
         {PLANS.map((plan, i) => {
