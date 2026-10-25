@@ -63,7 +63,7 @@ export default function OnboardingPage() {
     };
     check();
     return () => { cancelled = true; };
-  }, [checkoutComplete, authLoading, user?.id, refreshUser]);
+  }, [checkoutComplete, authLoading, user?.id]);
 
   const finish = async (event: FormEvent) => {
     event.preventDefault();
