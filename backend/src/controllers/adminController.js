@@ -108,7 +108,9 @@ const getUser = async (req, res) => {
       queryOne(`SELECT id,email,name,plan,subscription_status,trial_ends_at,email_verified,role,is_banned,ban_reason,
                        created_at,updated_at,last_login,
                        (stripe_customer_id IS NOT NULL) AS has_stripe_customer,
-                       (stripe_subscription_id IS NOT NULL) AS has_stripe_subscription
+                       (stripe_subscription_id IS NOT NULL) AS has_stripe_subscription,
+                       (SELECT COUNT(*) FROM websites WHERE user_id=users.id) AS website_count,
+                       (SELECT COUNT(*) FROM audits WHERE user_id=users.id) AS audit_count
                 FROM users WHERE id=$1`, [userId]),
       queryAll('SELECT id,name,url,last_score,status,created_at FROM websites WHERE user_id=$1 ORDER BY created_at DESC', [userId]),
       queryAll('SELECT action,count,month FROM usage_tracking WHERE user_id=$1 ORDER BY month DESC', [userId]),
