@@ -123,7 +123,7 @@ export default function UpgradePage() {
 
       <div style={{ textAlign:'center',marginTop:32 }}>
         <p style={{ fontSize:13,color:'rgba(255,255,255,0.25)',marginBottom:12 }}>
-          ✓ 14-day free trial on all plans &nbsp;·&nbsp; ✓ No credit card to try &nbsp;·&nbsp; ✓ Cancel any time
+          14-day no-card Free Trial available separately &nbsp;·&nbsp; Paid subscriptions start after secure checkout
         </p>
         <Link href="/dashboard/billing" style={{ fontSize:13,color:'#818cf8',textDecoration:'none' }}>
           ← Back to billing overview
