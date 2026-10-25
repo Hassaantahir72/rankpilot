@@ -69,7 +69,10 @@ router.post('/stripe', async (req, res) => {
         break;
       }
     }
-  } catch (err) { console.error('Webhook handler error:', err); }
+  } catch (err) {
+    console.error('Webhook handler error:', err);
+    return res.status(500).json({ error: 'Webhook processing failed. Stripe may retry this event.' });
+  }
   res.json({ received: true });
 });
 
@@ -81,7 +84,8 @@ router.post('/create-checkout', authMiddleware, async (req, res) => {
 
   try {
     const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-    let customerId = req.user.stripe_customer_id;
+    const savedCustomer = await queryOne('SELECT stripe_customer_id FROM users WHERE id=$1', [req.user.id]);
+    let customerId = savedCustomer?.stripe_customer_id;
     if (!customerId) {
       const customer = await stripe.customers.create({ email: req.user.email, name: req.user.name, metadata: { userId: req.user.id } });
       customerId = customer.id;
