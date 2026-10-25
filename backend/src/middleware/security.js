@@ -111,10 +111,22 @@ const logAdminRequest = async (req, res, next) => {
 };
 
 const sanitizeBody = (body) => {
-  if (!body) return {};
-  const safe = { ...body };
-  ['password', 'password_hash', 'otp_code', 'stripe_secret_key'].forEach(k => { if (safe[k]) safe[k] = '***'; });
-  return safe;
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return {};
+  const sensitive = /password|passphrase|secret|token|authorization|cookie|otp|verification.?code|api.?key|private.?key|credential|client.?secret|access.?key/i;
+  const sanitize = (value, depth = 0) => {
+    if (depth > 3) return '[truncated]';
+    if (Array.isArray(value)) return value.slice(0, 20).map(item => sanitize(item, depth + 1));
+    if (!value || typeof value !== 'object') {
+      if (typeof value === 'string') return value.length > 500 ? value.slice(0, 500) + '[truncated]' : value;
+      return value;
+    }
+    const result = {};
+    for (const [key, nested] of Object.entries(value).slice(0, 50)) {
+      result[key] = sensitive.test(key) ? '[redacted]' : sanitize(nested, depth + 1);
+    }
+    return result;
+  };
+  return sanitize(body);
 };
 
 // ── CONTENT SECURITY HEADERS ─────────────────────────────────────
