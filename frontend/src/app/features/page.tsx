@@ -46,7 +46,7 @@ export default function FeaturesPage() {
               Two complete modules. One platform. Replace your entire marketing stack.
             </p>
             <div className="animate-fade-up delay-3" style={{ display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap' }}>
-              <Link href="/auth/signup" className="btn-primary" style={{ fontSize:16,padding:'14px 30px' }}>Start free trial →</Link>
+              <Link href="/auth/signup?flow=trial" className="btn-primary" style={{ fontSize:16,padding:'14px 30px' }}>Start free trial →</Link>
               <Link href="/pricing" className="btn-ghost" style={{ fontSize:16,padding:'14px 30px' }}>See pricing</Link>
             </div>
           </div>
@@ -131,9 +131,9 @@ export default function FeaturesPage() {
             <ScrollReveal type="scale">
               <div style={{ textAlign:'center',padding:'72px 40px',background:'linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.06))',border:'1px solid rgba(99,102,241,0.22)',borderRadius:32,position:'relative',overflow:'hidden' }}>
                 <div style={{ position:'absolute',top:-80,left:'50%',transform:'translateX(-50%)',width:400,height:400,background:'radial-gradient(circle,rgba(99,102,241,0.12),transparent 65%)',pointerEvents:'none' }} />
-                <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:900,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.1,marginBottom:18 }}>Try every feature free for 14 days</h2>
-                <p style={{ fontSize:16,color:'rgba(255,255,255,0.45)',marginBottom:40 }}>No credit card. Full access. Cancel any time.</p>
-                <Link href="/auth/signup" className="btn-primary" style={{ fontSize:16,padding:'15px 32px' }}>Start free trial →</Link>
+                <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:900,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.1,marginBottom:18 }}>Try the Free Trial plan for 14 days</h2>
+                <p style={{ fontSize:16,color:'rgba(255,255,255,0.45)',marginBottom:40 }}>No credit card required. Includes 1 website, 5 audits/month, 10 AI content generations/month, 5 social posts/month, competitor analysis, and weekly tracking.</p>
+                <Link href="/auth/signup?flow=trial" className="btn-primary" style={{ fontSize:16,padding:'15px 32px' }}>Start free trial →</Link>
               </div>
             </ScrollReveal>
           </div>

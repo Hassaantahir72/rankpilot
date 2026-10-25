@@ -33,7 +33,7 @@ function SignupForm() {
       const { data } = await authApi.register({ ...form, deviceSignature, selectedPlan, selectedInterval: selectedInterval === 'annual' ? 'annual' : 'monthly' });
       const intervalParam = selectedInterval === 'annual' ? '&interval=annual' : '';
       const planParam = requestedPlan && allowedPlans.includes(requestedPlan) ? `&plan=${encodeURIComponent(requestedPlan)}` : '';
-      router.push(`/auth/verify-email?userId=${encodeURIComponent(data.userId)}&type=verify${planParam}${intervalParam}`);
+      router.push(`/auth/verify-email?userId=${encodeURIComponent(data.userId)}&type=verify${planParam}${intervalParam}${!selectedPlan ? '&flow=trial' : ''}`);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
     }
@@ -50,9 +50,9 @@ function SignupForm() {
             <span style={{fontWeight:700,fontSize:18,color:'#fff'}}>RankPilot</span>
           </Link>
           <h1 style={{fontSize:26,fontWeight:800,marginBottom:8,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{signupPlan ? 'Create your RankPilot account' : 'Start your 14-day free trial'}</h1>
-          <p style={{fontSize:14,color:'rgba(255,255,255,0.55)',lineHeight:1.7}}>{signupPlan ? 'Create your account first. After email verification, you’ll continue to secure checkout and then workspace setup.' : 'Start with the 14-day trial. No card is required; you can upgrade from your dashboard whenever you’re ready.'}</p>
+          <p style={{fontSize:14,color:'rgba(255,255,255,0.55)',lineHeight:1.7}}>{signupPlan ? 'Step 1 of 4 · Create your account and verify your email. Then review billing details and continue to secure payment before workspace setup.' : 'Create your account, verify your email, then set up your workspace. No payment details are needed for the Free Trial.'}</p>
           <div style={{display:'flex',justifyContent:'center',gap:8,marginTop:18,flexWrap:'wrap'}}>
-            {['1 · Account','2 · '+(signupPlan ? 'Secure checkout' : 'Free trial'),'3 · Workspace'].map((step,i)=><span key={step} style={{fontSize:11,padding:'7px 10px',borderRadius:100,border:'1px solid '+(i===0?'rgba(129,140,248,.5)':'rgba(255,255,255,.1)'),background:i===0?'rgba(99,102,241,.13)':'rgba(255,255,255,.025)',color:i===0?'#c7d2fe':'rgba(255,255,255,.45)'}}>{step}</span>)}
+            {['1 · Account','2 · Verify email',signupPlan ? '3 · Billing & payment' : '3 · Free Trial','4 · Workspace'].map((step,i)=><span key={step} style={{fontSize:11,padding:'7px 10px',borderRadius:100,border:'1px solid '+(i===0?'rgba(129,140,248,.5)':'rgba(255,255,255,.1)'),background:i===0?'rgba(99,102,241,.13)':'rgba(255,255,255,.025)',color:i===0?'#c7d2fe':'rgba(255,255,255,.45)'}}>{step}</span>)}
           </div>
           {signupPlan && <div style={{marginTop:18,padding:16,textAlign:'left',borderRadius:14,border:'1px solid rgba(129,140,248,.25)',background:'rgba(99,102,241,.07)'}}>
             <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center'}}>
@@ -62,6 +62,10 @@ function SignupForm() {
             <p style={{fontSize:12,color:'rgba(255,255,255,.48)',marginTop:7}}>{signupInterval==='annual'?'Annual billing; paid yearly.':'Monthly billing.'} Payment is collected by the provider only after you review the checkout total.</p>
           </div>}
         </div>
+        {!signupPlan && <div style={{marginTop:18,padding:16,textAlign:'left',borderRadius:14,border:'1px solid rgba(74,222,128,.2)',background:'rgba(74,222,128,.05)'}}>
+            <strong style={{fontSize:14,color:'#86efac'}}>Your selected plan: 14-day Free Trial</strong>
+            <p style={{fontSize:12,color:'rgba(255,255,255,.58)',lineHeight:1.7,marginTop:8}}>Includes 1 website, 5 SEO audits/month, 10 AI content generations/month, 5 social posts/month, competitor analysis, and weekly rank tracking. Google Ads AI, Meta Ads AI, and branded reports are not included. No card is required and no automatic charge starts after trial signup.</p>
+          </div>}
         <div style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:20,padding:32}}>
           {!signupPlan && <p style={{fontSize:11,lineHeight:1.6,color:'rgba(255,255,255,0.42)',marginTop:12}}>To reduce repeated free-trial abuse across browsers, RankPilot checks a privacy-preserving device signal. Only a one-way hash is stored; raw browser/device attributes are not saved. Web browsers do not expose a guaranteed unique hardware ID, so this is an anti-abuse measure rather than perfect device identification.</p>}
           <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:18}}>

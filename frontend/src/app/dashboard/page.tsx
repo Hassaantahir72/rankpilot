@@ -139,10 +139,11 @@ export default function DashboardPage() {
             <h2 style={{fontSize:15,fontWeight:700}}>This month's usage</h2>
             <Link href="/dashboard/billing" style={{fontSize:12,color:'rgba(255,255,255,0.4)',textDecoration:'none'}}>View plan →</Link>
           </div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:20}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:20}}>
             <UsageBar label="SEO Audits" used={stats?.usage?.audit||0} max={limits.max_audits_per_month}/>
             <UsageBar label="AI Content" used={stats?.usage?.content||0} max={limits.max_content_per_month} color="#8b5cf6"/>
             <UsageBar label="Websites" used={stats?.websiteCount||0} max={limits.max_websites} color="#ec4899"/>
+            {limits.max_social_posts_per_month > 0 && <UsageBar label="Social posts" used={stats?.usage?.social||0} max={limits.max_social_posts_per_month} color="#10b981"/>}
           </div>
         </div>
       )}

@@ -1,9 +1,10 @@
 'use client';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
-import { billingApi, paymentMethodsApi } from '@/lib/api';
+
 import AvailablePaymentMethods from '@/components/billing/AvailablePaymentMethods';
-import { useEffect, useState } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 const PLANS = [
   {
@@ -26,32 +27,14 @@ const PLANS = [
 
 export default function UpgradePage() {
   const { user } = useAuth();
-  const [loading, setLoading] = useState('');
-  const [error, setError] = useState('');
-  const [availableProviders, setAvailableProviders] = useState<string[]>([]);
+  const router = useRouter();
 
-  useEffect(() => {
-    const refreshMethods = () => paymentMethodsApi.listPublic().then(({ data }) => setAvailableProviders((data.methods || []).map((m:any) => m.provider))).catch(() => setAvailableProviders([]));
-    refreshMethods();
-    const methodsInterval = window.setInterval(refreshMethods, 15000);
-    window.addEventListener('focus', refreshMethods);
-    return () => { window.clearInterval(methodsInterval); window.removeEventListener('focus', refreshMethods); };
-  }, []);
-
-  const upgrade = async (planId: string) => {
-    if (!availableProviders.includes('lemon_squeezy')) {
-      setError('No verified payment provider is currently available. Please contact support while payment setup is completed.');
+  const upgrade = (planId: string) => {
+    if (user && !['free', 'trial'].includes(user.plan)) {
+      router.push('/dashboard/billing');
       return;
     }
-    setLoading(planId);
-    try {
-      const { data } = await billingApi.createProviderCheckout('lemon_squeezy', planId, 'monthly');
-      const checkoutUrl = new URL(data.url);
-      if (checkoutUrl.protocol !== 'https:' || !(checkoutUrl.hostname === 'lemonsqueezy.com' || checkoutUrl.hostname.endsWith('.lemonsqueezy.com'))) throw new Error('Payment provider returned an invalid checkout URL.');
-      window.location.assign(checkoutUrl.toString());
-    } catch (err:any) {
-      setError(err.response?.data?.error || err.message || 'Could not start checkout.');
-    } finally { setLoading(''); }
+    router.push('/checkout?plan=' + encodeURIComponent(planId) + '&interval=monthly');
   };
 
   const PLAN_ORDER = ['free','trial','starter','growth','pro','agency'];
@@ -67,12 +50,6 @@ export default function UpgradePage() {
           You're on the <strong style={{ color:'#818cf8',textTransform:'capitalize' }}>{user?.plan}</strong> plan. Upgrade to unlock more features.
         </p>
       </div>
-
-      {error && (
-        <div style={{ marginBottom:24,padding:'12px 16px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.22)',borderRadius:10,fontSize:14,color:'#fca5a5',textAlign:'center' }}>
-          {error}
-        </div>
-      )}
 
       <AvailablePaymentMethods compact />
 
@@ -111,9 +88,8 @@ export default function UpgradePage() {
               ) : (
                 <button
                   onClick={() => upgrade(plan.id)}
-                  disabled={!!loading}
                   style={{ padding:'12px',background:isDowngrade?'rgba(255,255,255,0.05)':`linear-gradient(135deg,${plan.color},${plan.color}cc)`, border:isDowngrade?'1px solid rgba(255,255,255,0.1)':'none', borderRadius:10, color:'#fff', fontWeight:600, fontSize:13, cursor:'pointer', fontFamily:'inherit', boxShadow:isDowngrade?'none':`0 4px 20px ${plan.color}35`, transition:'all 0.2s' }}>
-                  {loading===plan.id ? 'Redirecting...' : !availableProviders.includes('lemon_squeezy') ? 'Payments unavailable' : isDowngrade ? 'Downgrade' : `Upgrade to ${plan.name} →`}
+                  {isDowngrade ? 'Review billing options' : 'Continue to checkout →'}
                 </button>
               )}
             </div>

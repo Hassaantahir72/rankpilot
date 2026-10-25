@@ -10,6 +10,8 @@ interface User {
   plan: string;
   subscription_status: string;
   trial_ends_at: string | null;
+  signup_plan?: string | null;
+  signup_interval?: 'monthly' | 'annual' | null;
   email_verified: boolean;
   onboarding_completed?: boolean;
   role: string;
@@ -24,6 +26,7 @@ interface Limits {
   meta_ads: boolean;
   competitor_analysis: boolean;
   weekly_reports: boolean;
+  priority_support: boolean;
   ab_testing: boolean;
   white_label: boolean;
   api_access: boolean;

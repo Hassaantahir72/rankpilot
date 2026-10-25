@@ -50,15 +50,15 @@ const register = async (req, res) => {
       const passwordHash = await bcrypt.hash(password, 12);
       const otp = generateOTP();
       const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
-      const trialEnds = userPlan === 'trial' ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) : null;
+      // Start the trial clock only after the user verifies their email.
       const userId = uuidv4();
       const user = await queryOne(
         `INSERT INTO users (id,email,name,password_hash,plan,subscription_status,trial_ends_at,signup_plan,signup_interval,email_verified,otp_code,otp_purpose,otp_expires_at,otp_attempts,created_at,updated_at)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,false,$10,'verify',$11,0,NOW(),NOW()) RETURNING id,email,name,plan,subscription_status,trial_ends_at,signup_plan,signup_interval,role`,
-        [userId, email.toLowerCase(), name, passwordHash, userPlan, userPlan, trialEnds, paidPlanIntent ? requestedPlan : null, paidPlanIntent ? requestedInterval : null, otp, otpExpires]
+        [userId, email.toLowerCase(), name, passwordHash, userPlan, userPlan, null, paidPlanIntent ? requestedPlan : null, paidPlanIntent ? requestedInterval : null, otp, otpExpires]
       );
       if (claim) await query('UPDATE trial_device_claims SET user_id=$1 WHERE device_hash=$2', [user.id, deviceHash]);
-      await sendOTPEmail(user.email, user.name, otp, 'verify');
+      await sendOTPEmail(user.email, user.name, otp, 'verify', user.plan);
       res.status(201).json({ message: 'Account created! Check your email for the 6-digit verification code.', userId: user.id, requiresVerification: true });
     } catch (err) {
       // Keep the device claim if account creation succeeded; only release an unassigned claim on a failed registration.
@@ -85,10 +85,13 @@ const verifyOTP = async (req, res) => {
       await query('UPDATE users SET otp_attempts=otp_attempts+1 WHERE id=$1', [userId]);
       return res.status(400).json({ error: 'Invalid code. ' + (4 - (user.otp_attempts||0)) + ' attempts remaining.' });
     }
-    await query('UPDATE users SET email_verified=true,otp_code=NULL,otp_purpose=NULL,otp_expires_at=NULL,otp_attempts=0,updated_at=NOW() WHERE id=$1', [userId]);
-    await sendWelcomeEmail(user.email, user.name);
-    const token = signToken(user);
-    res.json({ message: 'Email verified! Welcome to RankPilot.', token, user: { id:user.id, email:user.email, name:user.name, plan:user.plan, subscription_status:user.subscription_status, trial_ends_at:user.trial_ends_at, signup_plan:user.signup_plan || null, signup_interval:user.signup_interval || null, onboarding_completed:user.onboarding_completed || false, email_verified:true, role:user.role||'user' } });
+    const verifiedUser = await queryOne(
+      "UPDATE users SET email_verified=true,trial_ends_at=CASE WHEN plan='trial' AND subscription_status='trial' THEN NOW() + INTERVAL '14 days' ELSE trial_ends_at END,otp_code=NULL,otp_purpose=NULL,otp_expires_at=NULL,otp_attempts=0,updated_at=NOW() WHERE id=$1 RETURNING *",
+      [userId]
+    );
+    await sendWelcomeEmail(verifiedUser.email, verifiedUser.name, verifiedUser.plan).catch(err => console.error('Welcome email delivery failed after verification:', err.message));
+    const token = signToken(verifiedUser);
+    res.json({ message: 'Email verified! Welcome to RankPilot.', token, user: { id:verifiedUser.id, email:verifiedUser.email, name:verifiedUser.name, plan:verifiedUser.plan, subscription_status:verifiedUser.subscription_status, trial_ends_at:verifiedUser.trial_ends_at, signup_plan:verifiedUser.signup_plan || null, signup_interval:verifiedUser.signup_interval || null, onboarding_completed:verifiedUser.onboarding_completed || false, email_verified:true, role:verifiedUser.role||'user' } });
   } catch (err) {
     console.error('Verify OTP error:', err);
     res.status(500).json({ error: 'Verification failed.' });
@@ -99,12 +102,12 @@ const verifyOTP = async (req, res) => {
 const resendOTP = async (req, res) => {
   const { userId } = req.body;
   try {
-    const user = await queryOne('SELECT email,name,email_verified FROM users WHERE id=$1', [userId]);
+    const user = await queryOne('SELECT email,name,email_verified,plan FROM users WHERE id=$1', [userId]);
     if (!user || user.email_verified) return res.status(400).json({ error: 'If verification is still required, a new code can be requested.' });
     const otp = generateOTP();
     const expires = new Date(Date.now() + 10 * 60 * 1000);
     await query("UPDATE users SET otp_code=$1,otp_purpose='verify',otp_expires_at=$2,otp_attempts=0 WHERE id=$3", [otp, expires, userId]);
-    await sendOTPEmail(user.email, user.name, otp, 'verify');
+    await sendOTPEmail(user.email, user.name, otp, 'verify', user.plan);
     res.json({ message: 'New code sent to your email.' });
   } catch (err) { res.status(500).json({ error: 'Could not resend code.' }); }
 };
@@ -130,7 +133,7 @@ const login = async (req, res) => {
     if (!user.email_verified) {
       const otp = generateOTP();
       await query("UPDATE users SET otp_code=$1,otp_purpose='verify',otp_expires_at=$2,otp_attempts=0 WHERE id=$3", [otp, new Date(Date.now()+10*60*1000), user.id]);
-      await sendOTPEmail(user.email, user.name, otp, 'verify');
+      await sendOTPEmail(user.email, user.name, otp, 'verify', user.plan);
       return res.json({ requiresVerification: true, userId: user.id, message: 'Please verify your email. A new code has been sent.' });
     }
 

@@ -75,7 +75,7 @@ export default function HomePage() {
             Paste your URL. RankPilot audits your SEO, writes optimized content, and helps prepare Google and Meta ad campaigns with AI-powered tools.
           </p>
           <div className="animate-fade-up delay-3" style={{ display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap',marginBottom:56 }}>
-            <Link href="/auth/signup" className="btn-primary" style={{ fontSize:16,padding:'15px 32px' }}>
+            <Link href="/auth/signup?flow=trial" className="btn-primary" style={{ fontSize:16,padding:'15px 32px' }}>
               Start free — no card needed
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </Link>
@@ -379,7 +379,7 @@ export default function HomePage() {
             ))}
           </div>
           <ScrollReveal className="text-center" style={{ marginTop:36 }}>
-            <p style={{ fontSize:13,color:'rgba(255,255,255,0.28)' }}>Free plan available · Paid plans from $15/month · Cancel any time · Secure payments via Stripe</p>
+            <p style={{ fontSize:13,color:'rgba(255,255,255,0.28)' }}>Free plan available · Paid plans from $15/month · Cancel any time · Secure hosted checkout when enabled</p>
           </ScrollReveal>
         </div>
       </section>
@@ -413,9 +413,9 @@ export default function HomePage() {
               <h2 style={{ fontSize:'clamp(2rem,5vw,3.2rem)',fontWeight:900,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.08,marginBottom:20 }}>
                 Replace your agency.<br /><span className="gradient-text">Keep the results.</span>
               </h2>
-              <p style={{ fontSize:16,color:'rgba(255,255,255,0.45)',marginBottom:44,lineHeight:1.75,maxWidth:500,margin:'0 auto 44px' }}>Start your 14-day Free Trial with no card required. Trial access and usage limits are shown in your workspace.</p>
+              <p style={{ fontSize:16,color:'rgba(255,255,255,0.45)',marginBottom:44,lineHeight:1.75,maxWidth:500,margin:'0 auto 44px' }}>Start your 14-day Free Trial with no card required. It includes 1 website, 5 SEO audits/month, 10 AI content generations/month, 5 social posts/month, competitor analysis, and weekly rank tracking.</p>
               <div style={{ display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap' }}>
-                <Link href="/auth/signup" className="btn-primary" style={{ fontSize:16,padding:'16px 36px' }}>
+                <Link href="/auth/signup?flow=trial" className="btn-primary" style={{ fontSize:16,padding:'16px 36px' }}>
                   Start free trial
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </Link>

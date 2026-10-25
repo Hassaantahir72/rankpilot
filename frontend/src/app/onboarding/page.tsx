@@ -30,7 +30,7 @@ export default function OnboardingPage() {
     }
     if (user.signup_plan && user.plan === 'free' && !checkoutComplete) {
       const interval = user.signup_interval === 'annual' ? '&interval=annual' : '';
-      router.replace('/dashboard/billing?plan=' + encodeURIComponent(user.signup_plan) + interval);
+      router.replace('/checkout?plan=' + encodeURIComponent(user.signup_plan) + interval);
       return;
     }
     if (user.onboarding_completed && !checkoutComplete) {
