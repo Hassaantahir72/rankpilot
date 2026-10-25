@@ -45,6 +45,11 @@ export default function BillingPage() {
   }, []);
 
   const upgrade = async (priceId: string) => {
+    // Existing subscriptions must be changed in the billing portal, not by creating a second subscription.
+    if (hasPaidPlan) {
+      await openPortal();
+      return;
+    }
     if (!priceId) {
       setMsg('⚠️ Stripe not configured yet. Add your Stripe price IDs to .env.local and restart.');
       return;
@@ -71,6 +76,7 @@ export default function BillingPage() {
   };
 
   const currentPlanIdx = PLANS.findIndex(p => p.id === user?.plan);
+  const hasPaidPlan = !!user && !['free', 'trial'].includes(user.plan);
 
   return (
     <div>
@@ -135,7 +141,7 @@ export default function BillingPage() {
               <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', marginBottom: 16 }}>{plan.desc}</p>
               {!isCurrent && (
                 <button onClick={() => upgrade(selectedPriceId)} disabled={!!loading} style={{ width: '100%', padding: '9px', background: isDowngrade ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${plan.color},${plan.color}cc)`, border: isDowngrade ? '1px solid rgba(255,255,255,0.1)' : 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', boxShadow: isDowngrade ? 'none' : `0 4px 16px ${plan.color}35` }}>
-                  {loading === selectedPriceId ? 'Redirecting...' : !selectedPriceId ? 'Configure Stripe' : requestedPlan === plan.id ? 'Continue with this plan' : isDowngrade ? 'Downgrade' : 'Upgrade'}
+                  {loading === selectedPriceId ? 'Redirecting...' : hasPaidPlan ? 'Manage in Stripe' : !selectedPriceId ? 'Configure Stripe' : requestedPlan === plan.id ? 'Continue with this plan' : 'Upgrade'}
                 </button>
               )}
             </div>
