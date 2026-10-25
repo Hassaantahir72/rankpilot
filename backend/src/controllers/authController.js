@@ -107,7 +107,7 @@ const resendOTP = async (req, res) => {
     const otp = generateOTP();
     const expires = new Date(Date.now() + 10 * 60 * 1000);
     await query("UPDATE users SET otp_code=$1,otp_purpose='verify',otp_expires_at=$2,otp_attempts=0 WHERE id=$3", [otp, expires, userId]);
-    await sendOTPEmail(user.email, user.name, otp, 'verify');
+    await sendOTPEmail(user.email, user.name, otp, 'verify', user.plan);
     res.json({ message: 'New code sent to your email.' });
   } catch (err) { res.status(500).json({ error: 'Could not resend code.' }); }
 };
@@ -133,7 +133,7 @@ const login = async (req, res) => {
     if (!user.email_verified) {
       const otp = generateOTP();
       await query("UPDATE users SET otp_code=$1,otp_purpose='verify',otp_expires_at=$2,otp_attempts=0 WHERE id=$3", [otp, new Date(Date.now()+10*60*1000), user.id]);
-      await sendOTPEmail(user.email, user.name, otp, 'verify');
+      await sendOTPEmail(user.email, user.name, otp, 'verify', user.plan);
       return res.json({ requiresVerification: true, userId: user.id, message: 'Please verify your email. A new code has been sent.' });
     }
 
