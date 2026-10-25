@@ -117,6 +117,8 @@ export default function BillingPage() {
         </div>
       </div>
 
+      <p style={{ fontSize:12,color:'rgba(255,255,255,0.38)',marginBottom:18 }}>Secure checkout is hosted by Stripe. Available cards, wallets, and other payment methods are shown at checkout based on your region and the payment methods enabled for this Stripe account.</p>
+
       {/* Plans grid */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
         <h2 style={{ fontSize: 17, fontWeight: 700 }}>Available plans</h2>
