@@ -18,7 +18,7 @@ const PLANS = [
   },
   {
     name:'Pro', monthly:499, annual:399, desc:'For power users and marketing teams', color:'#ec4899', popular:false,
-    features:['10 websites','Everything in Growth','Meta Ads AI automation','Auto A/B ad testing','Advanced analytics dashboard','Branded PDF reports','20 social posts per site/mo','Dedicated support (4hr)'],
+    features:['10 websites','Everything in Growth','Meta Ads AI automation','Auto A/B ad testing','Advanced analytics dashboard','Branded PDF reports','100 social posts/mo','Dedicated support (4hr)'],
     not:['White-label dashboard'],
   },
   {
@@ -38,7 +38,7 @@ const TABLE = [
   {f:'Google Ads AI',s:'—',g:'✓',p:'✓',a:'✓'},
   {f:'Meta Ads AI',s:'—',g:'—',p:'✓',a:'✓'},
   {f:'A/B Ad Testing',s:'—',g:'—',p:'✓',a:'✓'},
-  {f:'Social Media Posts',s:'—',g:'20/mo',p:'20/site',a:'Unlimited'},
+  {f:'Social Media Posts',s:'—',g:'20/mo',p:'100/mo',a:'Unlimited'},
   {f:'White-label',s:'—',g:'—',p:'—',a:'✓'},
   {f:'API Access',s:'—',g:'—',p:'—',a:'✓'},
   {f:'Reports',s:'Monthly',g:'Weekly',p:'Branded PDF',a:'Custom'},
@@ -118,7 +118,7 @@ export default function PricingPage() {
                         </li>
                       ))}
                     </ul>
-                    <Link href={`/auth/signup?plan=${plan.name.toLowerCase()}`} className="btn-primary" style={{width:'100%',justifyContent:'center',background:plan.popular?'linear-gradient(135deg,#6366f1,#7c3aed)':'rgba(255,255,255,0.05)',boxShadow:plan.popular?undefined:'none',border:plan.popular?'none':'1px solid rgba(255,255,255,0.1)'}}>
+                    <Link href={`/auth/signup?plan=${plan.name.toLowerCase()}&interval=${annual ? 'annual' : 'monthly'}`} className="btn-primary" style={{width:'100%',justifyContent:'center',background:plan.popular?'linear-gradient(135deg,#6366f1,#7c3aed)':'rgba(255,255,255,0.05)',boxShadow:plan.popular?undefined:'none',border:plan.popular?'none':'1px solid rgba(255,255,255,0.1)'}}>
                       Start free trial
                     </Link>
                   </div>
