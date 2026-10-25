@@ -36,6 +36,10 @@ const { startAuditWorker } = require('./jobs/auditWorker');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Render terminates TLS and forwards requests through its proxy.
+// Trust exactly one proxy hop there so express-rate-limit can identify client IPs.
+if (process.env.RENDER) app.set('trust proxy', 1);
+
 // ── SECURITY HEADERS ──────────────────────────────────────────────
 app.use(securityHeaders);
 app.use(helmet({ crossOriginEmbedderPolicy: false }));
