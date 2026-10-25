@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { billingApi, dashboardApi, paymentMethodsApi } from '@/lib/api';
@@ -34,6 +34,7 @@ export default function BillingPage() {
   const [requestedPlan, setRequestedPlan] = useState('');
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
   const [availableProviders, setAvailableProviders] = useState<string[]>([]);
+  const autoCheckoutStarted = useRef(false);
 
   useEffect(() => {
     const refreshMethods = () => paymentMethodsApi.listPublic().then(({ data }) => setAvailableProviders((data.methods || []).map((m:any) => m.provider))).catch(() => setAvailableProviders([]));
@@ -52,7 +53,7 @@ export default function BillingPage() {
 
   const upgrade = async (planId: string) => {
     if (!availableProviders.includes('lemon_squeezy')) {
-      setMsg('No verified payment provider is currently available. Please contact support while payment setup is completed.');
+      setMsg('Your selected plan is saved. Secure checkout is temporarily unavailable because no payment provider is enabled. You can retry from this page later; you will not be charged until checkout is completed.');
       return;
     }
     setLoading(planId);
@@ -65,6 +66,13 @@ export default function BillingPage() {
       setMsg(err.response?.data?.error || err.message || 'Could not start checkout.');
     } finally { setLoading(''); }
   };
+
+  useEffect(() => {
+    if (!requestedPlan || !availableProviders.includes('lemon_squeezy') || hasPaidPlan || autoCheckoutStarted.current) return;
+    autoCheckoutStarted.current = true;
+    // Continue straight to hosted checkout for a plan selected before signup.
+    upgrade(requestedPlan);
+  }, [requestedPlan, availableProviders, hasPaidPlan]);
 
   const openPortal = async () => {
     setLoading('portal');
@@ -129,7 +137,7 @@ export default function BillingPage() {
         </div>
       </div>
 
-      <p style={{ fontSize:12,color:'rgba(255,255,255,0.38)',marginBottom:18 }}>New checkout providers are enabled only after server-side configuration and verified sandbox tests.</p>
+      <p style={{ fontSize:12,color:'rgba(255,255,255,0.38)',marginBottom:18 }}>Your selected plan is highlighted below. When a verified provider is enabled, you’ll continue directly to its secure hosted checkout; your card details never pass through RankPilot.</p>
 
       <AvailablePaymentMethods compact />
 
