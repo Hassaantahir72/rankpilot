@@ -100,6 +100,7 @@ export const paymentMethodsApi = {
 // ── BILLING ───────────────────────────────────────────────────────
 export const billingApi = {
   createCheckout: (priceId: string) => api.post('/webhooks/create-checkout', { priceId }),
+  createProviderCheckout: (provider: string, plan: string, interval: 'monthly'|'annual' = 'monthly') => api.post('/payment-methods/checkout', { provider, plan, interval }),
   openPortal:     ()                => api.post('/webhooks/portal'),
 };
 
