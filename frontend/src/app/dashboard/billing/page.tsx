@@ -118,10 +118,10 @@ export default function BillingPage() {
         {PLANS.filter(p => p.id !== 'free').map((plan, i) => {
           const isCurrent = plan.id === user?.plan;
           const isDowngrade = PLANS.findIndex(p => p.id === plan.id) < currentPlanIdx;
+          const selectedPriceId = billingInterval === 'annual' ? (plan.annualPriceId || '') : plan.priceId;
           return (
             <div key={plan.id} style={{ background: isCurrent || requestedPlan === plan.id ? `${plan.color}12` : 'rgba(255,255,255,0.02)', border: `1px solid ${isCurrent || requestedPlan === plan.id ? plan.color + '70' : 'rgba(255,255,255,0.08)'}`, borderRadius: 14, padding: '20px 16px', position: 'relative' }}>
               {isCurrent && <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: plan.color, color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 12px', borderRadius: 100, whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>CURRENT</div>}
-              {!isCurrent && requestedPlan === plan.id && <div style={{ position: 'absolute', top: -10, right: 10, background: plan.color, color: '#fff', fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 100 }}>SELECTED</div>}
               {!isCurrent && requestedPlan === plan.id && <div style={{ position: 'absolute', top: -10, right: 10, background: plan.color, color: '#fff', fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 100 }}>SELECTED</div>}
               <p style={{ fontSize: 11, fontWeight: 700, color: plan.color, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{plan.name}</p>
               <p style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Plus Jakarta Sans',sans-serif", marginBottom: 4 }}>${billingInterval === 'annual' ? (plan.annualPrice ?? 0) : plan.price}<span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(255,255,255,0.35)' }}>/mo</span></p>
