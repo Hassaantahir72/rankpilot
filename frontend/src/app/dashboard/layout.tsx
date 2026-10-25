@@ -1,7 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import ChatWidgetWrapper from '@/components/chat/ChatWidgetWrapper';
 import PlanGate from '@/components/dashboard/PlanGate';
@@ -37,8 +37,13 @@ const NAV = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout, isAdmin } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (user && user.onboarding_completed === false && !isAdmin) router.replace('/onboarding');
+  }, [user?.id, user?.onboarding_completed, isAdmin, router]);
   const gatedPages: Array<{ prefix: string; feature: string }> = [
     { prefix: '/dashboard/email-marketing', feature: 'email_marketing' },
     { prefix: '/dashboard/pdf-reports', feature: 'pdf_reports' },
