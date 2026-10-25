@@ -90,8 +90,8 @@ const processNextAudit = async () => {
        WHERE id=(
          SELECT id FROM audit_jobs
          WHERE status='pending' AND available_at<=NOW()
-         ORDER BY created_at ASC
-         FOR UPDATE SKIP LOCKED LIMIT 1
+         ORDER BY created_at ASC LIMIT 1
+         FOR UPDATE SKIP LOCKED
        )
        RETURNING *`,
       [workerId]
