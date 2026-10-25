@@ -142,6 +142,8 @@ const getMe = async (req, res) => {
 
 // FORGOT PASSWORD
 const forgotPassword = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'Enter a valid email address.' });
   const { email } = req.body;
   try {
     const user = await queryOne('SELECT id,name FROM users WHERE email=$1', [email.toLowerCase()]);
@@ -155,6 +157,8 @@ const forgotPassword = async (req, res) => {
 
 // RESET PASSWORD
 const resetPassword = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'Enter a valid reset code and a password of at least 8 characters.' });
   const { userId, otp, password } = req.body;
   try {
     const user = await queryOne('SELECT * FROM users WHERE id=$1', [userId]);
