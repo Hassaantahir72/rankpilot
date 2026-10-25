@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware, requireSubscription } = require('../middleware/auth');
+const { authMiddleware, requirePlanFeature } = require('../middleware/auth');
 const { queryOne, queryAll, query } = require('../config/db');
 const aiService = require('../services/aiService');
 const { sendWeeklyReport } = require('../services/emailService');
@@ -18,7 +18,7 @@ router.get('/:reportId', async (req, res) => {
   res.json({ report });
 });
 
-router.post('/generate', requireSubscription, async (req, res) => {
+router.post('/generate', requirePlanFeature('weekly_reports'), async (req, res) => {
   const { websiteId } = req.body;
   const website = await queryOne('SELECT * FROM websites WHERE id=$1 AND user_id=$2', [websiteId, req.user.id]);
   if (!website) return res.status(404).json({ error: 'Website not found.' });
