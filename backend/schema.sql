@@ -17,11 +17,14 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
   password_hash TEXT,
+  token_version INTEGER NOT NULL DEFAULT 0,
   google_id TEXT,
   role TEXT DEFAULT 'user' CHECK (role IN ('user','admin','superadmin')),
   plan TEXT DEFAULT 'free' CHECK (plan IN ('free','trial','starter','growth','pro','agency')),
   subscription_status TEXT DEFAULT 'free' CHECK (subscription_status IN ('free','trial','active','past_due','cancelled','paused')),
   trial_ends_at TIMESTAMPTZ,
+  signup_plan TEXT CHECK (signup_plan IS NULL OR signup_plan IN ('starter','growth','pro','agency')),
+  signup_interval TEXT CHECK (signup_interval IS NULL OR signup_interval IN ('monthly','annual')),
   email_verified BOOLEAN DEFAULT FALSE,
   otp_code TEXT,
   otp_expires_at TIMESTAMPTZ,
@@ -29,12 +32,29 @@ CREATE TABLE IF NOT EXISTS users (
   stripe_customer_id TEXT,
   stripe_subscription_id TEXT,
   stripe_price_id TEXT,
+  payment_provider TEXT,
+  provider_customer_id TEXT,
+  provider_subscription_id TEXT,
+  provider_variant_id TEXT,
+  provider_order_id TEXT,
+  provider_subscription_updated_at TIMESTAMPTZ,
+  provider_subscription_ends_at TIMESTAMPTZ,
   last_login TIMESTAMPTZ,
   is_banned BOOLEAN DEFAULT FALSE,
   ban_reason TEXT,
+  onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS trial_device_claims (
+  device_hash TEXT PRIMARY KEY,
+  ip_hash TEXT,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS trial_device_claims_ip_created_idx ON trial_device_claims (ip_hash, created_at DESC);
+CREATE INDEX IF NOT EXISTS trial_device_claims_user_id_idx ON trial_device_claims (user_id);
 
 -- ── PLAN LIMITS ───────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS plan_limits (
@@ -55,19 +75,30 @@ CREATE TABLE IF NOT EXISTS plan_limits (
   rank_tracking_frequency TEXT DEFAULT 'monthly'
 );
 
-INSERT INTO plan_limits VALUES
-  ('free',    1,  20,  1,   2,    0,    false,false,false,false,false,false,false,false,'monthly'),
-  ('trial',   1,  100, 5,   10,   5,    false,false,false,false,false,true, false,false,'weekly'),
-  ('starter', 1,  150, 10,  20,   0,    false,false,false,false,false,true, false,false,'weekly'),
-  ('growth',  3,  300, 30,  60,   20,   true, false,false,false,false,true, true, true, 'weekly'),
-  ('pro',     10, 500, 100, 200,  100,  true, true, true, false,false,true, true, true, 'weekly'),
-  ('agency',  9999,9999,9999,9999,9999, true, true, true, true, true, true, true, true, 'weekly')
+INSERT INTO plan_limits
+  (plan,max_websites,max_keywords,max_audits_per_month,max_content_per_month,max_social_posts_per_month,google_ads,meta_ads,ab_testing,white_label,api_access,competitor_analysis,weekly_reports,priority_support,rank_tracking_frequency)
+VALUES
+  ('free',    1,   20,   1,   2,   0,    false,false,false,false,false,false,false,false,'monthly'),
+  ('trial',   1,  100,   5,  10,   5,    false,false,false,false,false,true, false,false,'weekly'),
+  ('starter', 1,  150,   5,  10,   0,    false,false,false,false,false,true, false,false,'monthly'),
+  ('growth',  3,  300,  15,  30,  10,    true, false,false,false,false,true, true, true, 'weekly'),
+  ('pro',     5,  500,  40,  80,  30,    true, true, false, false, false, true, true, true, 'weekly'),
+  ('agency', 10, 1000, 100, 200, 100,    true, true, false, false, false, true, true, true, 'weekly')
 ON CONFLICT (plan) DO UPDATE SET
   max_websites=EXCLUDED.max_websites,
+  max_keywords=EXCLUDED.max_keywords,
   max_audits_per_month=EXCLUDED.max_audits_per_month,
   max_content_per_month=EXCLUDED.max_content_per_month,
+  max_social_posts_per_month=EXCLUDED.max_social_posts_per_month,
   google_ads=EXCLUDED.google_ads,
-  meta_ads=EXCLUDED.meta_ads;
+  meta_ads=EXCLUDED.meta_ads,
+  ab_testing=EXCLUDED.ab_testing,
+  white_label=EXCLUDED.white_label,
+  api_access=EXCLUDED.api_access,
+  competitor_analysis=EXCLUDED.competitor_analysis,
+  weekly_reports=EXCLUDED.weekly_reports,
+  priority_support=EXCLUDED.priority_support,
+  rank_tracking_frequency=EXCLUDED.rank_tracking_frequency;
 
 -- ── WEBSITES ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS websites (
@@ -285,6 +316,39 @@ CREATE TABLE IF NOT EXISTS billing_history (
   period_start TIMESTAMPTZ,
   period_end TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ── STRIPE WEBHOOK IDEMPOTENCY ────────────────────────────────────
+CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+  id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ── PROVIDER-INDEPENDENT PAYMENT METHODS ─────────────────────────
+CREATE TABLE IF NOT EXISTS payment_methods (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider_key TEXT NOT NULL CHECK (provider_key IN ('safepay','lemon_squeezy','manual_bank_transfer')),
+  display_name TEXT NOT NULL CHECK (length(trim(display_name)) BETWEEN 2 AND 80),
+  description TEXT NOT NULL DEFAULT '' CHECK (length(description) <= 240),
+  enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  public_config JSONB NOT NULL DEFAULT '{}'::jsonb,
+  sort_order INTEGER NOT NULL DEFAULT 100,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (provider_key)
+);
+CREATE INDEX IF NOT EXISTS payment_methods_public_idx ON payment_methods (enabled, sort_order);
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_provider_subscription_unique
+  ON users (payment_provider, provider_subscription_id)
+  WHERE provider_subscription_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS payment_provider_events (
+  event_key TEXT PRIMARY KEY,
+  provider_key TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ── SUPPORT TICKETS ───────────────────────────────────────────────

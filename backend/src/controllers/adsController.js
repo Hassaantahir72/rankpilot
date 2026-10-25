@@ -97,19 +97,24 @@ const generateSocialContent = async (req, res) => {
   const month = new Date().toISOString().slice(0,7);
   const limits = await queryOne('SELECT max_social_posts_per_month FROM plan_limits WHERE plan=$1', [req.user.plan]);
   const usage = await queryOne('SELECT count FROM usage_tracking WHERE user_id=$1 AND action=$$social$$ AND month=$2', [req.user.id, month]);
-  const used = usage?.count || 0;
-  if (limits && limits.max_social_posts_per_month !== 9999 && limits.max_social_posts_per_month > 0 && used >= limits.max_social_posts_per_month) {
-    return res.status(403).json({ error: 'Social post limit reached. Upgrade for more.', code: 'USAGE_LIMIT_REACHED' });
+  const used = Number(usage?.count || 0);
+  const monthlyLimit = Number(limits?.max_social_posts_per_month ?? 0);
+  if (!limits || monthlyLimit === 0 || (monthlyLimit !== 9999 && used >= monthlyLimit)) {
+    return res.status(403).json({ error: 'Social posts are not included in your plan or your monthly limit has been reached.', code: 'UPGRADE_REQUIRED', used, limit: monthlyLimit });
   }
+  const requestedCount = Math.min(10, Math.max(1, Number.parseInt(String(count ?? 5), 10) || 5));
+  const allowedCount = monthlyLimit === 9999 ? requestedCount : Math.min(requestedCount, monthlyLimit - used);
 
   try {
-    const content = await aiService.generateSocialContent({ website, platform, topic, count: count||5 });
-    for (const post of (content.posts||[]).slice(0,10)) {
+    const content = await aiService.generateSocialContent({ website, platform, topic, count: allowedCount });
+    const posts = (content.posts || []).slice(0, allowedCount);
+    content.posts = posts;
+    for (const post of posts) {
       await query('INSERT INTO social_posts (id,user_id,website_id,platform,content,hashtags,type,best_time,image_idea,status,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$$draft$$,NOW())',
         [uuidv4(), req.user.id, websiteId, platform, post.content, post.hashtags||[], post.type, post.bestPostingTime, post.imageIdea]);
     }
-    await incrementUsage(req.user.id, 'social');
-    res.json({ message: 'Social content generated!', content });
+    for (let i = 0; i < posts.length; i += 1) await incrementUsage(req.user.id, 'social');
+    res.json({ message: 'Social content generated!', content, usage: { used: used + posts.length, limit: monthlyLimit } });
   } catch (err) {
     console.error('Social content error:', err);
     res.status(500).json({ error: 'Failed to generate social content.' });

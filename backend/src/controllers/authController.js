@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { validationResult } = require('express-validator');
@@ -6,8 +7,8 @@ const { queryOne, query } = require('../config/db');
 const { sendWelcomeEmail, sendOTPEmail } = require('../services/emailService');
 const { logSecurityEvent, trackFailedLogin, clearFailedAttempts } = require('../middleware/security');
 
-const signToken = (userId) => jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
-const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+const signToken = (user) => jwt.sign({ userId: user.id, tokenVersion: Number(user.token_version || 0) }, process.env.JWT_SECRET, { expiresIn: '7d' });
+const generateOTP = () => crypto.randomInt(100000, 1000000).toString();
 
 // REGISTER
 const register = async (req, res) => {
@@ -18,19 +19,51 @@ const register = async (req, res) => {
     const existing = await queryOne('SELECT id FROM users WHERE email=$1', [email.toLowerCase()]);
     if (existing) return res.status(400).json({ error: 'Email already registered. Please sign in.' });
 
-    const passwordHash = await bcrypt.hash(password, 12);
-    const otp = generateOTP();
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
-    const trialEnds = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+    const requestedPlan = String(req.body.selectedPlan || '').toLowerCase();
+    const paidPlanIntent = ['starter','growth','pro','agency'].includes(requestedPlan);
+    const requestedInterval = req.body.selectedInterval === 'annual' ? 'annual' : 'monthly';
+    let claim = null;
 
-    const user = await queryOne(
-      `INSERT INTO users (id,email,name,password_hash,plan,subscription_status,trial_ends_at,email_verified,otp_code,otp_expires_at,otp_attempts,created_at,updated_at)
-       VALUES ($1,$2,$3,$4,'trial','trial',$5,false,$6,$7,0,NOW(),NOW()) RETURNING id,email,name,plan,subscription_status,trial_ends_at,role`,
-      [uuidv4(), email.toLowerCase(), name, passwordHash, trialEnds, otp, otpExpires]
-    );
+    // Only trial signups consume a trial claim. Abandoned paid signups must not burn the device's free trial.
+    if (!paidPlanIntent) {
+      // This is a coarse, privacy-preserving anti-abuse signal, not a unique hardware ID.
+      // The client sends basic platform/display/timezone attributes; only an HMAC is stored.
+      const suppliedSignature = typeof req.body.deviceSignature === 'string' ? req.body.deviceSignature.slice(0, 1000) : '';
+      if (!suppliedSignature) return res.status(400).json({ error: 'Please refresh the page and try signup again.' });
+      const deviceHash = crypto.createHmac('sha256', process.env.JWT_SECRET)
+        .update('rankpilot-trial-device-v1:' + suppliedSignature).digest('hex');
+      const ipValue = String(req.ip || req.socket?.remoteAddress || 'unknown').slice(0, 100);
+      const ipHash = crypto.createHmac('sha256', process.env.JWT_SECRET)
+        .update('rankpilot-trial-ip-v1:' + ipValue).digest('hex');
+      claim = await queryOne(
+        'INSERT INTO trial_device_claims (device_hash,ip_hash,created_at) VALUES ($1,$2,NOW()) ON CONFLICT (device_hash) DO NOTHING RETURNING device_hash',
+        [deviceHash, ipHash]
+      );
+      if (!claim) {
+        return res.status(409).json({ error: 'A free trial has already been claimed from this device. Please sign in or choose a paid plan.' });
+      }
+    }
 
-    await sendOTPEmail(user.email, user.name, otp, 'verify');
-    res.status(201).json({ message: 'Account created! Check your email for the 6-digit verification code.', userId: user.id, requiresVerification: true });
+    const userPlan = !paidPlanIntent && Boolean(claim) ? 'trial' : 'free';
+    try {
+      const passwordHash = await bcrypt.hash(password, 12);
+      const otp = generateOTP();
+      const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+      const trialEnds = userPlan === 'trial' ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) : null;
+      const userId = uuidv4();
+      const user = await queryOne(
+        `INSERT INTO users (id,email,name,password_hash,plan,subscription_status,trial_ends_at,signup_plan,signup_interval,email_verified,otp_code,otp_expires_at,otp_attempts,created_at,updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,false,$10,$11,0,NOW(),NOW()) RETURNING id,email,name,plan,subscription_status,trial_ends_at,signup_plan,signup_interval,role`,
+        [userId, email.toLowerCase(), name, passwordHash, userPlan, userPlan, trialEnds, paidPlanIntent ? requestedPlan : null, paidPlanIntent ? requestedInterval : null, otp, otpExpires]
+      );
+      if (claim) await query('UPDATE trial_device_claims SET user_id=$1 WHERE device_hash=$2', [user.id, deviceHash]);
+      await sendOTPEmail(user.email, user.name, otp, 'verify');
+      res.status(201).json({ message: 'Account created! Check your email for the 6-digit verification code.', userId: user.id, requiresVerification: true });
+    } catch (err) {
+      // Keep the device claim if account creation succeeded; only release an unassigned claim on a failed registration.
+      if (claim) await query('DELETE FROM trial_device_claims WHERE device_hash=$1 AND user_id IS NULL', [deviceHash]).catch(() => {});
+      throw err;
+    }
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ error: 'Registration failed. Please try again.' });
@@ -52,8 +85,8 @@ const verifyOTP = async (req, res) => {
     }
     await query('UPDATE users SET email_verified=true,otp_code=NULL,otp_expires_at=NULL,otp_attempts=0,updated_at=NOW() WHERE id=$1', [userId]);
     await sendWelcomeEmail(user.email, user.name);
-    const token = signToken(user.id);
-    res.json({ message: 'Email verified! Welcome to RankPilot.', token, user: { id:user.id, email:user.email, name:user.name, plan:user.plan, subscription_status:user.subscription_status, trial_ends_at:user.trial_ends_at, email_verified:true, role:user.role||'user' } });
+    const token = signToken(user);
+    res.json({ message: 'Email verified! Welcome to RankPilot.', token, user: { id:user.id, email:user.email, name:user.name, plan:user.plan, subscription_status:user.subscription_status, trial_ends_at:user.trial_ends_at, signup_plan:user.signup_plan || null, signup_interval:user.signup_interval || null, onboarding_completed:user.onboarding_completed || false, email_verified:true, role:user.role||'user' } });
   } catch (err) {
     console.error('Verify OTP error:', err);
     res.status(500).json({ error: 'Verification failed.' });
@@ -125,7 +158,7 @@ const verifyLoginOTP = async (req, res) => {
       return res.status(400).json({ error: 'Invalid code.' });
     }
     await query('UPDATE users SET otp_code=NULL,otp_expires_at=NULL,otp_attempts=0 WHERE id=$1', [userId]);
-    const token = signToken(user.id);
+    const token = signToken(user);
     res.json({ token, user: { id:user.id, email:user.email, name:user.name, plan:user.plan, subscription_status:user.subscription_status, trial_ends_at:user.trial_ends_at, email_verified:user.email_verified, role:user.role||'user' } });
   } catch (err) {
     console.error('Verify login OTP error:', err);
@@ -139,8 +172,21 @@ const getMe = async (req, res) => {
   res.json({ user: req.user, limits });
 };
 
+// Mark onboarding complete only for the authenticated account.
+const completeOnboarding = async (req, res) => {
+  try {
+    await query('UPDATE users SET onboarding_completed=TRUE,updated_at=NOW() WHERE id=$1', [req.user.id]);
+    return res.json({ success: true, onboarding_completed: true });
+  } catch (err) {
+    console.error('Onboarding completion failed:', err.message);
+    return res.status(500).json({ error: 'Could not save onboarding status.' });
+  }
+};
+
 // FORGOT PASSWORD
 const forgotPassword = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'Enter a valid email address.' });
   const { email } = req.body;
   try {
     const user = await queryOne('SELECT id,name FROM users WHERE email=$1', [email.toLowerCase()]);
@@ -154,14 +200,22 @@ const forgotPassword = async (req, res) => {
 
 // RESET PASSWORD
 const resetPassword = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'Enter a valid reset code and a password of at least 8 characters.' });
   const { userId, otp, password } = req.body;
   try {
     const user = await queryOne('SELECT * FROM users WHERE id=$1', [userId]);
-    if (!user || user.otp_code !== otp || new Date(user.otp_expires_at) < new Date()) {
+    if (!user) return res.status(400).json({ error: 'Invalid or expired code.' });
+    if ((user.otp_attempts || 0) >= 5) return res.status(429).json({ error: 'Too many attempts. Request a new reset code.' });
+    if (!user.otp_code || !user.otp_expires_at || new Date(user.otp_expires_at) < new Date()) {
+      return res.status(400).json({ error: 'Invalid or expired code.' });
+    }
+    if (user.otp_code !== String(otp || '').trim()) {
+      await query('UPDATE users SET otp_attempts=otp_attempts+1 WHERE id=$1', [userId]);
       return res.status(400).json({ error: 'Invalid or expired code.' });
     }
     const passwordHash = await bcrypt.hash(password, 12);
-    await query('UPDATE users SET password_hash=$1,otp_code=NULL,otp_expires_at=NULL,updated_at=NOW() WHERE id=$2', [passwordHash, userId]);
+    await query('UPDATE users SET password_hash=$1,otp_code=NULL,otp_expires_at=NULL,otp_attempts=0,token_version=token_version+1,updated_at=NOW() WHERE id=$2', [passwordHash, userId]);
     res.json({ message: 'Password reset successfully. Please sign in.' });
   } catch (err) { res.status(500).json({ error: 'Reset failed.' }); }
 };
@@ -216,14 +270,22 @@ const googleCallback = async (req, res) => {
       );
     }
 
-    const token = signToken(user.id);
-    res.redirect(process.env.FRONTEND_URL + '/auth/callback?token=' + token);
+    const token = signToken(user);
+    res.redirect(process.env.FRONTEND_URL + '/auth/callback#token=' + encodeURIComponent(token));
   } catch (err) {
     console.error('Google OAuth error:', err.message);
     res.redirect(process.env.FRONTEND_URL + '/auth/login?error=google_failed');
   }
 };
 
-const logout = (req, res) => res.json({ message: 'Logged out.' });
+const logout = async (req, res) => {
+  try {
+    await query('UPDATE users SET token_version=token_version+1,updated_at=NOW() WHERE id=$1', [req.user.id]);
+    res.json({ message: 'Logged out.' });
+  } catch (err) {
+    console.error('Logout error:', err.message);
+    res.status(500).json({ error: 'Could not end the session. Please try again.' });
+  }
+};
 
-module.exports = { register, verifyOTP, resendOTP, login, verifyLoginOTP, getMe, forgotPassword, resetPassword, googleAuthUrl, googleCallback, logout };
+module.exports = { register, verifyOTP, resendOTP, login, verifyLoginOTP, getMe, completeOnboarding, forgotPassword, resetPassword, googleAuthUrl, googleCallback, logout };

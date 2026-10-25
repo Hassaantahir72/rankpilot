@@ -9,11 +9,31 @@ const authMiddleware = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await queryOne(
-      'SELECT id,email,name,plan,subscription_status,trial_ends_at,email_verified,role,is_banned FROM users WHERE id=$1',
+      'SELECT id,email,name,plan,subscription_status,trial_ends_at,email_verified,onboarding_completed,role,is_banned,token_version,payment_provider,provider_subscription_id,provider_subscription_ends_at FROM users WHERE id=$1',
       [decoded.userId]
     );
     if (!user) return res.status(401).json({ error: 'User not found.' });
+    if (Number(decoded.tokenVersion || 0) !== Number(user.token_version || 0)) return res.status(401).json({ error: 'Session revoked. Please sign in again.' });
     if (user.is_banned) return res.status(403).json({ error: 'Account suspended.' });
+
+    // A cancellation scheduled for the end of a paid billing period must not revoke access early.
+    if (user.payment_provider === 'lemon_squeezy' && user.provider_subscription_ends_at && new Date(user.provider_subscription_ends_at) <= new Date()) {
+      await query(
+        "UPDATE users SET plan='free',subscription_status='cancelled',provider_subscription_id=NULL,provider_variant_id=NULL,provider_subscription_ends_at=NULL,updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_ends_at <= NOW()",
+        [user.id]
+      );
+      user.plan = 'free';
+      user.subscription_status = 'cancelled';
+      user.provider_subscription_id = null;
+      user.provider_subscription_ends_at = null;
+    }
+
+    // Trial entitlements must expire even if the user's stored plan has not yet been changed.
+    if (user.plan === 'trial' && user.trial_ends_at && new Date(user.trial_ends_at) <= new Date()) {
+      await query("UPDATE users SET plan='free',subscription_status='free',updated_at=NOW() WHERE id=$1 AND plan='trial' AND trial_ends_at <= NOW()", [user.id]);
+      user.plan = 'free';
+      user.subscription_status = 'free';
+    }
 
     req.user = user;
     next();
@@ -29,10 +49,21 @@ const requireVerified = (req, res, next) => {
 };
 
 const requireSubscription = (req, res, next) => {
-  const { subscription_status, trial_ends_at } = req.user;
-  const trialValid = trial_ends_at && new Date(trial_ends_at) > new Date();
-  if (!trialValid && subscription_status !== 'active' && req.user.plan !== 'free') {
+  const { plan, subscription_status, trial_ends_at } = req.user;
+  const trialValid = plan === 'trial' && trial_ends_at && new Date(trial_ends_at) > new Date();
+  if (!trialValid && subscription_status !== 'active' && plan !== 'free') {
     return res.status(403).json({ error: 'Active subscription required.', code: 'SUBSCRIPTION_REQUIRED' });
+  }
+  next();
+};
+
+const PLAN_ORDER = ['free', 'trial', 'starter', 'growth', 'pro', 'agency'];
+
+const requireMinimumPlan = (minimumPlan) => (req, res, next) => {
+  const current = PLAN_ORDER.indexOf(req.user?.plan);
+  const minimum = PLAN_ORDER.indexOf(minimumPlan);
+  if (minimum < 0 || current < 0 || current < minimum) {
+    return res.status(403).json({ error: `This feature requires the ${minimumPlan} plan or higher.`, code: 'UPGRADE_REQUIRED', requiredPlan: minimumPlan });
   }
   next();
 };
@@ -91,4 +122,4 @@ const requireSuperAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { authMiddleware, requireVerified, requireSubscription, requirePlanFeature, checkUsageLimit, incrementUsage, requireAdmin, requireSuperAdmin };
+module.exports = { authMiddleware, requireVerified, requireSubscription, requireMinimumPlan, requirePlanFeature, checkUsageLimit, incrementUsage, requireAdmin, requireSuperAdmin };

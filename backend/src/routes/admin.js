@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const c = require('../controllers/adminController');
+const paymentMethods = require('../controllers/paymentMethodsController');
 const { authMiddleware } = require('../middleware/auth');
 const { adminSecurityCheck, adminRateLimit, requireSuperAdmin, logAdminRequest } = require('../middleware/security');
 
@@ -14,6 +15,7 @@ router.get('/growth',          c.getGrowthStats);
 // Users (admin + superadmin)
 router.get('/users',           c.getUsers);
 router.get('/users/:userId',   c.getUser);
+router.post('/users/:userId/billing-portal', c.createUserBillingPortal);
 router.patch('/users/:userId/plan',     c.updateUserPlan);
 router.patch('/users/:userId/ban',      c.toggleBan);
 router.patch('/users/:userId/verify',   c.verifyUserEmail);
@@ -23,6 +25,12 @@ router.patch('/users/:userId/role',         requireSuperAdmin, c.updateRole);
 router.patch('/users/:userId/password',     requireSuperAdmin, c.resetUserPassword);
 router.post('/users/:userId/impersonate',   requireSuperAdmin, c.impersonateUser);
 router.delete('/users/:userId',             requireSuperAdmin, c.deleteUser);
+
+// Payment methods (superadmin only)
+router.get('/payment-methods', requireSuperAdmin, paymentMethods.adminList);
+router.post('/payment-methods', requireSuperAdmin, paymentMethods.create);
+router.patch('/payment-methods/:id', requireSuperAdmin, paymentMethods.update);
+router.delete('/payment-methods/:id', requireSuperAdmin, paymentMethods.remove);
 
 // Site settings (superadmin only)
 router.get('/settings',              requireSuperAdmin, c.getSiteSettings);

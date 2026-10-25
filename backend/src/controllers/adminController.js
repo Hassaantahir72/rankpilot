@@ -48,32 +48,56 @@ const getDashboardStats = async (req, res) => {
 
 // ── USERS ─────────────────────────────────────────────────────────
 const getUsers = async (req, res) => {
-  const { page = 1, limit = 25, search, plan, status, role, banned } = req.query;
+  const { search, plan, status, role, banned } = req.query;
+  const page = Number.parseInt(req.query.page, 10) || 1;
+  const requestedLimit = Number.parseInt(req.query.limit, 10) || 25;
+  const limit = Math.min(100, Math.max(1, requestedLimit));
+  if (req.query.page !== undefined && (!Number.isInteger(Number(req.query.page)) || page < 1)) {
+    return res.status(400).json({ error: 'Invalid page.' });
+  }
+  if (req.query.limit !== undefined && (!Number.isInteger(Number(req.query.limit)) || Number(req.query.limit) < 1)) {
+    return res.status(400).json({ error: 'Invalid limit.' });
+  }
+  const validPlans = ['free','trial','starter','growth','pro','agency'];
+  const validStatuses = ['free','trial','active','past_due','cancelled','paused'];
+  const validRoles = ['user','admin','superadmin'];
+  if (plan && !validPlans.includes(plan)) return res.status(400).json({ error: 'Invalid plan filter.' });
+  if (status && !validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status filter.' });
+  if (role && !validRoles.includes(role)) return res.status(400).json({ error: 'Invalid role filter.' });
+  if (banned !== undefined && !['true','false'].includes(banned)) return res.status(400).json({ error: 'Invalid banned filter.' });
+  if (search !== undefined && (typeof search !== 'string' || search.length > 100)) {
+    return res.status(400).json({ error: 'Search must be 100 characters or fewer.' });
+  }
+
   const offset = (page - 1) * limit;
   const conds = ['1=1'], params = [];
-
-  if (search) { params.push(`%${search}%`); conds.push(`(u.email ILIKE $${params.length} OR u.name ILIKE $${params.length})`); }
-  if (plan)   { params.push(plan);   conds.push(`u.plan=$${params.length}`); }
-  if (status) { params.push(status); conds.push(`u.subscription_status=$${params.length}`); }
-  if (role)   { params.push(role);   conds.push(`u.role=$${params.length}`); }
+  if (search && search.trim()) {
+    params.push('%' + search.trim() + '%');
+    conds.push('(u.email ILIKE $' + params.length + ' OR u.name ILIKE $' + params.length + ')');
+  }
+  if (plan) { params.push(plan); conds.push('u.plan=$' + params.length); }
+  if (status) { params.push(status); conds.push('u.subscription_status=$' + params.length); }
+  if (role) { params.push(role); conds.push('u.role=$' + params.length); }
   if (banned === 'true') conds.push('u.is_banned=true');
   if (banned === 'false') conds.push('u.is_banned=false');
 
-  params.push(parseInt(limit));
-  params.push(offset);
+  params.push(limit, offset);
   try {
     const users = await queryAll(
-      `SELECT u.id,u.email,u.name,u.plan,u.subscription_status,u.email_verified,u.role,u.is_banned,u.ban_reason,
-              u.created_at,u.last_login,u.trial_ends_at,u.stripe_customer_id,
-              (SELECT COUNT(*) FROM websites WHERE user_id=u.id) as website_count,
-              (SELECT COUNT(*) FROM audits WHERE user_id=u.id) as audit_count
-       FROM users u WHERE ${conds.join(' AND ')} ORDER BY u.created_at DESC LIMIT $${params.length-1} OFFSET $${params.length}`,
+      'SELECT u.id,u.email,u.name,u.plan,u.subscription_status,u.email_verified,u.role,u.is_banned,u.ban_reason,' +
+      ' u.created_at,u.last_login,u.trial_ends_at,(u.stripe_customer_id IS NOT NULL) AS has_stripe_customer,' +
+      ' (u.stripe_subscription_id IS NOT NULL) AS has_stripe_subscription,' +
+      ' (u.provider_subscription_id IS NOT NULL) AS has_provider_subscription,' +
+      ' (SELECT COUNT(*) FROM websites WHERE user_id=u.id) as website_count,' +
+      ' (SELECT COUNT(*) FROM audits WHERE user_id=u.id) as audit_count' +
+      ' FROM users u WHERE ' + conds.join(' AND ') + ' ORDER BY u.created_at DESC LIMIT $' +
+      (params.length - 1) + ' OFFSET $' + params.length,
       params
     );
-    const total = await queryOne(`SELECT COUNT(*) FROM users u WHERE ${conds.join(' AND ')}`, params.slice(0,-2));
-    res.json({ users, total: parseInt(total.count), page: Number(page), limit: Number(limit) });
+    const total = await queryOne('SELECT COUNT(*) FROM users u WHERE ' + conds.join(' AND '), params.slice(0, -2));
+    res.json({ users, total: parseInt(total.count, 10), page, limit });
   } catch (err) {
-    console.error('Get users error:', err);
+    console.error('Get users error:', err.message);
     res.status(500).json({ error: 'Failed to load users.' });
   }
 };
@@ -82,7 +106,13 @@ const getUser = async (req, res) => {
   const { userId } = req.params;
   try {
     const [user, websites, usage, billing, auditLog, secEvents] = await Promise.all([
-      queryOne('SELECT * FROM users WHERE id=$1', [userId]),
+      queryOne(`SELECT id,email,name,plan,subscription_status,trial_ends_at,email_verified,role,is_banned,ban_reason,
+                       created_at,updated_at,last_login,
+                       (stripe_customer_id IS NOT NULL) AS has_stripe_customer,
+                       (stripe_subscription_id IS NOT NULL) AS has_stripe_subscription,
+                       (SELECT COUNT(*) FROM websites WHERE user_id=users.id) AS website_count,
+                       (SELECT COUNT(*) FROM audits WHERE user_id=users.id) AS audit_count
+                FROM users WHERE id=$1`, [userId]),
       queryAll('SELECT id,name,url,last_score,status,created_at FROM websites WHERE user_id=$1 ORDER BY created_at DESC', [userId]),
       queryAll('SELECT action,count,month FROM usage_tracking WHERE user_id=$1 ORDER BY month DESC', [userId]),
       queryAll('SELECT * FROM billing_history WHERE user_id=$1 ORDER BY created_at DESC LIMIT 10', [userId]),
@@ -90,30 +120,103 @@ const getUser = async (req, res) => {
       queryAll('SELECT event,ip_address,created_at FROM security_events WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20', [userId]),
     ]);
     if (!user) return res.status(404).json({ error: 'User not found.' });
-    // Never expose password hash
-    delete user.password_hash;
-    delete user.otp_code;
     res.json({ user, websites, usage, billing, auditLog, secEvents });
   } catch (err) { res.status(500).json({ error: 'Failed to load user.' }); }
+};
+
+const createUserBillingPortal = async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const target = await queryOne('SELECT id,email,stripe_customer_id,stripe_subscription_id,payment_provider,provider_subscription_id FROM users WHERE id=$1', [userId]);
+    if (!target) return res.status(404).json({ error: 'User not found.' });
+    const returnUrl = new URL('/dashboard/admin', process.env.FRONTEND_URL || 'http://localhost:3000');
+
+    if (target.payment_provider === 'lemon_squeezy' && target.provider_subscription_id) {
+      if (!process.env.LEMONSQUEEZY_API_KEY) return res.status(503).json({ error: 'Lemon Squeezy billing is not configured.' });
+      const response = await fetch('https://api.lemonsqueezy.com/v1/subscriptions/' + encodeURIComponent(target.provider_subscription_id), {
+        headers: { 'Authorization': 'Bearer ' + process.env.LEMONSQUEEZY_API_KEY, 'Accept': 'application/vnd.api+json' },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) return res.status(502).json({ error: 'Could not retrieve this user’s provider billing portal.' });
+      const portalUrl = payload?.data?.attributes?.urls?.customer_portal || payload?.data?.attributes?.urls?.update_payment_method;
+      let parsed;
+      try { parsed = new URL(portalUrl); } catch {}
+      if (!parsed || parsed.protocol !== 'https:' || !(parsed.hostname === 'lemonsqueezy.com' || parsed.hostname.endsWith('.lemonsqueezy.com'))) {
+        return res.status(502).json({ error: 'Payment provider returned an invalid billing portal URL.' });
+      }
+      await logAction(req.user.id, 'open_user_billing_portal', userId, { provider: 'lemon_squeezy', adminEmail: req.user.email });
+      return res.json({ url: parsed.toString(), provider: 'lemon_squeezy' });
+    }
+
+    if (!process.env.STRIPE_SECRET_KEY || !process.env.FRONTEND_URL) return res.status(503).json({ error: 'No supported billing portal is configured for this user.' });
+    if (process.env.NODE_ENV === 'production' && returnUrl.protocol !== 'https:') return res.status(503).json({ error: 'The configured frontend URL must use HTTPS.' });
+    if (!target.stripe_customer_id) return res.status(400).json({ error: 'This user has no supported billing customer yet.' });
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    const session = await stripe.billingPortal.sessions.create({
+      customer: target.stripe_customer_id,
+      return_url: returnUrl.origin + returnUrl.pathname,
+    });
+    if (!session.url || !session.url.startsWith('https://billing.stripe.com/')) throw new Error('Stripe did not return a valid billing portal URL.');
+    await logAction(req.user.id, 'open_user_billing_portal', userId, { provider: 'stripe_legacy', adminEmail: req.user.email });
+    return res.json({ url: session.url, provider: 'stripe_legacy' });
+  } catch (err) {
+    console.error('Admin billing portal error:', err.message);
+    return res.status(500).json({ error: 'Could not open this user’s billing portal.' });
+  }
 };
 
 const updateUserPlan = async (req, res) => {
   const { userId } = req.params;
   const { plan, subscription_status } = req.body;
+  const trialDays = req.body?.trial_days === undefined ? 14 : Number(req.body.trial_days);
   const validPlans = ['free','trial','starter','growth','pro','agency'];
+  const validStatuses = ['free','trial','active'];
+  const status = subscription_status || (plan === 'free' ? 'free' : plan === 'trial' ? 'trial' : 'active');
   if (!validPlans.includes(plan)) return res.status(400).json({ error: 'Invalid plan.' });
+  if (plan === 'trial' && (!Number.isInteger(trialDays) || trialDays < 1 || trialDays > 90)) {
+    return res.status(400).json({ error: 'Trial duration must be between 1 and 90 days.' });
+  }
+  if (!validStatuses.includes(status) || (plan === 'free' && status !== 'free') || (plan === 'trial' && status !== 'trial') || (['starter','growth','pro','agency'].includes(plan) && status !== 'active')) {
+    return res.status(400).json({ error: 'Plan and subscription status do not match.' });
+  }
   try {
-    const user = await queryOne('UPDATE users SET plan=$1,subscription_status=$2,updated_at=NOW() WHERE id=$3 RETURNING id,email,name,plan', [plan, subscription_status || 'active', userId]);
+    const target = await queryOne('SELECT id,stripe_subscription_id,provider_subscription_id FROM users WHERE id=$1', [userId]);
+    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (target.stripe_subscription_id || target.provider_subscription_id) {
+      return res.status(409).json({
+        error: 'This user has a provider-managed subscription. Use that provider’s billing management so the plan change is applied to the actual subscription.',
+        code: 'PROVIDER_SUBSCRIPTION_MANAGED',
+      });
+    }
+    const user = await queryOne(
+      `UPDATE users
+       SET plan=$1,subscription_status=$2,
+           trial_ends_at=CASE WHEN $1='trial' THEN NOW() + ($3 * INTERVAL '1 day') ELSE NULL END,
+           updated_at=NOW()
+       WHERE id=$4
+       RETURNING id,email,name,plan,subscription_status,trial_ends_at`,
+      [plan, status, plan === 'trial' ? trialDays : 0, userId]
+    );
     if (!user) return res.status(404).json({ error: 'User not found.' });
-    await logAction(req.user.id, 'update_plan', userId, { plan, subscription_status, adminEmail: req.user.email });
-    res.json({ message: `Plan updated to ${plan}.`, user });
-  } catch (err) { res.status(500).json({ error: 'Failed to update plan.' }); }
+    await logAction(req.user.id, 'update_plan', userId, {
+      plan, subscription_status: status,
+      trial_days: plan === 'trial' ? trialDays : null,
+      trial_ends_at: user.trial_ends_at,
+      adminEmail: req.user.email,
+    });
+    res.json({ message: plan === 'trial' ? `Trial set for ${trialDays} days.` : `Plan updated to ${plan}.`, user });
+  } catch (err) {
+    console.error('Admin plan update failed:', err.message);
+    res.status(500).json({ error: 'Failed to update plan.' });
+  }
 };
 
 const toggleBan = async (req, res) => {
   const { userId } = req.params;
-  const { ban, reason } = req.body;
-  if (ban && !reason) return res.status(400).json({ error: 'Ban reason is required.' });
+  const { ban, reason } = req.body || {};
+  if (typeof ban !== 'boolean') return res.status(400).json({ error: 'Ban must be true or false.' });
+  if (ban && (typeof reason !== 'string' || !reason.trim())) return res.status(400).json({ error: 'Ban reason is required.' });
+  if (reason !== undefined && (typeof reason !== 'string' || reason.length > 500)) return res.status(400).json({ error: 'Ban reason must be 500 characters or fewer.' });
 
   // Prevent banning other admins unless superadmin
   const target = await queryOne('SELECT role FROM users WHERE id=$1', [userId]);
@@ -142,10 +245,11 @@ const updateRole = async (req, res) => {
 
 const resetUserPassword = async (req, res) => {
   const { userId } = req.params;
-  const { newPassword } = req.body;
-  if (!newPassword || newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+  const { newPassword } = req.body || {};
+  if (typeof newPassword !== 'string' || newPassword.length < 8 || newPassword.length > 128) return res.status(400).json({ error: 'Password must be between 8 and 128 characters.' });
   const hash = await bcrypt.hash(newPassword, 12);
-  await query('UPDATE users SET password_hash=$1,updated_at=NOW() WHERE id=$2', [hash, userId]);
+  const updated = await query('UPDATE users SET password_hash=$1,otp_code=NULL,otp_expires_at=NULL,otp_attempts=0,token_version=token_version+1,updated_at=NOW() WHERE id=$2', [hash, userId]);
+  if (updated.rowCount !== 1) return res.status(404).json({ error: 'User not found.' });
   await logAction(req.user.id, 'reset_user_password', userId, { adminEmail: req.user.email });
   await logSecurityEvent('admin_password_reset', req.adminIp, req.user.id, { targetUserId: userId });
   res.json({ message: 'Password reset successfully.' });
@@ -153,7 +257,8 @@ const resetUserPassword = async (req, res) => {
 
 const verifyUserEmail = async (req, res) => {
   const { userId } = req.params;
-  await query('UPDATE users SET email_verified=true,otp_code=NULL,otp_expires_at=NULL,updated_at=NOW() WHERE id=$1', [userId]);
+  const updated = await query('UPDATE users SET email_verified=true,otp_code=NULL,otp_expires_at=NULL,otp_attempts=0,updated_at=NOW() WHERE id=$1', [userId]);
+  if (updated.rowCount !== 1) return res.status(404).json({ error: 'User not found.' });
   await logAction(req.user.id, 'force_verify_email', userId, { adminEmail: req.user.email });
   res.json({ message: 'Email verified.' });
 };
@@ -162,10 +267,10 @@ const impersonateUser = async (req, res) => {
   // Only superadmin can impersonate
   const { userId } = req.params;
   const jwt = require('jsonwebtoken');
-  const target = await queryOne('SELECT id,email,name,plan,subscription_status,trial_ends_at,email_verified,role FROM users WHERE id=$1', [userId]);
+  const target = await queryOne('SELECT id,email,name,plan,subscription_status,trial_ends_at,email_verified,role,token_version FROM users WHERE id=$1', [userId]);
   if (!target) return res.status(404).json({ error: 'User not found.' });
   if (['admin','superadmin'].includes(target.role)) return res.status(403).json({ error: 'Cannot impersonate admin accounts.' });
-  const token = jwt.sign({ userId: target.id, impersonatedBy: req.user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  const token = jwt.sign({ userId: target.id, impersonatedBy: req.user.id, tokenVersion: Number(target.token_version || 0) }, process.env.JWT_SECRET, { expiresIn: '1h' });
   await logAction(req.user.id, 'impersonate_user', userId, { adminEmail: req.user.email });
   await logSecurityEvent('user_impersonated', req.adminIp, req.user.id, { targetUserId: userId });
   res.json({ token, user: target, message: 'Impersonation token created (1 hour). Use carefully.' });
@@ -174,9 +279,10 @@ const impersonateUser = async (req, res) => {
 const deleteUser = async (req, res) => {
   const { userId } = req.params;
   if (userId === req.user.id) return res.status(400).json({ error: 'You cannot delete yourself.' });
-  const target = await queryOne('SELECT email,role FROM users WHERE id=$1', [userId]);
+  const target = await queryOne('SELECT email,role,stripe_subscription_id,provider_subscription_id FROM users WHERE id=$1', [userId]);
   if (!target) return res.status(404).json({ error: 'User not found.' });
   if (['admin','superadmin'].includes(target.role)) return res.status(403).json({ error: 'Cannot delete admin accounts.' });
+  if (target.stripe_subscription_id || target.provider_subscription_id) return res.status(409).json({ error: 'Cancel or resolve this user’s payment-provider subscription before deleting the account.', code: 'ACTIVE_PROVIDER_SUBSCRIPTION' });
   await query('DELETE FROM users WHERE id=$1', [userId]);
   await logAction(req.user.id, 'delete_user', userId, { deletedEmail: target.email, adminEmail: req.user.email });
   await logSecurityEvent('user_deleted', req.adminIp, req.user.id, { targetEmail: target.email });
@@ -191,11 +297,12 @@ const getSiteSettings = async (req, res) => {
 
 const updateSiteSetting = async (req, res) => {
   const { key } = req.params;
-  const { value } = req.body;
+  const { value } = req.body || {};
+  if (typeof value !== 'string' || value.length > 10000) return res.status(400).json({ error: 'Setting value must be text of 10,000 characters or fewer.' });
   const existing = await queryOne('SELECT key FROM site_settings WHERE key=$1', [key]);
   if (!existing) return res.status(404).json({ error: 'Setting not found.' });
   await query('UPDATE site_settings SET value=$1,updated_by=$2,updated_at=NOW() WHERE key=$3', [value, req.user.id, key]);
-  await logAction(req.user.id, 'update_site_setting', null, { key, value, adminEmail: req.user.email });
+  await logAction(req.user.id, 'update_site_setting', null, { key, value: '[redacted]', adminEmail: req.user.email });
   res.json({ message: `Setting "${key}" updated.` });
 };
 
@@ -285,7 +392,7 @@ const getGrowthStats = async (req, res) => {
 };
 
 module.exports = {
-  getDashboardStats, getUsers, getUser, updateUserPlan, toggleBan, updateRole,
+  getDashboardStats, getUsers, getUser, createUserBillingPortal, updateUserPlan, toggleBan, updateRole,
   resetUserPassword, verifyUserEmail, impersonateUser, deleteUser,
   getSiteSettings, updateSiteSetting,
   getBlockedIPs, blockIP, unblockIP,

@@ -9,6 +9,10 @@ const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
+  // Managed PostgreSQL (including Supabase) must use TLS in production.
+  ssl: process.env.NODE_ENV === 'production' || process.env.DB_SSL === 'true'
+    ? { rejectUnauthorized: true }
+    : undefined,
 });
 
 pool.on('error', (err) => console.error('PostgreSQL pool error:', err));

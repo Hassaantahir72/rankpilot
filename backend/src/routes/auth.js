@@ -12,7 +12,7 @@ router.post('/register', [
 
 router.post('/verify-otp', [
   body('userId').notEmpty(),
-  body('otp').isLength({ min: 6, max: 6 }),
+  body('otp').isLength({ min: 6, max: 6 }).isNumeric(),
 ], c.verifyOTP);
 
 router.post('/resend-otp', [body('userId').notEmpty()], c.resendOTP);
@@ -28,8 +28,9 @@ router.post('/verify-login-otp', [
 ], c.verifyLoginOTP);
 
 router.get('/me', authMiddleware, c.getMe);
+router.post('/onboarding/complete', authMiddleware, c.completeOnboarding);
 router.post('/forgot-password', [body('email').isEmail().normalizeEmail()], c.forgotPassword);
-router.post('/reset-password', [body('userId').notEmpty(), body('otp').notEmpty(), body('password').isLength({ min: 8 })], c.resetPassword);
+router.post('/reset-password', [body('userId').notEmpty(), body('otp').isLength({ min: 6, max: 6 }).isNumeric(), body('password').isLength({ min: 8 })], c.resetPassword);
 router.get('/google', c.googleAuthUrl);
 router.get('/google/callback', c.googleCallback);
 router.post('/logout', authMiddleware, c.logout);

@@ -20,6 +20,9 @@ const reportsRoutes   = require('./routes/reports');
 const dashboardRoutes = require('./routes/dashboard');
 const webhookRoutes   = require('./routes/webhooks');
 const adminRoutes     = require('./routes/admin');
+const paymentMethodsController = require('./controllers/paymentMethodsController');
+const paymentMethodsRoutes = require('./routes/paymentMethods');
+const providerWebhookRoutes = require('./routes/providerWebhooks');
 const contactRoutes   = require('./routes/contact');
 const supportRoutes   = require('./routes/support');
 const featuresRoutes  = require('./routes/features');
@@ -35,6 +38,8 @@ const { startAuditWorker } = require('./jobs/auditWorker');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+// Render terminates TLS and forwards through one trusted proxy hop.
+app.set('trust proxy', 1);
 
 // Render terminates TLS and forwards requests through its proxy.
 // Trust exactly one proxy hop there so express-rate-limit can identify client IPs.
@@ -54,6 +59,7 @@ app.use(cors({
 
 // ── Stripe webhook (raw body before JSON parser) ──────────────────
 app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }));
+app.use('/api/webhooks/lemon-squeezy', express.raw({ type: 'application/json' }));
 
 // ── BODY PARSER ───────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
@@ -76,18 +82,21 @@ app.use('/api/ads',       adsRoutes);
 app.use('/api/reports',   reportsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/webhooks',  webhookRoutes);
+app.use('/api/webhooks', providerWebhookRoutes);
+app.get('/api/payment-methods', paymentMethodsController.publicList);
+app.use('/api/payment-methods', paymentMethodsRoutes);
 app.use('/api/admin',     adminRoutes);
 app.use('/api/contact',   contactRoutes);
 app.use('/api/support',   supportRoutes);
 app.use('/api/features',  featuresRoutes);
 if (gscRoutes) app.use('/api/gsc', gscRoutes);
 
-// ── HEALTH CHECK ──────────────────────────────────────────────────
+// ── HEALTH CHECK ─────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({ status:'ok', version:'2.0.0', db:'PostgreSQL', service:'RankPilot API', timestamp:new Date().toISOString() });
 });
 
-// ── PLAN LIMITS (public) ──────────────────────────────────────────
+// ── PLAN LIMITS (public) ─────────────────────────────────────────
 app.get('/api/plans', async (req, res) => {
   try {
     const { queryAll } = require('./config/db');
@@ -96,13 +105,14 @@ app.get('/api/plans', async (req, res) => {
   } catch(err) { res.status(500).json({ error:'Failed to load plans.' }); }
 });
 
-// ── 404 ───────────────────────────────────────────────────────────
+// ── 404 ──────────────────────────────────────────────────────────
 app.use('*', (req, res) => res.status(404).json({ error:'Endpoint not found.' }));
 
-// ── GLOBAL ERROR HANDLER ──────────────────────────────────────────
+// ── GLOBAL ERROR HANDLER ─────────────────────────────────────────
 app.use((err, req, res, next) => {
-  console.error('Global error:', err.message);
-  res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
+  console.error('Global request error:', err.message);
+  if (res.headersSent) return next(err);
+  res.status(err.status && err.status < 500 ? err.status : 500).json({ error: err.status && err.status < 500 ? err.message : 'Internal server error' });
 });
 
 // ── CRON JOBS ─────────────────────────────────────────────────────
@@ -114,7 +124,7 @@ app.listen(PORT, () => {
   startAuditWorker();
   console.log('\n🚀 RankPilot API v2.0 running on :' + PORT);
   console.log('🗄  Database: PostgreSQL');
-  console.log('🔒 Security: IP blocking, Rate limiting, Admin guards active');
+  console.log('🔒 Security: IP blocking, Rate limiting, admin guards active');
   console.log('🌐 Frontend: ' + (process.env.FRONTEND_URL || 'http://localhost:3000') + '\n');
 });
 

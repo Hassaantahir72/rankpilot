@@ -142,13 +142,18 @@ const getRankings = async (req, res) => {
 
 // COMPETITORS
 const getCompetitors = async (req, res) => {
-  const competitors = await queryAll('SELECT * FROM competitors WHERE website_id=$1 ORDER BY shared_keywords DESC', [req.params.websiteId]);
+  const competitors = await queryAll(
+    'SELECT c.* FROM competitors c JOIN websites w ON w.id=c.website_id WHERE c.website_id=$1 AND w.user_id=$2 ORDER BY c.shared_keywords DESC',
+    [req.params.websiteId, req.user.id]
+  );
   res.json({ competitors });
 };
 
 const analyzeCompetitors = async (req, res) => {
   const website = await queryOne('SELECT * FROM websites WHERE id=$1 AND user_id=$2', [req.params.websiteId, req.user.id]);
   if (!website) return res.status(404).json({ error: 'Website not found.' });
+  const planLimits = await queryOne('SELECT competitor_analysis FROM plan_limits WHERE plan=$1', [req.user.plan]);
+  if (!planLimits?.competitor_analysis) return res.status(403).json({ error: 'Competitor analysis is not included in your plan.', code: 'UPGRADE_REQUIRED' });
   const dataforSeoService = require('../services/dataforSeoService');
   try {
     const competitors = await dataforSeoService.getCompetitors(website.url);

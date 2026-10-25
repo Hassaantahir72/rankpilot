@@ -28,10 +28,14 @@ if not exist .env.local (
   (
     echo NEXT_PUBLIC_API_URL=http://localhost:5000/api
     echo NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_YOUR_KEY
-    echo NEXT_PUBLIC_STRIPE_PRICE_STARTER=price_starter_id
-    echo NEXT_PUBLIC_STRIPE_PRICE_GROWTH=price_growth_id
-    echo NEXT_PUBLIC_STRIPE_PRICE_PRO=price_pro_id
-    echo NEXT_PUBLIC_STRIPE_PRICE_AGENCY=price_agency_id
+    echo NEXT_PUBLIC_STRIPE_PRICE_STARTER=
+    echo NEXT_PUBLIC_STRIPE_PRICE_GROWTH=
+    echo NEXT_PUBLIC_STRIPE_PRICE_PRO=
+    echo NEXT_PUBLIC_STRIPE_PRICE_AGENCY=
+    echo NEXT_PUBLIC_STRIPE_PRICE_STARTER_ANNUAL=
+    echo NEXT_PUBLIC_STRIPE_PRICE_GROWTH_ANNUAL=
+    echo NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL=
+    echo NEXT_PUBLIC_STRIPE_PRICE_AGENCY_ANNUAL=
   ) > .env.local
   echo  [OK] frontend\.env.local created
 ) else (echo  [SKIP] .env.local exists)
@@ -54,7 +58,7 @@ echo     - Set DB_PASSWORD to your PostgreSQL password
 echo     - Set GROQ_API_KEY (free at console.groq.com)
 echo     - Set DATAFORSEO_LOGIN + PASSWORD (free at dataforseo.com)
 echo     - Set Gmail SMTP_USER + SMTP_PASS (App Password)
-echo     - Stripe keys are OPTIONAL for testing
+echo     - Stripe keys are OPTIONAL for testing; add real monthly and annual Stripe Price IDs to frontend\.env.local
 echo.
 echo  3. Double-click START.bat to launch!
 echo.

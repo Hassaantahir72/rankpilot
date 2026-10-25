@@ -11,6 +11,7 @@ interface User {
   subscription_status: string;
   trial_ends_at: string | null;
   email_verified: boolean;
+  onboarding_completed?: boolean;
   role: string;
 }
 
@@ -95,7 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser();
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try { await authApi.logout(); } catch { /* Clear local state even if the server cannot be reached. */ }
     localStorage.removeItem('rp_token');
     localStorage.removeItem('rp_user');
     setUser(null);
@@ -131,8 +133,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const planGates: Record<string, string> = {
       ads:          'growth',
       email_marketing: 'starter',
-      reports:      'trial',
-      advanced_seo: 'starter',
+      pdf_reports: 'pro',
+      reports:      'growth',
+      advanced_seo: 'trial',
     };
 
     const minPlan = planGates[feature];
@@ -142,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return userPlanIdx >= minPlanIdx;
     }
 
-    return true; // default allow
+    return false; // Fail closed: unknown feature keys must not silently unlock gated UI.
   };
 
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';

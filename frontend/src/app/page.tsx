@@ -72,7 +72,7 @@ export default function HomePage() {
             <TypingText words={['SEO Expert','Marketing Team','Ad Manager','Content Writer','Growth Engine']} />
           </h1>
           <p className="animate-fade-up delay-2" style={{ fontSize:'clamp(1rem,2vw,1.2rem)',color:'rgba(255,255,255,0.5)',maxWidth:580,margin:'0 auto 44px',lineHeight:1.75 }}>
-            Paste your URL. RankPilot audits your SEO, writes optimized content, runs your Google and Meta ads — everything a $5,000/month agency does, completely automated.
+            Paste your URL. RankPilot audits your SEO, writes optimized content, and helps prepare Google and Meta ad campaigns with AI-powered tools.
           </p>
           <div className="animate-fade-up delay-3" style={{ display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap',marginBottom:56 }}>
             <Link href="/auth/signup" className="btn-primary" style={{ fontSize:16,padding:'15px 32px' }}>
@@ -150,7 +150,7 @@ export default function HomePage() {
             <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",marginBottom:16 }}>
               From zero to ranking in <span className="gradient-text">3 steps</span>
             </h2>
-            <p style={{ color:'rgba(255,255,255,0.45)',maxWidth:460,margin:'0 auto',fontSize:16 }}>No SEO knowledge needed. No agency. Just paste your URL and let the AI work.</p>
+            <p style={{ color:'rgba(255,255,255,0.45)',maxWidth:460,margin:'0 auto',fontSize:16 }}>No SEO knowledge needed. Start with one website and upgrade as your needs grow.</p>
           </ScrollReveal>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:40,position:'relative' }}>
             <div style={{ position:'absolute',top:22,left:'calc(33% + 20px)',right:'calc(33% + 20px)',height:1,background:'linear-gradient(90deg,rgba(99,102,241,0.5),rgba(99,102,241,0.1))' }} />
@@ -253,9 +253,9 @@ export default function HomePage() {
             </ScrollReveal>
             <ScrollReveal type="right">
               <span className="tag" style={{ marginBottom:20 }}>Marketing Autopilot</span>
-              <h2 style={{ fontSize:'clamp(1.8rem,3.5vw,2.6rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.12,marginBottom:18 }}>AI runs your ads like a <span className="gradient-text">senior media buyer</span></h2>
-              <p style={{ color:'rgba(255,255,255,0.45)',fontSize:15,lineHeight:1.8,marginBottom:32 }}>Connect your Google and Meta accounts. AI writes your ads, sets targeting, allocates budget, A/B tests automatically, kills underperformers — while you sleep.</p>
-              {['AI-written Google Ads and Meta Ads copy that converts','Smart budget allocation — spend where it performs best','Automatic A/B testing — winners scale, losers pause','Audience research and lookalike targeting recommendations','20 social media posts generated monthly per platform','Weekly plain-English performance report delivered by email'].map(f => (
+              <h2 style={{ fontSize:'clamp(1.8rem,3.5vw,2.6rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.12,marginBottom:18 }}>AI helps prepare campaigns like a <span className="gradient-text">marketing assistant</span></h2>
+              <p style={{ color:'rgba(255,255,255,0.45)',fontSize:15,lineHeight:1.8,marginBottom:32 }}>Use AI tools to prepare Google and Meta campaign drafts and ad copy. Review campaign settings and approve changes before publishing.</p>
+              {['AI-written Google Ads and Meta Ads copy that converts','Campaign draft assistance using your goals and budget','Reviewable campaign drafts before publishing','Keyword and audience suggestions for campaign planning','Social post generation within your plan’s monthly allowance','Weekly plain-English performance report delivered by email'].map(f => (
                 <div key={f} style={{ display:'flex',alignItems:'flex-start',gap:12,marginBottom:12 }}>
                   <div style={{ width:20,height:20,borderRadius:'50%',background:'rgba(139,92,246,0.15)',border:'1px solid rgba(139,92,246,0.35)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:2 }}>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>
@@ -344,14 +344,14 @@ export default function HomePage() {
           <ScrollReveal className="text-center" style={{ marginBottom:64 }}>
             <span className="tag" style={{ marginBottom:20 }}>Pricing</span>
             <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",marginBottom:14 }}>Way cheaper than any agency</h2>
-            <p style={{ color:'rgba(255,255,255,0.4)',maxWidth:500,margin:'0 auto',fontSize:16 }}>14-day free trial on every plan. No credit card. Cancel any time.</p>
+            <p style={{ color:'rgba(255,255,255,0.4)',maxWidth:500,margin:'0 auto',fontSize:16 }}>Choose a plan that fits your workload. Start with a free trial and cancel any time.</p>
           </ScrollReveal>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:20 }}>
             {[
-              { name:'Starter',price:99,desc:'Perfect for a single business',features:['1 website','Full SEO audit','AI keyword research','AI content generation','Monthly rank tracking','Email reports','Email support'],col:'#6366f1',popular:false },
-              { name:'Growth',price:299,desc:'For growing businesses',features:['3 websites','Everything in Starter','Google Ads automation','Weekly rank tracking','Competitor analysis','Social media posts (20/mo)','Priority support'],col:'#8b5cf6',popular:true },
-              { name:'Pro',price:499,desc:'For serious marketers',features:['10 websites','Everything in Growth','Meta Ads automation','Automatic A/B testing','Advanced analytics dashboard','Custom branded reports','Dedicated support'],col:'#ec4899',popular:false },
-              { name:'Agency',price:999,desc:'For marketing agencies',features:['Unlimited websites','Everything in Pro','White-label dashboard','Client management portal','Full API access','Custom integrations','Custom onboarding call'],col:'#f59e0b',popular:false },
+              { name:'Starter',price:15,desc:'Essential SEO for one website',features:['1 website','5 SEO audits/month','10 AI content generations/month','Monthly rank tracking','Competitor analysis','Email support'],col:'#6366f1',popular:false },
+              { name:'Growth',price:29,desc:'More capacity for growing businesses',features:['3 websites','15 SEO audits/month','30 AI content generations/month','Weekly rank tracking','Google Ads AI tools','10 social posts/month','Weekly reports'],col:'#8b5cf6',popular:true },
+              { name:'Pro',price:59,desc:'Advanced marketing for active teams',features:['5 websites','40 SEO audits/month','80 AI content generations/month','Google + Meta Ads AI tools','30 social posts/month','Branded PDF reports'],col:'#ec4899',popular:false },
+              { name:'Agency',price:99,desc:'Higher limits for agency workflows',features:['10 websites','100 SEO audits/month','200 AI content generations/month','Google + Meta Ads AI tools','100 social posts/month','Branded PDF reports'],col:'#f59e0b',popular:false },
             ].map((plan,i) => (
               <ScrollReveal key={plan.name} delay={i*80} type="up">
                 <div className={`pricing-card ${plan.popular?'popular':''}`} style={{ height:'100%',display:'flex',flexDirection:'column' }}>
@@ -371,15 +371,15 @@ export default function HomePage() {
                       </li>
                     ))}
                   </ul>
-                  <Link href="/auth/signup" className="btn-primary" style={{ width:'100%',justifyContent:'center',background:plan.popular?'linear-gradient(135deg,#6366f1,#7c3aed)':'rgba(255,255,255,0.05)',boxShadow:plan.popular?undefined:'none',border:plan.popular?'none':'1px solid rgba(255,255,255,0.1)' }}>
-                    Start free trial
+                  <Link href={`/auth/signup?plan=${plan.name.toLowerCase()}&interval=monthly`} className="btn-primary" style={{ width:'100%',justifyContent:'center',background:plan.popular?'linear-gradient(135deg,#6366f1,#7c3aed)':'rgba(255,255,255,0.05)',boxShadow:plan.popular?undefined:'none',border:plan.popular?'none':'1px solid rgba(255,255,255,0.1)' }}>
+                    Choose plan
                   </Link>
                 </div>
               </ScrollReveal>
             ))}
           </div>
           <ScrollReveal className="text-center" style={{ marginTop:36 }}>
-            <p style={{ fontSize:13,color:'rgba(255,255,255,0.28)' }}>All plans · 14-day free trial · No credit card · Cancel any time · Secure payments via Stripe</p>
+            <p style={{ fontSize:13,color:'rgba(255,255,255,0.28)' }}>Free plan available · Paid plans from $15/month · Cancel any time · Secure payments via Stripe</p>
           </ScrollReveal>
         </div>
       </section>
@@ -395,8 +395,8 @@ export default function HomePage() {
             { q:'Do I need any SEO knowledge to use RankPilot?',a:'Zero. RankPilot is built for business owners, not SEO experts. You paste your URL and AI does everything — audit, content, fix list. All reports are in plain English with no jargon.' },
             { q:'How is this different from hiring an SEO agency?',a:'Agencies charge $2,000–$8,000/month and spend much of that on account managers and overhead. RankPilot uses AI to do the actual work for a fraction of the price — with faster results and full transparency into exactly what was done.' },
             { q:'How long does it take to see ranking improvements?',a:'Most customers see ranking movement within 4–8 weeks of implementing the AI recommendations. Full first-page rankings for competitive keywords typically take 3–6 months, which is faster than most agencies achieve.' },
-            { q:'Does RankPilot actually run my Google Ads, or just suggest things?',a:'Both. On Growth and higher plans, RankPilot connects directly to your Google Ads and Meta Ads accounts via official APIs and creates and manages real campaigns. You approve everything before it goes live and stay in full control of your budget.' },
-            { q:'Can I use RankPilot for multiple websites?',a:'Yes. Starter includes 1 website, Growth includes 3, Pro includes 10, and Agency includes unlimited websites. Upgrade any time to add more.' },
+            { q:'Does RankPilot actually run my Google Ads, or just suggest things?',a:'Both. On eligible plans, RankPilot provides Google Ads and Meta Ads AI tools to help prepare campaign assets. Live campaign publishing depends on supported account connections and configuration.' },
+            { q:'Can I use RankPilot for multiple websites?',a:'Yes. Starter includes 1 website, Growth includes 3, Pro includes 5, and Agency includes 10 websites. Upgrade any time to add more.' },
             { q:'Is the AI-generated content good enough to actually rank?',a:'Yes — and it is often better than manually written content because it is specifically engineered for search intent. Our AI uses your target keyword, related keywords, and competitor analysis to write content Google wants to rank. Customers regularly reach page 1 within 60–90 days of publishing.' },
             { q:'What happens to my data if I cancel?',a:'Your data stays in your account for 30 days after cancellation so you can export everything. We never sell your data to third parties. All website data is encrypted and stored securely.' },
           ].map(faq => <FAQ key={faq.q} q={faq.q} a={faq.a} />)}

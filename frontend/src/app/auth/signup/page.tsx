@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api';
@@ -9,15 +9,28 @@ function SignupForm() {
   const [form, setForm] = useState({name:'',email:'',password:''});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [signupPlan, setSignupPlan] = useState('');
   const router = useRouter();
+
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('plan') || '';
+    setSignupPlan(['starter', 'growth', 'pro', 'agency'].includes(requested) ? requested : '');
+  }, []);
   const set = (k:string) => (e:any) => setForm(f=>({...f,[k]:e.target.value}));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      const { data } = await authApi.register(form);
-      router.push(`/auth/verify-email?userId=${data.userId}&type=verify`);
+      const requestedPlan = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('plan') : null;
+      const allowedPlans = ['starter', 'growth', 'pro', 'agency'];
+      const selectedPlan = requestedPlan && allowedPlans.includes(requestedPlan) ? requestedPlan : '';
+      const selectedInterval = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('interval') : null;
+      const deviceSignature = [navigator.platform || 'unknown', screen.width, screen.height, screen.colorDepth, window.devicePixelRatio || 1, Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown', navigator.language || 'unknown', navigator.hardwareConcurrency || 0, (navigator as any).deviceMemory || 0].join('|');
+      const { data } = await authApi.register({ ...form, deviceSignature, selectedPlan, selectedInterval: selectedInterval === 'annual' ? 'annual' : 'monthly' });
+      const intervalParam = selectedInterval === 'annual' ? '&interval=annual' : '';
+      const planParam = requestedPlan && allowedPlans.includes(requestedPlan) ? `&plan=${encodeURIComponent(requestedPlan)}` : '';
+      router.push(`/auth/verify-email?userId=${encodeURIComponent(data.userId)}&type=verify${planParam}${intervalParam}`);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
     }
@@ -33,10 +46,11 @@ function SignupForm() {
             <div style={{width:34,height:34,borderRadius:9,background:'linear-gradient(135deg,#6366f1,#7c3aed)',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:14,color:'#fff'}}>R</div>
             <span style={{fontWeight:700,fontSize:18,color:'#fff'}}>RankPilot</span>
           </Link>
-          <h1 style={{fontSize:26,fontWeight:800,marginBottom:8,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Start your free trial</h1>
-          <p style={{fontSize:14,color:'rgba(255,255,255,0.38)'}}>14 days free · No credit card · Cancel any time</p>
+          <h1 style={{fontSize:26,fontWeight:800,marginBottom:8,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{signupPlan ? 'Create your RankPilot account' : 'Start your 14-day free trial'}</h1>
+          <p style={{fontSize:14,color:'rgba(255,255,255,0.38)'}}>{signupPlan ? `Selected plan: ${signupPlan[0].toUpperCase()+signupPlan.slice(1)} · Verify your email, complete secure checkout, then set up your workspace.` : '14 days free · No card required to start · Cancel any time'}</p>
         </div>
         <div style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:20,padding:32}}>
+          <p style={{fontSize:11,lineHeight:1.6,color:'rgba(255,255,255,0.42)',marginTop:12}}>To help prevent repeated free-trial abuse, RankPilot checks a privacy-preserving device signal. Basic display, platform, language and timezone attributes are converted to a one-way hash on our server; raw attributes are not stored. This signal is approximate and is not a guaranteed unique hardware identifier.</p>
           <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:18}}>
             {error&&<div style={{background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.22)',color:'#fca5a5',padding:'12px 16px',borderRadius:10,fontSize:14}}>{error}</div>}
             <div>

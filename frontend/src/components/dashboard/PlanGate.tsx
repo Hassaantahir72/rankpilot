@@ -8,20 +8,22 @@ const FEATURE_PLAN: Record<string, string> = {
   ab_testing:          'pro',
   white_label:         'agency',
   api_access:          'agency',
-  competitor_analysis: 'growth',
+  competitor_analysis: 'starter',
   weekly_reports:      'growth',
   social_posts:        'growth',
   ads:                 'growth',
   email_marketing:     'starter',
+  advanced_seo:        'trial',
+  pdf_reports:         'pro',
 };
 
 const PLAN_LABELS: Record<string, string> = {
   free:    'Free',
   trial:   'Trial',
-  starter: 'Starter ($99/mo)',
-  growth:  'Growth ($299/mo)',
-  pro:     'Pro ($499/mo)',
-  agency:  'Agency ($999/mo)',
+  starter: 'Starter ($15/mo)',
+  growth:  'Growth ($29/mo)',
+  pro:     'Pro ($59/mo)',
+  agency:  'Agency ($99/mo)',
 };
 
 interface PlanGateProps {

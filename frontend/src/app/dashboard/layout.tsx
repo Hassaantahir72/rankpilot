@@ -1,9 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import ChatWidgetWrapper from '@/components/chat/ChatWidgetWrapper';
+import PlanGate from '@/components/dashboard/PlanGate';
 
 const NAV = [
   { href:'/dashboard',                    icon:'🏠', label:'Dashboard' },
@@ -36,8 +37,32 @@ const NAV = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout, isAdmin } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (user && user.onboarding_completed === false && !isAdmin && pathname !== '/dashboard/billing') router.replace('/onboarding');
+  }, [user?.id, user?.onboarding_completed, isAdmin, pathname, router]);
+  const gatedPages: Array<{ prefix: string; feature: string }> = [
+    { prefix: '/dashboard/email-marketing', feature: 'email_marketing' },
+    { prefix: '/dashboard/pdf-reports', feature: 'pdf_reports' },
+    { prefix: '/dashboard/reports', feature: 'reports' },
+    { prefix: '/dashboard/pmax', feature: 'google_ads' },
+    { prefix: '/dashboard/competitors', feature: 'competitor_analysis' },
+    { prefix: '/dashboard/backlinks', feature: 'advanced_seo' },
+    { prefix: '/dashboard/content-gap', feature: 'advanced_seo' },
+    { prefix: '/dashboard/local-seo', feature: 'advanced_seo' },
+    { prefix: '/dashboard/schema', feature: 'advanced_seo' },
+    { prefix: '/dashboard/pagespeed', feature: 'advanced_seo' },
+    { prefix: '/dashboard/internal-links', feature: 'advanced_seo' },
+    { prefix: '/dashboard/cannibalization', feature: 'advanced_seo' },
+    { prefix: '/dashboard/sitemap', feature: 'advanced_seo' },
+    { prefix: '/dashboard/monitor', feature: 'advanced_seo' },
+    { prefix: '/dashboard/blog', feature: 'advanced_seo' },
+    { prefix: '/dashboard/reviews', feature: 'advanced_seo' },
+  ];
+  const gatedPage = gatedPages.find(page => pathname === page.prefix || pathname.startsWith(`${page.prefix}/`));
 
   return (
     <div style={{ minHeight:'100vh', background:'#08080f', display:'flex', fontFamily:"'Inter',-apple-system,sans-serif" }}>
@@ -100,7 +125,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main content */}
       <main style={{ flex:1, padding:'28px 32px', minWidth:0, maxWidth:'100%', overflowX:'hidden' }}>
-        {children}
+        {gatedPage ? <PlanGate feature={gatedPage.feature}>{children}</PlanGate> : children}
       </main>
 
       <ChatWidgetWrapper />

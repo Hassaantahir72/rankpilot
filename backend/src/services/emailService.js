@@ -11,7 +11,8 @@ const send = async (to, subject, html) => {
   try {
     await transporter().sendMail({ from: process.env.EMAIL_FROM || 'RankPilot <noreply@rankpilot.ai>', to, subject, html });
   } catch (err) {
-    console.error('Email error:', err.message);
+    console.error('Email delivery failed:', err.message);
+    throw err;
   }
 };
 

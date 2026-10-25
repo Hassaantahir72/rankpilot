@@ -3,11 +3,11 @@
  */
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, requireSubscription, requireMinimumPlan, requirePlanFeature, incrementUsage } = require('../middleware/auth');
 const { queryOne, queryAll, query } = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
 
-router.use(authMiddleware);
+router.use(authMiddleware, requireSubscription, requireMinimumPlan('trial'));
 
 // ── FEATURE 1: BACKLINK ANALYZER ─────────────────────────────────
 router.post('/backlinks/analyze', async (req, res) => {
@@ -96,7 +96,7 @@ router.post('/pagespeed/analyze', async (req, res) => {
 });
 
 // ── FEATURE 6: EMAIL MARKETING ────────────────────────────────────
-router.post('/email-marketing/sequence', async (req, res) => {
+router.post('/email-marketing/sequence', requireMinimumPlan('starter'), async (req, res) => {
   const { websiteId, sequenceType, goal, targetAudience } = req.body;
   try {
     const website = await queryOne('SELECT * FROM websites WHERE id=$1 AND user_id=$2', [websiteId, req.user.id]);
@@ -107,7 +107,7 @@ router.post('/email-marketing/sequence', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.post('/email-marketing/subjects', async (req, res) => {
+router.post('/email-marketing/subjects', requireMinimumPlan('starter'), async (req, res) => {
   const { topic, businessName } = req.body;
   const { generateSubjectLines } = require('../services/emailMarketingService');
   const subjects = await generateSubjectLines(topic, businessName);
@@ -144,7 +144,7 @@ router.post('/reviews/analyze', async (req, res) => {
 });
 
 // ── FEATURE 8: COMPETITOR TRACKING ───────────────────────────────
-router.post('/competitors/track', async (req, res) => {
+router.post('/competitors/track', requirePlanFeature('competitor_analysis'), async (req, res) => {
   const { websiteId, competitorUrls } = req.body;
   try {
     const website = await queryOne('SELECT * FROM websites WHERE id=$1 AND user_id=$2', [websiteId, req.user.id]);
@@ -155,7 +155,7 @@ router.post('/competitors/track', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.post('/competitors/snapshot', async (req, res) => {
+router.post('/competitors/snapshot', requirePlanFeature('competitor_analysis'), async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ error: 'URL required.' });
   const { fetchCompetitorSnapshot } = require('../services/competitorTrackingService');
@@ -163,7 +163,7 @@ router.post('/competitors/snapshot', async (req, res) => {
   res.json(snapshot);
 });
 
-router.post('/competitors/report', async (req, res) => {
+router.post('/competitors/report', requirePlanFeature('competitor_analysis'), async (req, res) => {
   const { yourDomain, competitors } = req.body;
   const { generateCompetitorReport } = require('../services/competitorTrackingService');
   const report = await generateCompetitorReport(yourDomain, competitors || []);
@@ -177,6 +177,12 @@ router.post('/blog/write', async (req, res) => {
   try {
     const website = await queryOne('SELECT * FROM websites WHERE id=$1 AND user_id=$2', [websiteId, req.user.id]);
     if (!website) return res.status(404).json({ error: 'Website not found.' });
+    const month = new Date().toISOString().slice(0, 7);
+    const limits = await queryOne('SELECT max_content_per_month FROM plan_limits WHERE plan=$1', [req.user.plan]);
+    const usage = await queryOne('SELECT count FROM usage_tracking WHERE user_id=$1 AND action=$2 AND month=$3', [req.user.id, 'content', month]);
+    const used = Number(usage?.count || 0);
+    const limit = Number(limits?.max_content_per_month ?? 0);
+    if (!limits || (limit !== 9999 && used >= limit)) return res.status(403).json({ error: 'Your monthly AI content limit has been reached.', code: 'USAGE_LIMIT_REACHED', used, limit });
     const { generateBlogPost } = require('../services/blogWriterService');
     const post = await generateBlogPost({ businessName: website.name, industry: website.industry, keyword, tone, audience });
     // Save to content history
@@ -184,6 +190,7 @@ router.post('/blog/write', async (req, res) => {
       'INSERT INTO content_history (id,website_id,user_id,target_keyword,generated_content,meta_title,meta_description,word_count,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())',
       [uuidv4(), websiteId, req.user.id, keyword, post.content, post.metaTitle, post.metaDescription, post.wordCount]
     );
+    await incrementUsage(req.user.id, 'content');
     res.json(post);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -193,10 +200,18 @@ router.post('/blog/topics', async (req, res) => {
   try {
     const website = await queryOne('SELECT * FROM websites WHERE id=$1 AND user_id=$2', [websiteId, req.user.id]);
     if (!website) return res.status(404).json({ error: 'Website not found.' });
+    const month = new Date().toISOString().slice(0, 7);
+    const limits = await queryOne('SELECT max_content_per_month FROM plan_limits WHERE plan=$1', [req.user.plan]);
+    const usage = await queryOne('SELECT count FROM usage_tracking WHERE user_id=$1 AND action=$2 AND month=$3', [req.user.id, 'content', month]);
+    const used = Number(usage?.count || 0);
+    const limit = Number(limits?.max_content_per_month ?? 0);
+    if (!limits || (limit !== 9999 && used >= limit)) return res.status(403).json({ error: 'Your monthly AI content limit has been reached.', code: 'USAGE_LIMIT_REACHED', used, limit });
     const keywords = await queryAll('SELECT keyword FROM keywords WHERE website_id=$1 LIMIT 20', [websiteId]);
     const { generateBlogTopics } = require('../services/blogWriterService');
-    const topics = await generateBlogTopics({ businessName: website.name, industry: website.industry, keywords: keywords.map(k => k.keyword), count });
-    res.json({ topics });
+    const safeCount = Math.min(10, Math.max(1, Number.parseInt(String(count), 10) || 10));
+    const topics = await generateBlogTopics({ businessName: website.name, industry: website.industry, keywords: keywords.map(k => k.keyword), count: safeCount });
+    await incrementUsage(req.user.id, 'content');
+    res.json({ topics, usage: { used: used + 1, limit } });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -209,7 +224,7 @@ router.post('/blog/publish-wordpress', async (req, res) => {
 });
 
 // ── FEATURE 10: PERFORMANCE MAX ───────────────────────────────────
-router.post('/pmax/generate', async (req, res) => {
+router.post('/pmax/generate', requirePlanFeature('google_ads'), async (req, res) => {
   const { websiteId, goal, budget, targetAudience, location } = req.body;
   try {
     const website = await queryOne('SELECT * FROM websites WHERE id=$1 AND user_id=$2', [websiteId, req.user.id]);
@@ -221,7 +236,7 @@ router.post('/pmax/generate', async (req, res) => {
 });
 
 // ── FEATURE 11: PDF REPORTS ───────────────────────────────────────
-router.post('/reports/generate-pdf', async (req, res) => {
+router.post('/reports/generate-pdf', requireMinimumPlan('pro'), async (req, res) => {
   const { websiteId } = req.body;
   try {
     const website = await queryOne('SELECT * FROM websites WHERE id=$1 AND user_id=$2', [websiteId, req.user.id]);

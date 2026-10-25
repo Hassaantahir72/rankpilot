@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import { adminApi } from '@/lib/api';
 
-type Tab = 'overview'|'users'|'settings'|'security'|'contacts'|'billing'|'log';
+type Tab = 'overview'|'users'|'settings'|'security'|'contacts'|'billing'|'payment-methods'|'log';
 
 function StatCard({ icon, label, value, color, sub }: any) {
   return (
@@ -41,12 +41,17 @@ export default function AdminPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [bannedFilter, setBannedFilter] = useState('');
   const [newPlan, setNewPlan] = useState('');
+  const [trialDays, setTrialDays] = useState('14');
   const [banReason, setBanReason] = useState('');
   const [newIP, setNewIP] = useState('');
   const [newIPReason, setNewIPReason] = useState('');
   const [msg, setMsg] = useState('');
   const [msgType, setMsgType] = useState<'ok'|'err'>('ok');
   const [settingEdits, setSettingEdits] = useState<Record<string,string>>({});
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [newProvider, setNewProvider] = useState('safepay');
+  const [newMethodName, setNewMethodName] = useState('Safepay');
+  const [newMethodDescription, setNewMethodDescription] = useState('Pakistan-focused payments');
 
   useEffect(() => {
     if (!loading && !isAdmin) { router.push('/dashboard'); return; }
@@ -57,8 +62,10 @@ export default function AdminPage() {
     if (tab === 'users')    loadUsers();
     if (tab === 'contacts') loadContacts();
     if (tab === 'billing')  loadBilling();
+    if (tab === 'payment-methods' && user?.role === 'superadmin') loadPaymentMethods();
     if (tab === 'log')      loadAuditLog();
-    if (tab === 'security') { loadSecEvents(); if (user?.role === 'superadmin') { loadSettings(); loadBlockedIPs(); } }
+    if (tab === 'settings' && user?.role === 'superadmin') loadSettings();
+    if (tab === 'security') { loadSecEvents(); if (user?.role === 'superadmin') loadBlockedIPs(); }
   }, [tab]);
 
   const showMsg = (text: string, type: 'ok'|'err' = 'ok') => { setMsg(text); setMsgType(type); setTimeout(() => setMsg(''), 6000); };
@@ -80,6 +87,26 @@ export default function AdminPage() {
   const loadAuditLog  = async () => { try { const { data } = await adminApi.getAuditLog(); setAuditLog(data.log || []); } catch {} };
   const loadSecEvents = async () => { try { const { data } = await adminApi.getSecurityEvents(); setSecEvents(data.events || []); } catch {} };
   const loadSettings  = async () => { try { const { data } = await adminApi.getSiteSettings(); setSettings(data.settings || []); } catch {} };
+  const loadPaymentMethods = async () => { try { const { data } = await adminApi.getPaymentMethods(); setPaymentMethods(data.methods || []); } catch (e:any) { showMsg(e.response?.data?.error || 'Could not load payment methods.', 'err'); } };
+  const doCreatePaymentMethod = async () => {
+    try {
+      await adminApi.createPaymentMethod({ provider_key: newProvider, display_name: newMethodName, description: newMethodDescription });
+      showMsg('Payment method added in disabled state. Configure server-side credentials and complete adapter testing before enabling it.');
+      loadPaymentMethods();
+    } catch (e:any) { showMsg(e.response?.data?.error || 'Could not add payment method.', 'err'); }
+  };
+  const doTogglePaymentMethod = async (method:any) => {
+    try {
+      await adminApi.updatePaymentMethod(method.id, { enabled: !method.enabled });
+      showMsg(!method.enabled ? 'Payment method published to the website.' : 'Payment method hidden from the website.');
+      loadPaymentMethods();
+    } catch (e:any) { showMsg(e.response?.data?.error || 'Cannot change payment method state.', 'err'); }
+  };
+  const doDeletePaymentMethod = async (method:any) => {
+    if (!confirm('Remove ' + method.display_name + ' from payment methods?')) return;
+    try { await adminApi.deletePaymentMethod(method.id); showMsg('Payment method removed.'); loadPaymentMethods(); }
+    catch (e:any) { showMsg(e.response?.data?.error || 'Could not remove payment method.', 'err'); }
+  };
   const loadBlockedIPs= async () => { try { const { data } = await adminApi.getBlockedIPs(); setBlockedIPs(data.blockedIPs || []); } catch {} };
 
   const loadUserDetail = async (u: any) => {
@@ -90,9 +117,12 @@ export default function AdminPage() {
   const doUpdatePlan = async () => {
     if (!selectedUser || !newPlan) return;
     try {
-      await adminApi.updatePlan(selectedUser.id, { plan: newPlan, subscription_status: newPlan === 'free' ? 'free' : 'active' });
-      showMsg(`Plan updated to ${newPlan}`);
-      setNewPlan(''); loadUsers(); loadUserDetail(selectedUser);
+      const { data } = await adminApi.updatePlan(selectedUser.id, { plan: newPlan, subscription_status: newPlan === 'free' ? 'free' : newPlan === 'trial' ? 'trial' : 'active', ...(newPlan === 'trial' ? { trial_days: Number(trialDays) } : {}) });
+      showMsg(data.message || `Plan updated to ${newPlan}`);
+      setNewPlan('');
+      loadUsers();
+      const updatedUser = data.user ? { ...selectedUser, ...data.user } : selectedUser;
+      loadUserDetail(updatedUser);
     } catch (e: any) { showMsg(e.response?.data?.error || 'Failed', 'err'); }
   };
 
@@ -104,6 +134,20 @@ export default function AdminPage() {
       showMsg(ban ? 'User banned' : 'User unbanned');
       setBanReason(''); loadUsers(); loadUserDetail(selectedUser);
     } catch (e: any) { showMsg(e.response?.data?.error || 'Failed', 'err'); }
+  };
+
+  const doManageBilling = async () => {
+    if (!selectedUser) return;
+    try {
+      const { data } = await adminApi.createUserBillingPortal(selectedUser.id);
+      if (!data.url || !(data.url.startsWith('https://billing.stripe.com/') || /^https:\/\/[a-z0-9.-]+\.lemonsqueezy\.com\//i.test(data.url))) {
+        showMsg('Payment provider returned an invalid billing portal URL.', 'err');
+        return;
+      }
+      window.location.assign(data.url);
+    } catch (e: any) {
+      showMsg(e.response?.data?.error || 'Could not open payment provider billing management.', 'err');
+    }
   };
 
   const doVerifyEmail = async () => {
@@ -155,6 +199,7 @@ export default function AdminPage() {
     { id:'security',  l:'Security',  i:'🛡️' },
     { id:'contacts',  l:'Messages',  i:'💬' },
     { id:'billing',   l:'Billing',   i:'💰' },
+    { id:'payment-methods', l:'Payment Methods', i:'💳' },
     { id:'log',       l:'Audit Log', i:'📋' },
   ] as const;
 
@@ -187,7 +232,7 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div style={{ display:'flex',gap:4,background:'rgba(255,255,255,0.04)',padding:4,borderRadius:12,marginBottom:24,flexWrap:'wrap',width:'fit-content' }}>
-        {TABS.map(t => (
+        {TABS.filter(t => (t.id !== 'settings' && t.id !== 'payment-methods') || user?.role === 'superadmin').map(t => (
           <button key={t.id} onClick={() => setTab(t.id as Tab)}
             style={{ display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:9,border:'none',background:tab===t.id?'rgba(255,255,255,0.1)':'transparent',color:tab===t.id?'#fff':'rgba(255,255,255,0.45)',fontSize:13,fontWeight:tab===t.id?600:400,cursor:'pointer',fontFamily:'inherit',transition:'all 0.2s' }}>
             {t.i} {t.l}
@@ -335,12 +380,23 @@ export default function AdminPage() {
                     <option value="">Select plan...</option>
                     {['free','trial','starter','growth','pro','agency'].map(p => <option key={p}>{p}</option>)}
                   </select>
-                  <button onClick={doUpdatePlan} disabled={!newPlan} style={{ padding:'8px 14px',background:'rgba(99,102,241,0.15)',border:'1px solid rgba(99,102,241,0.3)',borderRadius:8,color:'#818cf8',cursor:'pointer',fontSize:12,fontFamily:'inherit',opacity:newPlan?1:0.4 }}>Apply</button>
+                  <button onClick={doUpdatePlan} disabled={!newPlan || !!selectedUser.has_stripe_subscription || !!selectedUser.has_provider_subscription} style={{ padding:'8px 14px',background:'rgba(99,102,241,0.15)',border:'1px solid rgba(99,102,241,0.3)',borderRadius:8,color:'#818cf8',cursor:'pointer',fontSize:12,fontFamily:'inherit',opacity:newPlan?1:0.4 }}>Apply</button>
                 </div>
+                {newPlan === 'trial' && (
+                  <label style={{ display:'block',fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:10 }}>
+                    Trial duration (1–90 days)
+                    <input className="input-dark" type="number" min={1} max={90} step={1} value={trialDays} onChange={e => setTrialDays(e.target.value)} style={{ display:'block',width:'100%',marginTop:5,padding:'8px 12px',fontSize:12 }} />
+                  </label>
+                )}
+                {selectedUser.trial_ends_at && selectedUser.plan === 'trial' && (
+                  <p style={{ fontSize:11,color:'rgba(255,255,255,0.4)',marginTop:8 }}>Trial ends: {new Date(selectedUser.trial_ends_at).toLocaleString()}</p>
+                )}
+                {(selectedUser.has_stripe_subscription || selectedUser.has_provider_subscription) && <p style={{ fontSize:11,color:'#fbbf24',marginTop:8 }}>The payment provider manages this subscription. Use the billing portal above to change the plan, update payment details, or cancel; direct database overrides are disabled.</p>}
               </div>
 
               {/* Quick actions */}
               <div style={{ display:'flex',flexDirection:'column',gap:8,marginBottom:16 }}>
+                {(selectedUser.has_stripe_customer || selectedUser.has_provider_subscription) && <button onClick={doManageBilling} style={{ padding:'9px',background:'rgba(99,102,241,0.10)',border:'1px solid rgba(99,102,241,0.25)',borderRadius:9,color:'#a5b4fc',cursor:'pointer',fontSize:12,fontFamily:'inherit',fontWeight:600 }}>Manage provider billing & payment methods →</button>}
                 {!selectedUser.email_verified && (
                   <button onClick={doVerifyEmail} style={{ padding:'9px',background:'rgba(74,222,128,0.08)',border:'1px solid rgba(74,222,128,0.2)',borderRadius:9,color:'#4ade80',cursor:'pointer',fontSize:12,fontFamily:'inherit',fontWeight:600 }}>
                     ✓ Force verify email
@@ -370,6 +426,51 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* PAYMENT METHODS (superadmin only) */}
+      {tab === 'payment-methods' && (
+        isSuperAdmin ? (
+          <div style={{ display:'flex',flexDirection:'column',gap:16 }}>
+            <div style={{ background:'rgba(245,158,11,0.06)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:12,padding:'14px 16px' }}>
+              <p style={{ fontSize:13,color:'#fbbf24',fontWeight:700,marginBottom:5 }}>Provider-independent payment controls</p>
+              <p style={{ fontSize:12,color:'rgba(255,255,255,0.55)',lineHeight:1.7 }}>The public website reads enabled methods from the backend. New methods start disabled. Secret keys belong only in Render environment variables. A provider cannot be published until credentials are present and its checkout + signed-webhook adapter is marked ready after sandbox tests. This repository currently does not mark either provider adapter as ready.</p>
+            </div>
+            <div style={{ background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:20 }}>
+              <h3 style={{ fontSize:14,fontWeight:700,marginBottom:14 }}>Add payment provider</h3>
+              <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:10 }}>
+                <select className="input-dark" value={newProvider} onChange={e => { setNewProvider(e.target.value); const presets:any={safepay:['Safepay','Pakistan-focused payments'],lemon_squeezy:['Lemon Squeezy','International SaaS subscriptions'],manual_bank_transfer:['Manual bank transfer','Manual verification required']}; setNewMethodName(presets[e.target.value][0]); setNewMethodDescription(presets[e.target.value][1]); }} style={{ fontSize:13,padding:'9px 12px' }}>
+                  <option value="safepay">Safepay</option><option value="lemon_squeezy">Lemon Squeezy</option><option value="manual_bank_transfer">Manual bank transfer</option>
+                </select>
+                <input className="input-dark" value={newMethodName} onChange={e => setNewMethodName(e.target.value)} maxLength={80} placeholder="Public display name" style={{ fontSize:13,padding:'9px 12px' }} />
+                <input className="input-dark" value={newMethodDescription} onChange={e => setNewMethodDescription(e.target.value)} maxLength={240} placeholder="Public description" style={{ fontSize:13,padding:'9px 12px' }} />
+                <button onClick={doCreatePaymentMethod} className="btn-primary" style={{ fontSize:13,padding:'9px 16px' }}>Add disabled method</button>
+              </div>
+            </div>
+            <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
+              {paymentMethods.map(method => (
+                <div key={method.id} style={{ background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:13,padding:18 }}>
+                  <div style={{ display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start',flexWrap:'wrap' }}>
+                    <div style={{ flex:1,minWidth:200 }}>
+                      <p style={{ fontSize:14,fontWeight:700,marginBottom:4 }}>{method.display_name}</p>
+                      <p style={{ fontSize:12,color:'rgba(255,255,255,0.4)',marginBottom:8 }}>{method.description || method.provider_key}</p>
+                      <div style={{ display:'flex',gap:6,flexWrap:'wrap' }}>
+                        <span style={{ fontSize:10,padding:'3px 8px',borderRadius:100,background:'rgba(255,255,255,0.05)',color:'rgba(255,255,255,0.55)' }}>{method.provider_key}</span>
+                        <span style={{ fontSize:10,padding:'3px 8px',borderRadius:100,background:method.configured?'rgba(74,222,128,0.1)':'rgba(245,158,11,0.1)',color:method.configured?'#4ade80':'#fbbf24' }}>{method.configured?'Credentials detected':'Credentials missing'}</span>
+                        <span style={{ fontSize:10,padding:'3px 8px',borderRadius:100,background:method.adapterReady?'rgba(74,222,128,0.1)':'rgba(239,68,68,0.1)',color:method.adapterReady?'#4ade80':'#fca5a5' }}>{method.adapterReady?'Adapter ready':'Checkout/webhook tests pending'}</span>
+                      </div>
+                    </div>
+                    <div style={{ display:'flex',gap:8,alignItems:'center' }}>
+                      <button onClick={() => doTogglePaymentMethod(method)} disabled={!method.enabled && (!method.configured || !method.adapterReady)} style={{ padding:'8px 12px',background:method.enabled?'rgba(74,222,128,0.08)':'rgba(99,102,241,0.1)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:method.enabled?'#4ade80':'#a5b4fc',cursor:(!method.enabled && (!method.configured || !method.adapterReady))?'not-allowed':'pointer',opacity:(!method.enabled && (!method.configured || !method.adapterReady))?0.45:1,fontSize:12,fontFamily:'inherit' }}>{method.enabled?'Disable':'Enable on website'}</button>
+                      <button onClick={() => doDeletePaymentMethod(method)} style={{ padding:'8px 12px',background:'rgba(239,68,68,0.07)',border:'1px solid rgba(239,68,68,0.18)',borderRadius:8,color:'#fca5a5',cursor:'pointer',fontSize:12,fontFamily:'inherit' }}>Remove</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {!paymentMethods.length && <p style={{ textAlign:'center',padding:36,color:'rgba(255,255,255,0.35)',fontSize:13 }}>No payment methods configured. Add Safepay or Lemon Squeezy above.</p>}
+            </div>
+          </div>
+        ) : <div style={{ padding:40,textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:14 }}>Superadmin access required to manage payment methods.</div>
       )}
 
       {/* SETTINGS (superadmin only) */}
