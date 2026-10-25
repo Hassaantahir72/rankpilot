@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
-import { billingApi, dashboardApi } from '@/lib/api';
+import { billingApi, dashboardApi, paymentMethodsApi } from '@/lib/api';
 import { UsageBar } from '@/components/dashboard/PlanGate';
 import AvailablePaymentMethods from '@/components/billing/AvailablePaymentMethods';
 
@@ -33,8 +33,10 @@ export default function BillingPage() {
   const [usage, setUsage] = useState<any>(null);
   const [requestedPlan, setRequestedPlan] = useState('');
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
+  const [availableProviders, setAvailableProviders] = useState<string[]>([]);
 
   useEffect(() => {
+    paymentMethodsApi.listPublic().then(({ data }) => setAvailableProviders((data.methods || []).map((m:any) => m.provider))).catch(() => setAvailableProviders([]));
     dashboardApi.getStats().then(({ data }) => {
       setUsage({ ...(data.usage || {}), websites: data.websiteCount || 0 });
     }).catch(() => setMsg('Could not load usage totals. Please refresh the page.'));
@@ -44,8 +46,20 @@ export default function BillingPage() {
     setBillingInterval(params.get('interval') === 'annual' ? 'annual' : 'monthly');
   }, []);
 
-  const upgrade = async (_priceId: string) => {
-    setMsg('New subscription checkout is unavailable until a payment provider is configured and its checkout/webhook integration passes sandbox tests. Please contact support.');
+  const upgrade = async (planId: string) => {
+    if (!availableProviders.includes('lemon_squeezy')) {
+      setMsg('No verified payment provider is currently available. Please contact support while payment setup is completed.');
+      return;
+    }
+    setLoading(planId);
+    try {
+      const { data } = await billingApi.createProviderCheckout('lemon_squeezy', planId, billingInterval);
+      const checkoutUrl = new URL(data.url);
+      if (checkoutUrl.protocol !== 'https:' || !(checkoutUrl.hostname === 'lemonsqueezy.com' || checkoutUrl.hostname.endsWith('.lemonsqueezy.com'))) throw new Error('Payment provider returned an invalid checkout URL.');
+      window.location.assign(checkoutUrl.toString());
+    } catch (err:any) {
+      setMsg(err.response?.data?.error || err.message || 'Could not start checkout.');
+    } finally { setLoading(''); }
   };
 
   const openPortal = async () => {
@@ -118,7 +132,6 @@ export default function BillingPage() {
         {PLANS.filter(p => p.id !== 'free').map((plan, i) => {
           const isCurrent = plan.id === user?.plan;
           const isDowngrade = PLANS.findIndex(p => p.id === plan.id) < currentPlanIdx;
-          const selectedPriceId = billingInterval === 'annual' ? (plan.annualPriceId || '') : plan.priceId;
           return (
             <div key={plan.id} style={{ background: isCurrent || requestedPlan === plan.id ? `${plan.color}12` : 'rgba(255,255,255,0.02)', border: `1px solid ${isCurrent || requestedPlan === plan.id ? plan.color + '70' : 'rgba(255,255,255,0.08)'}`, borderRadius: 14, padding: '20px 16px', position: 'relative' }}>
               {isCurrent && <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: plan.color, color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 12px', borderRadius: 100, whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>CURRENT</div>}
@@ -128,8 +141,8 @@ export default function BillingPage() {
               {billingInterval === 'annual' && plan.id !== 'free' && <p style={{ fontSize: 11, color: '#4ade80', marginBottom: 8 }}>Billed ${(plan.annualPrice ?? 0) * 12}/year</p>}
               <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', marginBottom: 16 }}>{plan.desc}</p>
               {!isCurrent && (
-                <button onClick={() => upgrade(selectedPriceId)} disabled={!!loading} style={{ width: '100%', padding: '9px', background: isDowngrade ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${plan.color},${plan.color}cc)`, border: isDowngrade ? '1px solid rgba(255,255,255,0.1)' : 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', boxShadow: isDowngrade ? 'none' : `0 4px 16px ${plan.color}35` }}>
-                  {loading === selectedPriceId ? 'Redirecting...' : hasPaidPlan ? 'Manage in Stripe' : !selectedPriceId ? 'Configure Stripe' : requestedPlan === plan.id ? 'Continue with this plan' : 'Upgrade'}
+                <button onClick={() => hasPaidPlan ? openPortal() : upgrade(plan.id)} disabled={!!loading} style={{ width: '100%', padding: '9px', background: isDowngrade ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${plan.color},${plan.color}cc)`, border: isDowngrade ? '1px solid rgba(255,255,255,0.1)' : 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', boxShadow: isDowngrade ? 'none' : `0 4px 16px ${plan.color}35` }}>
+                  {loading === plan.id ? 'Redirecting...' : hasPaidPlan ? 'Manage existing billing' : availableProviders.includes('lemon_squeezy') ? (requestedPlan === plan.id ? 'Continue with this plan' : 'Upgrade') : 'Payments unavailable'}
                 </button>
               )}
             </div>
