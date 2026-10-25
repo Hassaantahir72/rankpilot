@@ -75,7 +75,7 @@ export default function HomePage() {
             Paste your URL. RankPilot audits your SEO, writes optimized content, and helps prepare Google and Meta ad campaigns with AI-powered tools.
           </p>
           <div className="animate-fade-up delay-3" style={{ display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap',marginBottom:56 }}>
-            <Link href="/auth/signup" className="btn-primary" style={{ fontSize:16,padding:'15px 32px' }}>
+            <Link href="/auth/signup?flow=trial" className="btn-primary" style={{ fontSize:16,padding:'15px 32px' }}>
               Start free — no card needed
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </Link>
