@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 
 export default function VerifyEmailPage() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -13,6 +14,7 @@ export default function VerifyEmailPage() {
   const [countdown, setCountdown] = useState(60);
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
   const router = useRouter();
+  const { login } = useAuth();
   const params = useSearchParams();
   const userId = params.get('userId');
   const type = params.get('type') || 'verify';
@@ -51,8 +53,7 @@ export default function VerifyEmailPage() {
       const endpoint = type === 'login' ? '/auth/verify-login-otp' : '/auth/verify-otp';
       const { data } = await api.post(endpoint, { userId, otp: code });
       if (data.token) {
-        localStorage.setItem('rp_token', data.token);
-        localStorage.setItem('rp_user', JSON.stringify(data.user));
+        login(data.token, data.user);
         const selectedPlan = params.get('plan');
         const allowedPlans = ['starter', 'growth', 'pro', 'agency'];
         if (type !== 'login' && selectedPlan && allowedPlans.includes(selectedPlan)) {
