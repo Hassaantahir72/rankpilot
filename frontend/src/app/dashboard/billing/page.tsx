@@ -9,22 +9,23 @@ import AvailablePaymentMethods from '@/components/billing/AvailablePaymentMethod
 
 const PLANS = [
   { id:'free',    name:'Free',    price:0,   desc:'Get started', color:'#6b7280' },
+  { id:'trial',   name:'Free Trial', price:0, annualPrice:0, desc:'14 days · no card required', color:'#10b981' },
   { id:'starter', name:'Starter', price:15, annualPrice:12, desc:'Essential SEO for one website', color:'#6366f1' },
   { id:'growth',  name:'Growth',  price:29, annualPrice:23, desc:'More capacity for growing businesses', color:'#8b5cf6' },
   { id:'pro',     name:'Pro',     price:59, annualPrice:47, desc:'Advanced marketing for active teams', color:'#ec4899' },
   { id:'agency',  name:'Agency',  price:99, annualPrice:79, desc:'Higher limits for agency workflows', color:'#f59e0b' },
 ];
 
-const FEATURES: Record<string, { free: string; starter: string; growth: string; pro: string; agency: string }> = {
-  'Websites':            { free:'1', starter:'1', growth:'3', pro:'5', agency:'10' },
-  'Audits / month':      { free:'1', starter:'5', growth:'15', pro:'40', agency:'100' },
-  'AI content / month':  { free:'2', starter:'10', growth:'30', pro:'80', agency:'200' },
-  'Google Ads AI tools': { free:'—', starter:'—', growth:'✓', pro:'✓', agency:'✓' },
-  'Meta Ads AI tools':   { free:'—', starter:'—', growth:'—', pro:'✓', agency:'✓' },
-  'Social posts/month':  { free:'—', starter:'—', growth:'10', pro:'30', agency:'100' },
-  'Competitor analysis': { free:'—', starter:'✓', growth:'✓', pro:'✓', agency:'✓' },
-  'Weekly reports':      { free:'—', starter:'—', growth:'✓', pro:'✓', agency:'✓' },
-  'Branded PDF reports': { free:'—', starter:'—', growth:'—', pro:'✓', agency:'✓' },
+const FEATURES: Record<string, { free: string; trial: string; starter: string; growth: string; pro: string; agency: string }> = {
+  'Websites':            { free:'1', trial:'1', starter:'1', growth:'3', pro:'5', agency:'10' },
+  'Audits / month':      { free:'1', trial:'5', starter:'5', growth:'15', pro:'40', agency:'100' },
+  'AI content / month':  { free:'2', trial:'10', starter:'10', growth:'30', pro:'80', agency:'200' },
+  'Google Ads AI tools': { free:'—', trial:'—', starter:'—', growth:'✓', pro:'✓', agency:'✓' },
+  'Meta Ads AI tools':   { free:'—', trial:'—', starter:'—', growth:'—', pro:'✓', agency:'✓' },
+  'Social posts/month':  { free:'—', trial:'5', starter:'—', growth:'10', pro:'30', agency:'100' },
+  'Competitor analysis': { free:'—', trial:'✓', starter:'✓', growth:'✓', pro:'✓', agency:'✓' },
+  'Weekly reports':      { free:'—', trial:'—', starter:'—', growth:'✓', pro:'✓', agency:'✓' },
+  'Branded PDF reports': { free:'—', trial:'—', starter:'—', growth:'—', pro:'✓', agency:'✓' },
 };
 
 export default function BillingPage() {
@@ -196,7 +197,7 @@ export default function BillingPage() {
             {Object.entries(FEATURES).map(([feature, vals], i) => (
               <tr key={feature} style={{ borderTop: '1px solid rgba(255,255,255,0.04)', background: i % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
                 <td style={{ padding: '11px 16px', color: 'rgba(255,255,255,0.6)' }}>{feature}</td>
-                {(['free','starter','growth','pro','agency'] as const).map(k => (
+                {(['free','trial','starter','growth','pro','agency'] as const).map(k => (
                   <td key={k} style={{ padding: '11px 14px', textAlign: 'center', color: vals[k] === '✓' ? '#4ade80' : vals[k] === '—' ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.65)', fontWeight: vals[k] === '✓' ? 700 : 400 }}>
                     {k === user?.plan ? <strong style={{ color: '#fff' }}>{vals[k]}</strong> : vals[k]}
                   </td>
