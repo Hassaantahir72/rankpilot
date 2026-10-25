@@ -1,14 +1,15 @@
 'use client';
-import { useEffect, useRef, ReactNode } from 'react';
+import { CSSProperties, useEffect, useRef, ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
   className?: string;
   delay?: number;
   type?: 'up' | 'left' | 'right' | 'scale';
+  style?: CSSProperties;
 }
 
-export default function ScrollReveal({ children, className = '', delay = 0, type = 'up' }: Props) {
+export default function ScrollReveal({ children, className = '', delay = 0, type = 'up', style }: Props) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,5 +28,5 @@ export default function ScrollReveal({ children, className = '', delay = 0, type
     return () => observer.disconnect();
   }, [delay, type]);
 
-  return <div ref={ref} className={className}>{children}</div>;
+  return <div ref={ref} className={className} style={style}>{children}</div>;
 }
