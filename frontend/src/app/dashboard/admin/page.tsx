@@ -91,7 +91,7 @@ export default function AdminPage() {
   const doUpdatePlan = async () => {
     if (!selectedUser || !newPlan) return;
     try {
-      await adminApi.updatePlan(selectedUser.id, { plan: newPlan, subscription_status: newPlan === 'free' ? 'free' : 'active' });
+      await adminApi.updatePlan(selectedUser.id, { plan: newPlan, subscription_status: newPlan === 'free' ? 'free' : newPlan === 'trial' ? 'trial' : 'active' });
       showMsg(`Plan updated to ${newPlan}`);
       setNewPlan(''); loadUsers(); loadUserDetail(selectedUser);
     } catch (e: any) { showMsg(e.response?.data?.error || 'Failed', 'err'); }
