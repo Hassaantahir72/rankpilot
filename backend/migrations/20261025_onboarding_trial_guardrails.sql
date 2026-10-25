@@ -1,5 +1,7 @@
 -- One free trial per coarse device signature. Raw browser attributes and IP addresses are never stored.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE;
+-- Do not force existing customers through the new-user onboarding flow.
+UPDATE users SET onboarding_completed=TRUE WHERE onboarding_completed=FALSE;
 
 CREATE TABLE IF NOT EXISTS trial_device_claims (
   device_hash TEXT PRIMARY KEY,
