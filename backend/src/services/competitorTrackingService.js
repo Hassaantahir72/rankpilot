@@ -1,14 +1,16 @@
-const axios = require('axios');
 const cheerio = require('cheerio');
+const safeHttp = require('./safeHttpService');
 const { googleAutocomplete, estimateMetrics } = require('./serpService');
 const { query, queryOne, queryAll } = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
 const HEADERS = { 'User-Agent': 'Mozilla/5.0 (compatible; RankPilotBot/1.0)' };
 
 const fetchCompetitorSnapshot = async (url) => {
-  const domain = url.replace(/https?:\/\/(www\.)?/,'').split('/')[0];
+  let domain = String(url || '');
   try {
-    const {data:html} = await axios.get(url.startsWith('http')?url:`https://${url}`,{headers:HEADERS,timeout:15000});
+    const safeUrl = await safeHttp.validatePublicUrl(url);
+    domain = new URL(safeUrl).hostname.replace(/^www\./, '');
+    const {data:html} = await safeHttp.fetchPublicUrl(safeUrl,{timeout:15000,maxBytes:2*1024*1024,userAgent:HEADERS['User-Agent']});
     const $ = cheerio.load(html);
     const title=$('title').text().trim(),h1=$('h1').first().text().trim(),metaDesc=$('meta[name="description"]').attr('content')||'',wordCount=$('body').text().replace(/\s+/g,' ').trim().split(' ').length,hasSchema=$('script[type="application/ld+json"]').length>0,hasBlog=$('a[href*="blog"],a[href*="news"],a[href*="articles"]').length>0;
     const brand=domain.split('.')[0];
