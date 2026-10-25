@@ -44,6 +44,17 @@ const requireSubscription = (req, res, next) => {
   next();
 };
 
+const PLAN_ORDER = ['free', 'trial', 'starter', 'growth', 'pro', 'agency'];
+
+const requireMinimumPlan = (minimumPlan) => (req, res, next) => {
+  const current = PLAN_ORDER.indexOf(req.user?.plan);
+  const minimum = PLAN_ORDER.indexOf(minimumPlan);
+  if (minimum < 0 || current < 0 || current < minimum) {
+    return res.status(403).json({ error: `This feature requires the ${minimumPlan} plan or higher.`, code: 'UPGRADE_REQUIRED', requiredPlan: minimumPlan });
+  }
+  next();
+};
+
 const requirePlanFeature = (feature) => async (req, res, next) => {
   try {
     const limits = await queryOne('SELECT * FROM plan_limits WHERE plan=$1', [req.user.plan]);
@@ -98,4 +109,4 @@ const requireSuperAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { authMiddleware, requireVerified, requireSubscription, requirePlanFeature, checkUsageLimit, incrementUsage, requireAdmin, requireSuperAdmin };
+module.exports = { authMiddleware, requireVerified, requireSubscription, requireMinimumPlan, requirePlanFeature, checkUsageLimit, incrementUsage, requireAdmin, requireSuperAdmin };
