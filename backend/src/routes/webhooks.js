@@ -21,6 +21,10 @@ router.post('/stripe', async (req, res) => {
     [process.env.STRIPE_PRICE_GROWTH]:  'growth',
     [process.env.STRIPE_PRICE_PRO]:     'pro',
     [process.env.STRIPE_PRICE_AGENCY]:  'agency',
+    [process.env.STRIPE_PRICE_STARTER_ANNUAL]: 'starter',
+    [process.env.STRIPE_PRICE_GROWTH_ANNUAL]: 'growth',
+    [process.env.STRIPE_PRICE_PRO_ANNUAL]: 'pro',
+    [process.env.STRIPE_PRICE_AGENCY_ANNUAL]: 'agency',
   };
 
   try {
@@ -72,7 +76,7 @@ router.post('/stripe', async (req, res) => {
 // Create Stripe checkout session
 router.post('/create-checkout', authMiddleware, async (req, res) => {
   const { priceId } = req.body;
-  const validPrices = [process.env.STRIPE_PRICE_STARTER, process.env.STRIPE_PRICE_GROWTH, process.env.STRIPE_PRICE_PRO, process.env.STRIPE_PRICE_AGENCY].filter(Boolean);
+  const validPrices = [process.env.STRIPE_PRICE_STARTER, process.env.STRIPE_PRICE_GROWTH, process.env.STRIPE_PRICE_PRO, process.env.STRIPE_PRICE_AGENCY, process.env.STRIPE_PRICE_STARTER_ANNUAL, process.env.STRIPE_PRICE_GROWTH_ANNUAL, process.env.STRIPE_PRICE_PRO_ANNUAL, process.env.STRIPE_PRICE_AGENCY_ANNUAL].filter(Boolean);
   if (!validPrices.includes(priceId)) return res.status(400).json({ error: 'Invalid plan selected.' });
 
   try {
