@@ -65,12 +65,21 @@ export default function BillingPage() {
   const openPortal = async () => {
     setLoading('portal');
     try {
+      try {
+        const { data } = await billingApi.openProviderPortal();
+        window.location.href = data.url;
+        return;
+      } catch (providerErr: any) {
+        if (providerErr.response?.data?.code !== 'LEGACY_BILLING') throw providerErr;
+      }
       const { data } = await billingApi.openPortal();
+      if (!data.url || !data.url.startsWith('https://billing.stripe.com/')) throw new Error('Billing provider returned an invalid portal URL.');
       window.location.href = data.url;
     } catch (err: any) {
-      setMsg(err.response?.data?.error || 'No active subscription found.');
+      setMsg(err.response?.data?.error || 'No active subscription billing portal found.');
+    } finally {
+      setLoading('');
     }
-    setLoading('');
   };
 
   const currentPlanIdx = PLANS.findIndex(p => p.id === user?.plan);
