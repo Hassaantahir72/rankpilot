@@ -10,10 +10,15 @@ export default function AvailablePaymentMethods({ compact = false }: { compact?:
 
   useEffect(() => {
     let active = true;
-    paymentMethodsApi.listPublic()
-      .then(({ data }) => { if (active) setMethods(Array.isArray(data.methods) ? data.methods : []); })
-      .catch(() => { if (active) setMethods([]); });
-    return () => { active = false; };
+    const refresh = () => {
+      paymentMethodsApi.listPublic()
+        .then(({ data }) => { if (active) setMethods(Array.isArray(data.methods) ? data.methods : []); })
+        .catch(() => { if (active) setMethods([]); });
+    };
+    refresh();
+    const interval = window.setInterval(refresh, 15000);
+    window.addEventListener('focus', refresh);
+    return () => { active = false; window.clearInterval(interval); window.removeEventListener('focus', refresh); };
   }, []);
 
   if (!methods.length) return null;
