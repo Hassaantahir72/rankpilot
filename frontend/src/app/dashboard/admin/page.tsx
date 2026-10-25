@@ -41,6 +41,7 @@ export default function AdminPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [bannedFilter, setBannedFilter] = useState('');
   const [newPlan, setNewPlan] = useState('');
+  const [trialDays, setTrialDays] = useState('14');
   const [banReason, setBanReason] = useState('');
   const [newIP, setNewIP] = useState('');
   const [newIPReason, setNewIPReason] = useState('');
@@ -116,7 +117,7 @@ export default function AdminPage() {
   const doUpdatePlan = async () => {
     if (!selectedUser || !newPlan) return;
     try {
-      const { data } = await adminApi.updatePlan(selectedUser.id, { plan: newPlan, subscription_status: newPlan === 'free' ? 'free' : newPlan === 'trial' ? 'trial' : 'active' });
+      const { data } = await adminApi.updatePlan(selectedUser.id, { plan: newPlan, subscription_status: newPlan === 'free' ? 'free' : newPlan === 'trial' ? 'trial' : 'active', ...(newPlan === 'trial' ? { trial_days: Number(trialDays) } : {}) });
       showMsg(data.message || `Plan updated to ${newPlan}`);
       setNewPlan(''); loadUsers(); loadUserDetail(selectedUser);
     } catch (e: any) { showMsg(e.response?.data?.error || 'Failed', 'err'); }
@@ -376,8 +377,17 @@ export default function AdminPage() {
                     <option value="">Select plan...</option>
                     {['free','trial','starter','growth','pro','agency'].map(p => <option key={p}>{p}</option>)}
                   </select>
-                  <button onClick={doUpdatePlan} disabled={!newPlan || !!selectedUser.has_stripe_subscription} style={{ padding:'8px 14px',background:'rgba(99,102,241,0.15)',border:'1px solid rgba(99,102,241,0.3)',borderRadius:8,color:'#818cf8',cursor:'pointer',fontSize:12,fontFamily:'inherit',opacity:newPlan?1:0.4 }}>Apply</button>
+                  <button onClick={doUpdatePlan} disabled={!newPlan || !!selectedUser.has_stripe_subscription || !!selectedUser.has_provider_subscription} style={{ padding:'8px 14px',background:'rgba(99,102,241,0.15)',border:'1px solid rgba(99,102,241,0.3)',borderRadius:8,color:'#818cf8',cursor:'pointer',fontSize:12,fontFamily:'inherit',opacity:newPlan?1:0.4 }}>Apply</button>
                 </div>
+                {newPlan === 'trial' && (
+                  <label style={{ display:'block',fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:10 }}>
+                    Trial duration (1–90 days)
+                    <input className="input-dark" type="number" min={1} max={90} step={1} value={trialDays} onChange={e => setTrialDays(e.target.value)} style={{ display:'block',width:'100%',marginTop:5,padding:'8px 12px',fontSize:12 }} />
+                  </label>
+                )}
+                {selectedUser.trial_ends_at && selectedUser.plan === 'trial' && (
+                  <p style={{ fontSize:11,color:'rgba(255,255,255,0.4)',marginTop:8 }}>Trial ends: {new Date(selectedUser.trial_ends_at).toLocaleString()}</p>
+                )}
                 {selectedUser.has_stripe_subscription && <p style={{ fontSize:11,color:'#fbbf24',marginTop:8 }}>Stripe manages this subscription. Use the billing portal below to change the plan or cancel; direct database overrides are disabled.</p>}
               </div>
 
