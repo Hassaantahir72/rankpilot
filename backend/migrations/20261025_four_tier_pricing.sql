@@ -28,4 +28,11 @@ ON CONFLICT (plan) DO UPDATE SET
   priority_support=EXCLUDED.priority_support,
   rank_tracking_frequency=EXCLUDED.rank_tracking_frequency;
 
+-- Persist Stripe event IDs so webhook retries cannot apply the same event twice.
+CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+  id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 COMMIT;
