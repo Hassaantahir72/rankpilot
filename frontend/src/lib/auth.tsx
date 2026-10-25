@@ -11,6 +11,7 @@ interface User {
   subscription_status: string;
   trial_ends_at: string | null;
   email_verified: boolean;
+  onboarding_completed?: boolean;
   role: string;
 }
 
