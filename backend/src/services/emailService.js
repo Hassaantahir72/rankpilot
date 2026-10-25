@@ -72,7 +72,7 @@ const sendWelcomeEmail = async (email, name, plan = 'trial') => {
     <p>✅ <strong>Step 3:</strong> Review your keyword recommendations and content fixes</p>
     <p>Open your dashboard to continue.</p>
   `);
-  await sendMail(email, 'Welcome to RankPilot', html);
+  await send(email, 'Welcome to RankPilot', html);
 };
 
 const sendAuditCompleteEmail = async (email, name, websiteName, score, auditId) => {
