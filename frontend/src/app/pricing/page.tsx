@@ -13,7 +13,7 @@ const PLANS = [
   },
   {
     id:'growth', name:'Growth', monthly:29, annual:23, desc:'More capacity for growing businesses', color:'#8b5cf6', popular:true,
-    features:['3 websites','15 SEO audits/month','30 AI content generations/month','Weekly rank tracking','Full competitor analysis','Google Ads AI tools','10 social posts/month','Weekly reports','Priority support'],
+    features:['3 websites','15 SEO audits/month','30 AI content generations/month','Weekly rank tracking','Competitor analysis','Google Ads AI tools','10 social posts/month','Weekly reports','Priority support'],
     not:['Meta Ads tools'],
   },
   {
@@ -39,7 +39,6 @@ const TABLE = [
   {f:'A/B Ad Testing',s:'—',g:'—',p:'✓',a:'✓'},
   {f:'Social Media Posts',s:'—',g:'10/mo',p:'30/mo',a:'100/mo'},
   {f:'Weekly Reports',s:'—',g:'✓',p:'✓',a:'✓'},
-  {f:'Branded PDF Reports',s:'—',g:'—',p:'✓',a:'✓'},
   {f:'Branded PDF Reports',s:'—',g:'—',p:'✓',a:'✓'},
   {f:'Support',s:'Email',g:'Priority',p:'Priority',a:'Agency support'},
 ];
