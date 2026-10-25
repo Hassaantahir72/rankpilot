@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { validationResult } = require('express-validator');
@@ -7,7 +8,7 @@ const { sendWelcomeEmail, sendOTPEmail } = require('../services/emailService');
 const { logSecurityEvent, trackFailedLogin, clearFailedAttempts } = require('../middleware/security');
 
 const signToken = (userId) => jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
-const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+const generateOTP = () => crypto.randomInt(100000, 1000000).toString();
 
 // REGISTER
 const register = async (req, res) => {
@@ -141,6 +142,8 @@ const getMe = async (req, res) => {
 
 // FORGOT PASSWORD
 const forgotPassword = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'Enter a valid email address.' });
   const { email } = req.body;
   try {
     const user = await queryOne('SELECT id,name FROM users WHERE email=$1', [email.toLowerCase()]);
@@ -154,14 +157,22 @@ const forgotPassword = async (req, res) => {
 
 // RESET PASSWORD
 const resetPassword = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'Enter a valid reset code and a password of at least 8 characters.' });
   const { userId, otp, password } = req.body;
   try {
     const user = await queryOne('SELECT * FROM users WHERE id=$1', [userId]);
-    if (!user || user.otp_code !== otp || new Date(user.otp_expires_at) < new Date()) {
+    if (!user) return res.status(400).json({ error: 'Invalid or expired code.' });
+    if ((user.otp_attempts || 0) >= 5) return res.status(429).json({ error: 'Too many attempts. Request a new reset code.' });
+    if (!user.otp_code || !user.otp_expires_at || new Date(user.otp_expires_at) < new Date()) {
+      return res.status(400).json({ error: 'Invalid or expired code.' });
+    }
+    if (user.otp_code !== String(otp || '').trim()) {
+      await query('UPDATE users SET otp_attempts=otp_attempts+1 WHERE id=$1', [userId]);
       return res.status(400).json({ error: 'Invalid or expired code.' });
     }
     const passwordHash = await bcrypt.hash(password, 12);
-    await query('UPDATE users SET password_hash=$1,otp_code=NULL,otp_expires_at=NULL,updated_at=NOW() WHERE id=$2', [passwordHash, userId]);
+    await query('UPDATE users SET password_hash=$1,otp_code=NULL,otp_expires_at=NULL,otp_attempts=0,updated_at=NOW() WHERE id=$2', [passwordHash, userId]);
     res.json({ message: 'Password reset successfully. Please sign in.' });
   } catch (err) { res.status(500).json({ error: 'Reset failed.' }); }
 };

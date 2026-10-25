@@ -17,10 +17,8 @@ export default function ForgotPasswordPage() {
     setLoading(true); setError('');
     try {
       const { data } = await authApi.forgotPassword(email);
-      if (data.userId) {
-        setUserId(data.userId);
-        setSent(true);
-      }
+      if (data.userId) setUserId(data.userId);
+      setSent(true);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Something went wrong.');
     }
@@ -49,11 +47,11 @@ export default function ForgotPasswordPage() {
               <div style={{fontSize:52,marginBottom:18}}>📧</div>
               <h3 style={{fontSize:18,fontWeight:700,marginBottom:10}}>Check your email</h3>
               <p style={{fontSize:14,color:'rgba(255,255,255,0.45)',lineHeight:1.7,marginBottom:28}}>
-                We sent a 6-digit reset code to <strong style={{color:'#818cf8'}}>{email}</strong>. Enter it on the next page to set a new password.
+                If an account exists for <strong style={{color:'#818cf8'}}>{email}</strong>, a 6-digit reset code has been sent. Check your inbox before continuing.
               </p>
-              <button onClick={goReset} className="btn-primary" style={{width:'100%',justifyContent:'center',fontSize:15,padding:'13px'}}>
+              {userId && <button onClick={goReset} className="btn-primary" style={{width:'100%',justifyContent:'center',fontSize:15,padding:'13px'}}>
                 Enter reset code →
-              </button>
+              </button>}
             </div>
           ) : (
             <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:18}}>

@@ -15,6 +15,13 @@ const authMiddleware = async (req, res, next) => {
     if (!user) return res.status(401).json({ error: 'User not found.' });
     if (user.is_banned) return res.status(403).json({ error: 'Account suspended.' });
 
+    // Trial entitlements must expire even if the user's stored plan has not yet been changed.
+    if (user.plan === 'trial' && user.trial_ends_at && new Date(user.trial_ends_at) <= new Date()) {
+      await query("UPDATE users SET plan='free',subscription_status='expired',updated_at=NOW() WHERE id=$1 AND plan='trial' AND trial_ends_at <= NOW()", [user.id]);
+      user.plan = 'free';
+      user.subscription_status = 'expired';
+    }
+
     req.user = user;
     next();
   } catch (err) {
@@ -29,10 +36,21 @@ const requireVerified = (req, res, next) => {
 };
 
 const requireSubscription = (req, res, next) => {
-  const { subscription_status, trial_ends_at } = req.user;
-  const trialValid = trial_ends_at && new Date(trial_ends_at) > new Date();
-  if (!trialValid && subscription_status !== 'active' && req.user.plan !== 'free') {
+  const { plan, subscription_status, trial_ends_at } = req.user;
+  const trialValid = plan === 'trial' && trial_ends_at && new Date(trial_ends_at) > new Date();
+  if (!trialValid && subscription_status !== 'active' && plan !== 'free') {
     return res.status(403).json({ error: 'Active subscription required.', code: 'SUBSCRIPTION_REQUIRED' });
+  }
+  next();
+};
+
+const PLAN_ORDER = ['free', 'trial', 'starter', 'growth', 'pro', 'agency'];
+
+const requireMinimumPlan = (minimumPlan) => (req, res, next) => {
+  const current = PLAN_ORDER.indexOf(req.user?.plan);
+  const minimum = PLAN_ORDER.indexOf(minimumPlan);
+  if (minimum < 0 || current < 0 || current < minimum) {
+    return res.status(403).json({ error: `This feature requires the ${minimumPlan} plan or higher.`, code: 'UPGRADE_REQUIRED', requiredPlan: minimumPlan });
   }
   next();
 };
@@ -91,4 +109,4 @@ const requireSuperAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { authMiddleware, requireVerified, requireSubscription, requirePlanFeature, checkUsageLimit, incrementUsage, requireAdmin, requireSuperAdmin };
+module.exports = { authMiddleware, requireVerified, requireSubscription, requireMinimumPlan, requirePlanFeature, checkUsageLimit, incrementUsage, requireAdmin, requireSuperAdmin };

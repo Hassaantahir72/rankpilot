@@ -53,7 +53,14 @@ export default function VerifyEmailPage() {
       if (data.token) {
         localStorage.setItem('rp_token', data.token);
         localStorage.setItem('rp_user', JSON.stringify(data.user));
-        router.push('/dashboard');
+        const selectedPlan = params.get('plan');
+        const allowedPlans = ['starter', 'growth', 'pro', 'agency'];
+        if (type !== 'login' && selectedPlan && allowedPlans.includes(selectedPlan)) {
+          const selectedInterval = params.get('interval') === 'annual' ? '&interval=annual' : '';
+          router.push(`/dashboard/billing?plan=${encodeURIComponent(selectedPlan)}${selectedInterval}`);
+        } else {
+          router.push('/dashboard');
+        }
       }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Invalid code. Try again.');

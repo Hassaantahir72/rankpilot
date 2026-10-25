@@ -17,7 +17,12 @@ function SignupForm() {
     setError(''); setLoading(true);
     try {
       const { data } = await authApi.register(form);
-      router.push(`/auth/verify-email?userId=${data.userId}&type=verify`);
+      const requestedPlan = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('plan') : null;
+      const allowedPlans = ['starter', 'growth', 'pro', 'agency'];
+      const selectedInterval = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('interval') : null;
+      const intervalParam = selectedInterval === 'annual' ? '&interval=annual' : '';
+      const planParam = requestedPlan && allowedPlans.includes(requestedPlan) ? `&plan=${encodeURIComponent(requestedPlan)}` : '';
+      router.push(`/auth/verify-email?userId=${encodeURIComponent(data.userId)}&type=verify${planParam}${intervalParam}`);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
     }

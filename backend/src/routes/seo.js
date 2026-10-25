@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, requireSubscription } = require('../middleware/auth');
 const c = require('../controllers/seoController');
 
-router.use(authMiddleware);
+router.use(authMiddleware, requireSubscription);
 router.get('/websites',                           c.getWebsites);
 router.post('/websites',                          c.addWebsite);
 router.delete('/websites/:websiteId',             c.deleteWebsite);

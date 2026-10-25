@@ -16,12 +16,16 @@ router.post('/stripe', async (req, res) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  const planMap = {
-    [process.env.STRIPE_PRICE_STARTER]: 'starter',
-    [process.env.STRIPE_PRICE_GROWTH]:  'growth',
-    [process.env.STRIPE_PRICE_PRO]:     'pro',
-    [process.env.STRIPE_PRICE_AGENCY]:  'agency',
-  };
+  const planMap = Object.fromEntries([
+    [process.env.STRIPE_PRICE_STARTER, 'starter'],
+    [process.env.STRIPE_PRICE_GROWTH, 'growth'],
+    [process.env.STRIPE_PRICE_PRO, 'pro'],
+    [process.env.STRIPE_PRICE_AGENCY, 'agency'],
+    [process.env.STRIPE_PRICE_STARTER_ANNUAL, 'starter'],
+    [process.env.STRIPE_PRICE_GROWTH_ANNUAL, 'growth'],
+    [process.env.STRIPE_PRICE_PRO_ANNUAL, 'pro'],
+    [process.env.STRIPE_PRICE_AGENCY_ANNUAL, 'agency'],
+  ].filter(([priceId]) => Boolean(priceId)));
 
   try {
     switch (event.type) {
@@ -30,7 +34,8 @@ router.post('/stripe', async (req, res) => {
         const userId = session.metadata?.userId;
         const priceId = session.metadata?.priceId;
         if (userId) {
-          const plan = planMap[priceId] || 'starter';
+          const plan = planMap[priceId];
+          if (!plan) throw new Error('Checkout completed with an unconfigured Stripe price ID.');
           await query('UPDATE users SET plan=$1,subscription_status=$$active$$,stripe_customer_id=$2,stripe_subscription_id=$3,stripe_price_id=$4,updated_at=NOW() WHERE id=$5',
             [plan, session.customer, session.subscription, priceId, userId]);
           await query('INSERT INTO billing_history (id,user_id,stripe_invoice_id,amount,currency,status,plan,created_at) VALUES ($1,$2,$3,$4,$5,$$paid$$,$6,NOW())',
@@ -59,25 +64,30 @@ router.post('/stripe', async (req, res) => {
       case 'customer.subscription.updated': {
         const sub = event.data.object;
         const priceId = sub.items?.data?.[0]?.price?.id;
-        const plan = planMap[priceId] || 'starter';
+        const plan = planMap[priceId];
+        if (!plan) throw new Error('Subscription updated with an unconfigured Stripe price ID.');
         await query('UPDATE users SET plan=$1,subscription_status=$2,stripe_price_id=$3,updated_at=NOW() WHERE stripe_subscription_id=$4',
           [plan, sub.status, priceId, sub.id]);
         break;
       }
     }
-  } catch (err) { console.error('Webhook handler error:', err); }
+  } catch (err) {
+    console.error('Webhook handler error:', err);
+    return res.status(500).json({ error: 'Webhook processing failed. Stripe may retry this event.' });
+  }
   res.json({ received: true });
 });
 
 // Create Stripe checkout session
 router.post('/create-checkout', authMiddleware, async (req, res) => {
   const { priceId } = req.body;
-  const validPrices = [process.env.STRIPE_PRICE_STARTER, process.env.STRIPE_PRICE_GROWTH, process.env.STRIPE_PRICE_PRO, process.env.STRIPE_PRICE_AGENCY].filter(Boolean);
+  const validPrices = [process.env.STRIPE_PRICE_STARTER, process.env.STRIPE_PRICE_GROWTH, process.env.STRIPE_PRICE_PRO, process.env.STRIPE_PRICE_AGENCY, process.env.STRIPE_PRICE_STARTER_ANNUAL, process.env.STRIPE_PRICE_GROWTH_ANNUAL, process.env.STRIPE_PRICE_PRO_ANNUAL, process.env.STRIPE_PRICE_AGENCY_ANNUAL].filter(Boolean);
   if (!validPrices.includes(priceId)) return res.status(400).json({ error: 'Invalid plan selected.' });
 
   try {
     const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-    let customerId = req.user.stripe_customer_id;
+    const savedCustomer = await queryOne('SELECT stripe_customer_id FROM users WHERE id=$1', [req.user.id]);
+    let customerId = savedCustomer?.stripe_customer_id;
     if (!customerId) {
       const customer = await stripe.customers.create({ email: req.user.email, name: req.user.name, metadata: { userId: req.user.id } });
       customerId = customer.id;

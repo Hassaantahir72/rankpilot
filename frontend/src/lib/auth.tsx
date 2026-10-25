@@ -131,8 +131,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const planGates: Record<string, string> = {
       ads:          'growth',
       email_marketing: 'starter',
-      reports:      'trial',
-      advanced_seo: 'starter',
+      pdf_reports: 'pro',
+      reports:      'growth',
+      advanced_seo: 'trial',
     };
 
     const minPlan = planGates[feature];
@@ -142,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return userPlanIdx >= minPlanIdx;
     }
 
-    return true; // default allow
+    return false; // Fail closed: unknown feature keys must not silently unlock gated UI.
   };
 
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
