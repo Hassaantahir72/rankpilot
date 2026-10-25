@@ -31,6 +31,22 @@ ON CONFLICT (plan) DO UPDATE SET
 -- Add revocable session versions without invalidating existing tokens until changed.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;
 
+-- Scrub sensitive fields from historical admin/security logs written before redaction was added.
+UPDATE security_events
+SET details =
+  (details - ARRAY['password','newPassword','password_hash','otp','otp_code','token','secret','apiKey','authorization','cookie','value']::text[])
+  || CASE
+       WHEN jsonb_typeof(details->'body') = 'object'
+       THEN jsonb_build_object('body', (details->'body') - ARRAY['password','newPassword','password_hash','otp','otp_code','token','secret','apiKey','authorization','cookie','value']::text[])
+       ELSE '{}'::jsonb
+     END
+WHERE details ?| ARRAY['password','newPassword','password_hash','otp','otp_code','token','secret','apiKey','authorization','cookie','value']::text[]
+   OR (jsonb_typeof(details->'body') = 'object' AND (details->'body') ?| ARRAY['password','newPassword','password_hash','otp','otp_code','token','secret','apiKey','authorization','cookie','value']::text[]);
+
+UPDATE admin_audit_log
+SET details = details - ARRAY['password','newPassword','password_hash','otp','otp_code','token','secret','apiKey','authorization','cookie','value']::text[]
+WHERE details ?| ARRAY['password','newPassword','password_hash','otp','otp_code','token','secret','apiKey','authorization','cookie','value']::text[];
+
 -- Persist Stripe event IDs so webhook retries cannot apply the same event twice.
 CREATE TABLE IF NOT EXISTS stripe_webhook_events (
   id TEXT PRIMARY KEY,
