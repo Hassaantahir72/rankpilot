@@ -12,7 +12,7 @@ const hasLemonSqueezyConfig = () => Boolean(
   process.env.LEMONSQUEEZY_API_KEY &&
   process.env.LEMONSQUEEZY_STORE_ID &&
   process.env.LEMONSQUEEZY_WEBHOOK_SECRET &&
-  lemonVariantIds().every(id => typeof id === 'string' && /^\\d+$/.test(id))
+  lemonVariantIds().every(id => typeof id === 'string' && /^\d+$/.test(id))
 );
 
 const PROVIDERS = {
