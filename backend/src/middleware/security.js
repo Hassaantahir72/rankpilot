@@ -112,7 +112,7 @@ const logAdminRequest = async (req, res, next) => {
 
 const sanitizeBody = (body) => {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return {};
-  const sensitive = /password|passphrase|secret|token|authorization|cookie|otp|verification.?code|api.?key|private.?key|credential|client.?secret|access.?key/i;
+  const sensitive = /password|passphrase|secret|token|authorization|cookie|otp|verification.?code|api.?key|private.?key|credential|client.?secret|access.?key|^value$/i;
   const sanitize = (value, depth = 0) => {
     if (depth > 3) return '[truncated]';
     if (Array.isArray(value)) return value.slice(0, 20).map(item => sanitize(item, depth + 1));
