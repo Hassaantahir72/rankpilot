@@ -11,7 +11,7 @@ const PAID_PLANS = ['starter', 'growth', 'pro', 'agency'];
 export default function OnboardingPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const { user, loading: authLoading, refreshUser } = useAuth();
+  const { user, limits, loading: authLoading, refreshUser } = useAuth();
   const checkoutComplete = params.get('checkout') === 'complete';
   const selectedPlan = params.get('plan') || '';
   const [siteName, setSiteName] = useState('');
@@ -136,8 +136,9 @@ export default function OnboardingPage() {
           <span style={styles.planLabel}>YOUR CURRENT PLAN</span>
           <strong style={styles.plan}>{user.plan === 'trial' ? 'Free trial' : user.plan[0].toUpperCase() + user.plan.slice(1)}</strong>
           {user.plan === 'trial'
-            ? <span style={styles.small}>{trialDays} day{trialDays === 1 ? '' : 's'} left in your 14-day trial · Trial limits apply until you upgrade.</span>
+            ? <span style={styles.small}>{trialDays} day{trialDays === 1 ? '' : 's'} left in your 14-day trial · No card is required for the trial.</span>
             : <span style={styles.small}>{user.plan === 'free' ? 'Free plan · You can upgrade any time.' : 'Your subscription is active.'}</span>}
+          {limits && <span style={styles.small}>Included now: {limits.max_websites} website{limits.max_websites === 1 ? '' : 's'} · {limits.max_audits_per_month} SEO audits/month · {limits.max_content_per_month} AI content generations/month · {limits.max_social_posts_per_month} social posts/month.</span>}
         </div>
         {error && <p style={styles.error}>{error}</p>}
         <form onSubmit={finish} style={styles.form}>
