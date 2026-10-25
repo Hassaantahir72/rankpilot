@@ -51,11 +51,15 @@ router.post('/lemon-squeezy', async (req, res) => {
     if (!claimed) return res.status(200).json({ received: true, duplicate: true });
     const plan = variantPlans()[String(attrs.variant_id || '')];
     const custom = event?.meta?.custom_data || {};
-    let user = subscriptionId ? await queryOne("SELECT id,plan FROM users WHERE payment_provider='lemon_squeezy' AND provider_subscription_id=$1", [subscriptionId]) : null;
-    if (!user && custom.user_id) user = await queryOne('SELECT id,plan FROM users WHERE id=$1', [String(custom.user_id)]);
+    let user = subscriptionId ? await queryOne("SELECT id,plan,provider_subscription_id,provider_subscription_updated_at FROM users WHERE payment_provider='lemon_squeezy' AND provider_subscription_id=$1", [subscriptionId]) : null;
+    if (!user && custom.user_id) user = await queryOne('SELECT id,plan,provider_subscription_id,provider_subscription_updated_at FROM users WHERE id=$1', [String(custom.user_id)]);
     if (!user) {
       await query('DELETE FROM payment_provider_events WHERE event_key=$1', [eventKey]);
       return res.status(200).json({ received: true, pending: true });
+    }
+    const eventUpdatedAt = attrs.updated_at && !Number.isNaN(Date.parse(attrs.updated_at)) ? new Date(attrs.updated_at) : null;
+    if (eventUpdatedAt && user.provider_subscription_updated_at && eventUpdatedAt < new Date(user.provider_subscription_updated_at)) {
+      return res.status(200).json({ received: true, stale: true });
     }
 
     if (['subscription_created','subscription_updated','subscription_resumed'].includes(eventName)) {
@@ -68,17 +72,17 @@ router.post('/lemon-squeezy', async (req, res) => {
         );
         if (updated.rowCount !== 1) throw new Error('Subscription could not be safely linked to this account.');
       } else if (attrs.status && attrs.status !== 'active' && subscriptionId) {
-        await query("UPDATE users SET subscription_status='past_due',updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId]);
+        await query("UPDATE users SET subscription_status='past_due',provider_subscription_updated_at=COALESCE($3,NOW()),updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId,eventUpdatedAt]);
       }
     } else if (eventName === 'subscription_cancelled' || eventName === 'subscription_expired') {
-      if (subscriptionId) await query("UPDATE users SET plan='free',subscription_status='cancelled',provider_subscription_id=NULL,provider_variant_id=NULL,updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId]);
+      if (subscriptionId) await query("UPDATE users SET plan='free',subscription_status='cancelled',provider_subscription_id=NULL,provider_variant_id=NULL,provider_subscription_updated_at=COALESCE($3,NOW()),updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId,eventUpdatedAt]);
     } else if (eventName === 'subscription_paused') {
-      if (subscriptionId) await query("UPDATE users SET subscription_status='paused',updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId]);
+      if (subscriptionId) await query("UPDATE users SET subscription_status='paused',provider_subscription_updated_at=COALESCE($3,NOW()),updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId,eventUpdatedAt]);
     } else if (eventName === 'subscription_payment_failed') {
       if (subscriptionId) await query("UPDATE users SET subscription_status='past_due',updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId]);
     } else if (eventName === 'subscription_payment_success') {
       if (attrs.status === 'active' && plan && subscriptionId) {
-        await query("UPDATE users SET plan=$1,subscription_status='active',provider_variant_id=$2,updated_at=NOW() WHERE id=$3 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$4", [plan,String(attrs.variant_id),user.id,subscriptionId]);
+        await query("UPDATE users SET plan=$1,subscription_status='active',provider_variant_id=$2,provider_subscription_updated_at=COALESCE($5,NOW()),updated_at=NOW() WHERE id=$3 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$4", [plan,String(attrs.variant_id),user.id,subscriptionId,eventUpdatedAt]);
       }
     }
     return res.status(200).json({ received: true });
