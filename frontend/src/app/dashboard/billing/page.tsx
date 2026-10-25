@@ -159,7 +159,9 @@ export default function BillingPage() {
               <p style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Plus Jakarta Sans',sans-serif", marginBottom: 4 }}>${billingInterval === 'annual' ? (plan.annualPrice ?? 0) : plan.price}<span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(255,255,255,0.35)' }}>/mo</span></p>
               {billingInterval === 'annual' && !['free','trial'].includes(plan.id) && <p style={{ fontSize: 11, color: '#4ade80', marginBottom: 8 }}>Billed ${(plan.annualPrice ?? 0) * 12}/year</p>}
               <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', marginBottom: 16 }}>{plan.desc}</p>
-              {!isCurrent && (
+              {!isCurrent && plan.id === 'trial' ? (
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', lineHeight: 1.6 }}>The no-card Free Trial is selected during new-account signup. Existing accounts can upgrade to a paid plan here.</p>
+              ) : !isCurrent && (
                 <button onClick={() => hasPaidPlan ? openPortal() : upgrade(plan.id)} disabled={!!loading} style={{ width: '100%', padding: '9px', background: isDowngrade ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${plan.color},${plan.color}cc)`, border: isDowngrade ? '1px solid rgba(255,255,255,0.1)' : 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', boxShadow: isDowngrade ? 'none' : `0 4px 16px ${plan.color}35` }}>
                   {loading === plan.id ? 'Redirecting...' : hasPaidPlan ? 'Manage existing billing' : availableProviders.includes('lemon_squeezy') ? (requestedPlan === plan.id ? 'Continue with this plan' : 'Upgrade') : 'Review checkout'}
                 </button>
