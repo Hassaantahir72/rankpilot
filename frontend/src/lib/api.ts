@@ -102,7 +102,7 @@ export const paymentMethodsApi = {
 // ── BILLING ───────────────────────────────────────────────────────
 export const billingApi = {
   createCheckout: (priceId: string) => api.post('/webhooks/create-checkout', { priceId }),
-  createProviderCheckout: (provider: string, plan: string, interval: 'monthly'|'annual' = 'monthly') => api.post('/payment-methods/checkout', { provider, plan, interval }),
+  createProviderCheckout: (provider: string, plan: string, interval: 'monthly'|'annual' = 'monthly', billingDetails?: { name: string; email: string; country: string; state?: string; zip?: string; taxNumber?: string }) => api.post('/payment-methods/checkout', { provider, plan, interval, billingDetails }),
   openPortal:     ()                => api.post('/webhooks/portal'),
   openProviderPortal: ()             => api.post('/payment-methods/portal'),
 };
