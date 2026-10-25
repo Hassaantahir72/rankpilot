@@ -118,7 +118,7 @@ export default function PricingPage() {
                         </li>
                       ))}
                     </ul>
-                    <Link href="/auth/signup" className="btn-primary" style={{width:'100%',justifyContent:'center',background:plan.popular?'linear-gradient(135deg,#6366f1,#7c3aed)':'rgba(255,255,255,0.05)',boxShadow:plan.popular?undefined:'none',border:plan.popular?'none':'1px solid rgba(255,255,255,0.1)'}}>
+                    <Link href={`/auth/signup?plan=${plan.name.toLowerCase()}`} className="btn-primary" style={{width:'100%',justifyContent:'center',background:plan.popular?'linear-gradient(135deg,#6366f1,#7c3aed)':'rgba(255,255,255,0.05)',boxShadow:plan.popular?undefined:'none',border:plan.popular?'none':'1px solid rgba(255,255,255,0.1)'}}>
                       Start free trial
                     </Link>
                   </div>
