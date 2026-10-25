@@ -233,75 +233,13 @@ router.post('/stripe', async (req, res) => {
   }
 });
 
-// Create a subscription checkout session. Plan and price are allow-listed server-side.
-router.post('/create-checkout', authMiddleware, requireVerified, billingRateLimit, async (req, res) => {
-  const { priceId } = req.body || {};
-  const planMap = getPlanMap();
-  if (typeof priceId !== 'string' || !planMap[priceId]) {
-    return res.status(400).json({ error: 'Invalid plan selected.' });
-  }
-  if (!process.env.STRIPE_SECRET_KEY) {
-    return res.status(503).json({ error: 'Checkout is not configured yet.' });
-  }
-
-  try {
-    const stripe = getStripe();
-    const frontendUrl = getFrontendBaseUrl();
-    const current = await queryOne(
-      'SELECT plan,subscription_status,stripe_customer_id,stripe_subscription_id FROM users WHERE id=$1',
-      [req.user.id]
-    );
-    if (!current) return res.status(401).json({ error: 'Account not found.' });
-
-    if (current.stripe_subscription_id && ['active', 'past_due', 'paused'].includes(current.subscription_status)) {
-      return res.status(409).json({
-        error: 'You already have a subscription. Use Manage subscription to change plans or update payment methods.',
-        code: 'SUBSCRIPTION_EXISTS',
-      });
-    }
-
-    let customerId = current.stripe_customer_id;
-    if (!customerId) {
-      const customer = await stripe.customers.create(
-        { email: req.user.email, name: req.user.name, metadata: { userId: req.user.id } },
-        { idempotencyKey: `rankpilot-customer-${req.user.id}` }
-      );
-      customerId = customer.id;
-      const saved = await query(
-        'UPDATE users SET stripe_customer_id=$1 WHERE id=$2 AND (stripe_customer_id IS NULL OR stripe_customer_id=$1)',
-        [customerId, req.user.id]
-      );
-      if (saved.rowCount !== 1) {
-        const refreshed = await queryOne('SELECT stripe_customer_id FROM users WHERE id=$1', [req.user.id]);
-        if (!refreshed?.stripe_customer_id) throw new Error('Could not safely save Stripe customer.');
-        customerId = refreshed.stripe_customer_id;
-      }
-    }
-
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      mode: 'subscription',
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${frontendUrl}/dashboard/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${frontendUrl}/dashboard/billing?cancelled=true`,
-      client_reference_id: req.user.id,
-      metadata: { userId: req.user.id, priceId },
-      subscription_data: { metadata: { userId: req.user.id, priceId } },
-      payment_method_collection: 'always',
-      allow_promotion_codes: true,
-    }, {
-      idempotencyKey: `rankpilot-checkout-${req.user.id}-${priceId}-${Math.floor(Date.now() / 60000)}`,
-    });
-
-    if (!session.url || !session.url.startsWith('https://checkout.stripe.com/')) {
-      throw new Error('Stripe did not return a valid hosted checkout URL.');
-    }
-    return res.json({ url: session.url });
-  } catch (err) {
-    if (err.code === 'STRIPE_NOT_CONFIGURED') return res.status(503).json({ error: 'Checkout is not configured yet.' });
-    console.error('Checkout session creation failed:', err.message);
-    return res.status(500).json({ error: 'Failed to create checkout session.' });
-  }
+// New Stripe checkouts are disabled for this Pakistan-based deployment.
+// Existing Stripe subscriptions retain the legacy portal/webhook paths for migration support.
+router.post('/create-checkout', authMiddleware, requireVerified, billingRateLimit, (_req, res) => {
+  return res.status(410).json({
+    error: 'New Stripe checkout is disabled. Use an enabled provider from the payment methods shown on the website.',
+    code: 'STRIPE_CHECKOUT_DISABLED',
+  });
 });
 
 // Create a customer-owned billing portal session for subscription and payment-method management.

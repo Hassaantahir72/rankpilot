@@ -92,10 +92,17 @@ export const reportsApi = {
   generate:  (wid:string)=> api.post('/reports/generate', { websiteId: wid }),
 };
 
+// ── PUBLIC PAYMENT METHODS ────────────────────────────────────────
+export const paymentMethodsApi = {
+  listPublic: () => api.get('/payment-methods'),
+};
+
 // ── BILLING ───────────────────────────────────────────────────────
 export const billingApi = {
   createCheckout: (priceId: string) => api.post('/webhooks/create-checkout', { priceId }),
+  createProviderCheckout: (provider: string, plan: string, interval: 'monthly'|'annual' = 'monthly') => api.post('/payment-methods/checkout', { provider, plan, interval }),
   openPortal:     ()                => api.post('/webhooks/portal'),
+  openProviderPortal: ()             => api.post('/payment-methods/portal'),
 };
 
 // ── ADMIN ─────────────────────────────────────────────────────────
@@ -115,6 +122,12 @@ export const adminApi = {
   resetPassword:(id:string,d:any)=> api.patch(`/admin/users/${id}/password`, d),
   impersonate: (id:string)       => api.post(`/admin/users/${id}/impersonate`),
   deleteUser:  (id:string)       => api.delete(`/admin/users/${id}`),
+
+  // Payment methods (superadmin only)
+  getPaymentMethods: () => api.get('/admin/payment-methods'),
+  createPaymentMethod: (d:any) => api.post('/admin/payment-methods', d),
+  updatePaymentMethod: (id:string,d:any) => api.patch(`/admin/payment-methods/${id}`, d),
+  deletePaymentMethod: (id:string) => api.delete(`/admin/payment-methods/${id}`),
 
   // Site settings
   getSiteSettings: ()            => api.get('/admin/settings'),

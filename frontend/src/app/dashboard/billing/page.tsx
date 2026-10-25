@@ -2,15 +2,16 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
-import { billingApi, dashboardApi } from '@/lib/api';
+import { billingApi, dashboardApi, paymentMethodsApi } from '@/lib/api';
 import { UsageBar } from '@/components/dashboard/PlanGate';
+import AvailablePaymentMethods from '@/components/billing/AvailablePaymentMethods';
 
 const PLANS = [
-  { id:'free',    name:'Free',    price:0,   desc:'Get started', color:'#6b7280', priceId: '' },
-  { id:'starter', name:'Starter', price:15, annualPrice:12, desc:'Essential SEO for one website', color:'#6366f1', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_ANNUAL || '' },
-  { id:'growth',  name:'Growth',  price:29, annualPrice:23, desc:'More capacity for growing businesses', color:'#8b5cf6', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH_ANNUAL || '' },
-  { id:'pro',     name:'Pro',     price:59, annualPrice:47, desc:'Advanced marketing for active teams', color:'#ec4899', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL || '' },
-  { id:'agency',  name:'Agency',  price:99, annualPrice:79, desc:'Higher limits for agency workflows', color:'#f59e0b', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY_ANNUAL || '' },
+  { id:'free',    name:'Free',    price:0,   desc:'Get started', color:'#6b7280' },
+  { id:'starter', name:'Starter', price:15, annualPrice:12, desc:'Essential SEO for one website', color:'#6366f1' },
+  { id:'growth',  name:'Growth',  price:29, annualPrice:23, desc:'More capacity for growing businesses', color:'#8b5cf6' },
+  { id:'pro',     name:'Pro',     price:59, annualPrice:47, desc:'Advanced marketing for active teams', color:'#ec4899' },
+  { id:'agency',  name:'Agency',  price:99, annualPrice:79, desc:'Higher limits for agency workflows', color:'#f59e0b' },
 ];
 
 const FEATURES: Record<string, { free: string; starter: string; growth: string; pro: string; agency: string }> = {
@@ -32,8 +33,13 @@ export default function BillingPage() {
   const [usage, setUsage] = useState<any>(null);
   const [requestedPlan, setRequestedPlan] = useState('');
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
+  const [availableProviders, setAvailableProviders] = useState<string[]>([]);
 
   useEffect(() => {
+    const refreshMethods = () => paymentMethodsApi.listPublic().then(({ data }) => setAvailableProviders((data.methods || []).map((m:any) => m.provider))).catch(() => setAvailableProviders([]));
+    refreshMethods();
+    const methodsInterval = window.setInterval(refreshMethods, 15000);
+    window.addEventListener('focus', refreshMethods);
     dashboardApi.getStats().then(({ data }) => {
       setUsage({ ...(data.usage || {}), websites: data.websiteCount || 0 });
     }).catch(() => setMsg('Could not load usage totals. Please refresh the page.'));
@@ -41,41 +47,43 @@ export default function BillingPage() {
     const selected = params.get('plan') || '';
     if (['starter', 'growth', 'pro', 'agency'].includes(selected)) setRequestedPlan(selected);
     setBillingInterval(params.get('interval') === 'annual' ? 'annual' : 'monthly');
+    return () => { window.clearInterval(methodsInterval); window.removeEventListener('focus', refreshMethods); };
   }, []);
 
-  const upgrade = async (priceId: string) => {
-    if (!priceId) {
-      setMsg('Stripe checkout is not configured yet. Please contact support.');
+  const upgrade = async (planId: string) => {
+    if (!availableProviders.includes('lemon_squeezy')) {
+      setMsg('No verified payment provider is currently available. Please contact support while payment setup is completed.');
       return;
     }
-    setLoading(priceId);
+    setLoading(planId);
     try {
-      const { data } = await billingApi.createCheckout(priceId);
-      if (!data.url || !data.url.startsWith('https://checkout.stripe.com/')) {
-        throw new Error('Stripe returned an invalid checkout URL.');
-      }
-      window.location.assign(data.url);
-    } catch (err: any) {
-      // The backend, not frontend plan labels, decides whether a Stripe subscription already exists.
-      if (err.response?.data?.code === 'SUBSCRIPTION_EXISTS') {
-        await openPortal();
-      } else {
-        setMsg(err.response?.data?.error || err.message || 'Failed to open checkout.');
-      }
-    } finally {
-      setLoading('');
-    }
+      const { data } = await billingApi.createProviderCheckout('lemon_squeezy', planId, billingInterval);
+      const checkoutUrl = new URL(data.url);
+      if (checkoutUrl.protocol !== 'https:' || !(checkoutUrl.hostname === 'lemonsqueezy.com' || checkoutUrl.hostname.endsWith('.lemonsqueezy.com'))) throw new Error('Payment provider returned an invalid checkout URL.');
+      window.location.assign(checkoutUrl.toString());
+    } catch (err:any) {
+      setMsg(err.response?.data?.error || err.message || 'Could not start checkout.');
+    } finally { setLoading(''); }
   };
 
   const openPortal = async () => {
     setLoading('portal');
     try {
+      try {
+        const { data } = await billingApi.openProviderPortal();
+        window.location.href = data.url;
+        return;
+      } catch (providerErr: any) {
+        if (providerErr.response?.data?.code !== 'LEGACY_BILLING') throw providerErr;
+      }
       const { data } = await billingApi.openPortal();
+      if (!data.url || !data.url.startsWith('https://billing.stripe.com/')) throw new Error('Billing provider returned an invalid portal URL.');
       window.location.href = data.url;
     } catch (err: any) {
-      setMsg(err.response?.data?.error || 'No active subscription found.');
+      setMsg(err.response?.data?.error || 'No active subscription billing portal found.');
+    } finally {
+      setLoading('');
     }
-    setLoading('');
   };
 
   const currentPlanIdx = PLANS.findIndex(p => p.id === user?.plan);
@@ -121,7 +129,9 @@ export default function BillingPage() {
         </div>
       </div>
 
-      <p style={{ fontSize:12,color:'rgba(255,255,255,0.38)',marginBottom:18 }}>Secure checkout is hosted by Stripe. Available cards, wallets, and other payment methods are shown at checkout based on your region and the payment methods enabled for this Stripe account.</p>
+      <p style={{ fontSize:12,color:'rgba(255,255,255,0.38)',marginBottom:18 }}>New checkout providers are enabled only after server-side configuration and verified sandbox tests.</p>
+
+      <AvailablePaymentMethods compact />
 
       {/* Plans grid */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
@@ -135,7 +145,6 @@ export default function BillingPage() {
         {PLANS.filter(p => p.id !== 'free').map((plan, i) => {
           const isCurrent = plan.id === user?.plan;
           const isDowngrade = PLANS.findIndex(p => p.id === plan.id) < currentPlanIdx;
-          const selectedPriceId = billingInterval === 'annual' ? (plan.annualPriceId || '') : plan.priceId;
           return (
             <div key={plan.id} style={{ background: isCurrent || requestedPlan === plan.id ? `${plan.color}12` : 'rgba(255,255,255,0.02)', border: `1px solid ${isCurrent || requestedPlan === plan.id ? plan.color + '70' : 'rgba(255,255,255,0.08)'}`, borderRadius: 14, padding: '20px 16px', position: 'relative' }}>
               {isCurrent && <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: plan.color, color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 12px', borderRadius: 100, whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>CURRENT</div>}
@@ -145,8 +154,8 @@ export default function BillingPage() {
               {billingInterval === 'annual' && plan.id !== 'free' && <p style={{ fontSize: 11, color: '#4ade80', marginBottom: 8 }}>Billed ${(plan.annualPrice ?? 0) * 12}/year</p>}
               <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', marginBottom: 16 }}>{plan.desc}</p>
               {!isCurrent && (
-                <button onClick={() => upgrade(selectedPriceId)} disabled={!!loading} style={{ width: '100%', padding: '9px', background: isDowngrade ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${plan.color},${plan.color}cc)`, border: isDowngrade ? '1px solid rgba(255,255,255,0.1)' : 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', boxShadow: isDowngrade ? 'none' : `0 4px 16px ${plan.color}35` }}>
-                  {loading === selectedPriceId ? 'Redirecting...' : hasPaidPlan ? 'Manage in Stripe' : !selectedPriceId ? 'Configure Stripe' : requestedPlan === plan.id ? 'Continue with this plan' : 'Upgrade'}
+                <button onClick={() => hasPaidPlan ? openPortal() : upgrade(plan.id)} disabled={!!loading} style={{ width: '100%', padding: '9px', background: isDowngrade ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${plan.color},${plan.color}cc)`, border: isDowngrade ? '1px solid rgba(255,255,255,0.1)' : 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', boxShadow: isDowngrade ? 'none' : `0 4px 16px ${plan.color}35` }}>
+                  {loading === plan.id ? 'Redirecting...' : hasPaidPlan ? 'Manage existing billing' : availableProviders.includes('lemon_squeezy') ? (requestedPlan === plan.id ? 'Continue with this plan' : 'Upgrade') : 'Payments unavailable'}
                 </button>
               )}
             </div>
@@ -182,7 +191,7 @@ export default function BillingPage() {
       </div>
 
       <div style={{ marginTop: 24, textAlign: 'center' }}>
-        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>Secure payments via Stripe · Cancel any time</p>
+        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>Payment options appear here when a verified provider is enabled · Contact support for billing help</p>
       </div>
     </div>
   );

@@ -30,6 +30,13 @@ CREATE TABLE IF NOT EXISTS users (
   stripe_customer_id TEXT,
   stripe_subscription_id TEXT,
   stripe_price_id TEXT,
+  payment_provider TEXT,
+  provider_customer_id TEXT,
+  provider_subscription_id TEXT,
+  provider_variant_id TEXT,
+  provider_order_id TEXT,
+  provider_subscription_updated_at TIMESTAMPTZ,
+  provider_subscription_ends_at TIMESTAMPTZ,
   last_login TIMESTAMPTZ,
   is_banned BOOLEAN DEFAULT FALSE,
   ban_reason TEXT,
@@ -302,6 +309,32 @@ CREATE TABLE IF NOT EXISTS billing_history (
 -- ── STRIPE WEBHOOK IDEMPOTENCY ────────────────────────────────────
 CREATE TABLE IF NOT EXISTS stripe_webhook_events (
   id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ── PROVIDER-INDEPENDENT PAYMENT METHODS ─────────────────────────
+CREATE TABLE IF NOT EXISTS payment_methods (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider_key TEXT NOT NULL CHECK (provider_key IN ('safepay','lemon_squeezy','manual_bank_transfer')),
+  display_name TEXT NOT NULL CHECK (length(trim(display_name)) BETWEEN 2 AND 80),
+  description TEXT NOT NULL DEFAULT '' CHECK (length(description) <= 240),
+  enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  public_config JSONB NOT NULL DEFAULT '{}'::jsonb,
+  sort_order INTEGER NOT NULL DEFAULT 100,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (provider_key)
+);
+CREATE INDEX IF NOT EXISTS payment_methods_public_idx ON payment_methods (enabled, sort_order);
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_provider_subscription_unique
+  ON users (payment_provider, provider_subscription_id)
+  WHERE provider_subscription_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS payment_provider_events (
+  event_key TEXT PRIMARY KEY,
+  provider_key TEXT NOT NULL,
   event_type TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

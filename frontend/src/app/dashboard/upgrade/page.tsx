@@ -1,29 +1,26 @@
 'use client';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
-import { billingApi } from '@/lib/api';
-import { useState } from 'react';
+import { billingApi, paymentMethodsApi } from '@/lib/api';
+import AvailablePaymentMethods from '@/components/billing/AvailablePaymentMethods';
+import { useEffect, useState } from 'react';
 
 const PLANS = [
   {
     id:'starter', name:'Starter', price:15, color:'#6366f1',
     features:['1 website','5 SEO audits/month','10 AI content generations/month','Monthly rank tracking','Competitor analysis','Email support'],
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || '',
   },
   {
     id:'growth', name:'Growth', price:29, color:'#8b5cf6', popular:true,
     features:['3 websites','15 SEO audits/month','30 AI content generations/month','Weekly rank tracking','Google Ads AI tools','10 social posts/month','Weekly reports'],
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH || '',
   },
   {
     id:'pro', name:'Pro', price:59, color:'#ec4899',
     features:['5 websites','40 SEO audits/month','80 AI content generations/month','Google + Meta Ads AI tools','30 social posts/month','Branded PDF reports'],
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || '',
   },
   {
     id:'agency', name:'Agency', price:99, color:'#f59e0b',
     features:['10 websites','100 SEO audits/month','200 AI content generations/month','Google + Meta Ads AI tools','100 social posts/month','Branded PDF reports'],
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || '',
   },
 ];
 
@@ -31,20 +28,30 @@ export default function UpgradePage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState('');
   const [error, setError] = useState('');
+  const [availableProviders, setAvailableProviders] = useState<string[]>([]);
 
-  const upgrade = async (priceId: string, planId: string) => {
-    if (!priceId) {
-      setError('Stripe price IDs not configured yet. Add them to frontend/.env.local');
+  useEffect(() => {
+    const refreshMethods = () => paymentMethodsApi.listPublic().then(({ data }) => setAvailableProviders((data.methods || []).map((m:any) => m.provider))).catch(() => setAvailableProviders([]));
+    refreshMethods();
+    const methodsInterval = window.setInterval(refreshMethods, 15000);
+    window.addEventListener('focus', refreshMethods);
+    return () => { window.clearInterval(methodsInterval); window.removeEventListener('focus', refreshMethods); };
+  }, []);
+
+  const upgrade = async (planId: string) => {
+    if (!availableProviders.includes('lemon_squeezy')) {
+      setError('No verified payment provider is currently available. Please contact support while payment setup is completed.');
       return;
     }
     setLoading(planId);
     try {
-      const { data } = await billingApi.createCheckout(priceId);
-      window.location.href = data.url;
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to open checkout.');
-    }
-    setLoading('');
+      const { data } = await billingApi.createProviderCheckout('lemon_squeezy', planId, 'monthly');
+      const checkoutUrl = new URL(data.url);
+      if (checkoutUrl.protocol !== 'https:' || !(checkoutUrl.hostname === 'lemonsqueezy.com' || checkoutUrl.hostname.endsWith('.lemonsqueezy.com'))) throw new Error('Payment provider returned an invalid checkout URL.');
+      window.location.assign(checkoutUrl.toString());
+    } catch (err:any) {
+      setError(err.response?.data?.error || err.message || 'Could not start checkout.');
+    } finally { setLoading(''); }
   };
 
   const PLAN_ORDER = ['free','trial','starter','growth','pro','agency'];
@@ -66,6 +73,8 @@ export default function UpgradePage() {
           {error}
         </div>
       )}
+
+      <AvailablePaymentMethods compact />
 
       <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:16 }}>
         {PLANS.map((plan, i) => {
@@ -101,10 +110,10 @@ export default function UpgradePage() {
                 </div>
               ) : (
                 <button
-                  onClick={() => upgrade(plan.priceId, plan.id)}
+                  onClick={() => upgrade(plan.id)}
                   disabled={!!loading}
                   style={{ padding:'12px',background:isDowngrade?'rgba(255,255,255,0.05)':`linear-gradient(135deg,${plan.color},${plan.color}cc)`, border:isDowngrade?'1px solid rgba(255,255,255,0.1)':'none', borderRadius:10, color:'#fff', fontWeight:600, fontSize:13, cursor:'pointer', fontFamily:'inherit', boxShadow:isDowngrade?'none':`0 4px 20px ${plan.color}35`, transition:'all 0.2s' }}>
-                  {loading===plan.id ? 'Redirecting...' : isDowngrade ? 'Downgrade' : `Upgrade to ${plan.name} →`}
+                  {loading===plan.id ? 'Redirecting...' : !availableProviders.includes('lemon_squeezy') ? 'Payments unavailable' : isDowngrade ? 'Downgrade' : `Upgrade to ${plan.name} →`}
                 </button>
               )}
             </div>

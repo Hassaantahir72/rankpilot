@@ -87,6 +87,7 @@ const getUsers = async (req, res) => {
       'SELECT u.id,u.email,u.name,u.plan,u.subscription_status,u.email_verified,u.role,u.is_banned,u.ban_reason,' +
       ' u.created_at,u.last_login,u.trial_ends_at,(u.stripe_customer_id IS NOT NULL) AS has_stripe_customer,' +
       ' (u.stripe_subscription_id IS NOT NULL) AS has_stripe_subscription,' +
+      ' (u.provider_subscription_id IS NOT NULL) AS has_provider_subscription,' +
       ' (SELECT COUNT(*) FROM websites WHERE user_id=u.id) as website_count,' +
       ' (SELECT COUNT(*) FROM audits WHERE user_id=u.id) as audit_count' +
       ' FROM users u WHERE ' + conds.join(' AND ') + ' ORDER BY u.created_at DESC LIMIT $' +
@@ -126,57 +127,88 @@ const getUser = async (req, res) => {
 const createUserBillingPortal = async (req, res) => {
   const { userId } = req.params;
   try {
-    if (!process.env.STRIPE_SECRET_KEY || !process.env.FRONTEND_URL) {
-      return res.status(503).json({ error: 'Stripe billing is not configured.' });
-    }
-    const returnUrl = new URL('/dashboard/admin', process.env.FRONTEND_URL);
-    if (process.env.NODE_ENV === 'production' && returnUrl.protocol !== 'https:') {
-      return res.status(503).json({ error: 'The configured frontend URL must use HTTPS.' });
-    }
-    const target = await queryOne('SELECT id,email,stripe_customer_id,stripe_subscription_id FROM users WHERE id=$1', [userId]);
+    const target = await queryOne('SELECT id,email,stripe_customer_id,stripe_subscription_id,payment_provider,provider_subscription_id FROM users WHERE id=$1', [userId]);
     if (!target) return res.status(404).json({ error: 'User not found.' });
-    if (!target.stripe_customer_id) return res.status(400).json({ error: 'This user has no Stripe customer yet.' });
+    const returnUrl = new URL('/dashboard/admin', process.env.FRONTEND_URL || 'http://localhost:3000');
 
+    if (target.payment_provider === 'lemon_squeezy' && target.provider_subscription_id) {
+      if (!process.env.LEMONSQUEEZY_API_KEY) return res.status(503).json({ error: 'Lemon Squeezy billing is not configured.' });
+      const response = await fetch('https://api.lemonsqueezy.com/v1/subscriptions/' + encodeURIComponent(target.provider_subscription_id), {
+        headers: { 'Authorization': 'Bearer ' + process.env.LEMONSQUEEZY_API_KEY, 'Accept': 'application/vnd.api+json' },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) return res.status(502).json({ error: 'Could not retrieve this user’s provider billing portal.' });
+      const portalUrl = payload?.data?.attributes?.urls?.customer_portal || payload?.data?.attributes?.urls?.update_payment_method;
+      let parsed;
+      try { parsed = new URL(portalUrl); } catch {}
+      if (!parsed || parsed.protocol !== 'https:' || !(parsed.hostname === 'lemonsqueezy.com' || parsed.hostname.endsWith('.lemonsqueezy.com'))) {
+        return res.status(502).json({ error: 'Payment provider returned an invalid billing portal URL.' });
+      }
+      await logAction(req.user.id, 'open_user_billing_portal', userId, { provider: 'lemon_squeezy', adminEmail: req.user.email });
+      return res.json({ url: parsed.toString(), provider: 'lemon_squeezy' });
+    }
+
+    if (!process.env.STRIPE_SECRET_KEY || !process.env.FRONTEND_URL) return res.status(503).json({ error: 'No supported billing portal is configured for this user.' });
+    if (process.env.NODE_ENV === 'production' && returnUrl.protocol !== 'https:') return res.status(503).json({ error: 'The configured frontend URL must use HTTPS.' });
+    if (!target.stripe_customer_id) return res.status(400).json({ error: 'This user has no supported billing customer yet.' });
     const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
     const session = await stripe.billingPortal.sessions.create({
       customer: target.stripe_customer_id,
       return_url: returnUrl.origin + returnUrl.pathname,
     });
-    if (!session.url || !session.url.startsWith('https://billing.stripe.com/')) {
-      throw new Error('Stripe did not return a valid billing portal URL.');
-    }
-    await logAction(req.user.id, 'open_user_billing_portal', userId, { adminEmail: req.user.email });
-    res.json({ url: session.url });
+    if (!session.url || !session.url.startsWith('https://billing.stripe.com/')) throw new Error('Stripe did not return a valid billing portal URL.');
+    await logAction(req.user.id, 'open_user_billing_portal', userId, { provider: 'stripe_legacy', adminEmail: req.user.email });
+    return res.json({ url: session.url, provider: 'stripe_legacy' });
   } catch (err) {
     console.error('Admin billing portal error:', err.message);
-    res.status(500).json({ error: 'Could not open this user’s Stripe billing portal.' });
+    return res.status(500).json({ error: 'Could not open this user’s billing portal.' });
   }
 };
 
 const updateUserPlan = async (req, res) => {
   const { userId } = req.params;
   const { plan, subscription_status } = req.body;
+  const trialDays = req.body?.trial_days === undefined ? 14 : Number(req.body.trial_days);
   const validPlans = ['free','trial','starter','growth','pro','agency'];
   const validStatuses = ['free','trial','active'];
   const status = subscription_status || (plan === 'free' ? 'free' : plan === 'trial' ? 'trial' : 'active');
   if (!validPlans.includes(plan)) return res.status(400).json({ error: 'Invalid plan.' });
+  if (plan === 'trial' && (!Number.isInteger(trialDays) || trialDays < 1 || trialDays > 90)) {
+    return res.status(400).json({ error: 'Trial duration must be between 1 and 90 days.' });
+  }
   if (!validStatuses.includes(status) || (plan === 'free' && status !== 'free') || (plan === 'trial' && status !== 'trial') || (['starter','growth','pro','agency'].includes(plan) && status !== 'active')) {
     return res.status(400).json({ error: 'Plan and subscription status do not match.' });
   }
   try {
-    const target = await queryOne('SELECT id,stripe_subscription_id FROM users WHERE id=$1', [userId]);
+    const target = await queryOne('SELECT id,stripe_subscription_id,provider_subscription_id FROM users WHERE id=$1', [userId]);
     if (!target) return res.status(404).json({ error: 'User not found.' });
-    if (target.stripe_subscription_id) {
+    if (target.stripe_subscription_id || target.provider_subscription_id) {
       return res.status(409).json({
-        error: 'This user has a Stripe-managed subscription. Use Manage Stripe billing so the plan change is applied to the actual subscription.',
-        code: 'STRIPE_SUBSCRIPTION_MANAGED',
+        error: 'This user has a provider-managed subscription. Use that provider’s billing management so the plan change is applied to the actual subscription.',
+        code: 'PROVIDER_SUBSCRIPTION_MANAGED',
       });
     }
-    const user = await queryOne('UPDATE users SET plan=$1,subscription_status=$2,updated_at=NOW() WHERE id=$3 RETURNING id,email,name,plan,subscription_status', [plan, status, userId]);
+    const user = await queryOne(
+      `UPDATE users
+       SET plan=$1,subscription_status=$2,
+           trial_ends_at=CASE WHEN $1='trial' THEN NOW() + ($3 * INTERVAL '1 day') ELSE NULL END,
+           updated_at=NOW()
+       WHERE id=$4
+       RETURNING id,email,name,plan,subscription_status,trial_ends_at`,
+      [plan, status, plan === 'trial' ? trialDays : 0, userId]
+    );
     if (!user) return res.status(404).json({ error: 'User not found.' });
-    await logAction(req.user.id, 'update_plan', userId, { plan, subscription_status: status, adminEmail: req.user.email });
-    res.json({ message: `Plan updated to ${plan}.`, user });
-  } catch (err) { res.status(500).json({ error: 'Failed to update plan.' }); }
+    await logAction(req.user.id, 'update_plan', userId, {
+      plan, subscription_status: status,
+      trial_days: plan === 'trial' ? trialDays : null,
+      trial_ends_at: user.trial_ends_at,
+      adminEmail: req.user.email,
+    });
+    res.json({ message: plan === 'trial' ? `Trial set for ${trialDays} days.` : `Plan updated to ${plan}.`, user });
+  } catch (err) {
+    console.error('Admin plan update failed:', err.message);
+    res.status(500).json({ error: 'Failed to update plan.' });
+  }
 };
 
 const toggleBan = async (req, res) => {
@@ -247,10 +279,10 @@ const impersonateUser = async (req, res) => {
 const deleteUser = async (req, res) => {
   const { userId } = req.params;
   if (userId === req.user.id) return res.status(400).json({ error: 'You cannot delete yourself.' });
-  const target = await queryOne('SELECT email,role,stripe_subscription_id FROM users WHERE id=$1', [userId]);
+  const target = await queryOne('SELECT email,role,stripe_subscription_id,provider_subscription_id FROM users WHERE id=$1', [userId]);
   if (!target) return res.status(404).json({ error: 'User not found.' });
   if (['admin','superadmin'].includes(target.role)) return res.status(403).json({ error: 'Cannot delete admin accounts.' });
-  if (target.stripe_subscription_id) return res.status(409).json({ error: 'Cancel or resolve this user’s Stripe subscription in Manage Stripe billing before deleting the account.', code: 'ACTIVE_STRIPE_SUBSCRIPTION' });
+  if (target.stripe_subscription_id || target.provider_subscription_id) return res.status(409).json({ error: 'Cancel or resolve this user’s payment-provider subscription before deleting the account.', code: 'ACTIVE_PROVIDER_SUBSCRIPTION' });
   await query('DELETE FROM users WHERE id=$1', [userId]);
   await logAction(req.user.id, 'delete_user', userId, { deletedEmail: target.email, adminEmail: req.user.email });
   await logSecurityEvent('user_deleted', req.adminIp, req.user.id, { targetEmail: target.email });
