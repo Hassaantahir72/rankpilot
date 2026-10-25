@@ -175,12 +175,6 @@ router.post('/stripe', async (req, res) => {
         const subscription = event.data.object;
         const priceId = subscription.items?.data?.[0]?.price?.id;
         const plan = planMap[priceId];
-        if (!plan) {
-          // A legacy/unconfigured price must never grant a new tier; acknowledge it to avoid endless Stripe retries.
-          console.error('Stripe subscription references an unconfigured price; subscription was not upgraded.');
-          break;
-        }
-
         const statusMap = {
           active: 'active',
           past_due: 'past_due',
@@ -192,13 +186,32 @@ router.post('/stripe', async (req, res) => {
           trialing: 'past_due',
         };
         const status = statusMap[subscription.status] || 'past_due';
-        const metadataUserId = subscription.metadata?.userId;
         const customerOwner = await queryOne(
-          'SELECT id FROM users WHERE stripe_customer_id=$1 ORDER BY created_at ASC LIMIT 1',
-          [subscription.customer]
+          'SELECT id FROM users WHERE stripe_subscription_id=$1 OR stripe_customer_id=$2 ORDER BY (stripe_subscription_id=$1) DESC, created_at ASC LIMIT 1',
+          [subscription.id, subscription.customer]
         );
-        const userId = customerOwner?.id || metadataUserId;
+        const userId = customerOwner?.id || subscription.metadata?.userId;
         if (!userId) break;
+
+        if (!plan) {
+          // Keep legacy entitlements unchanged, but still enforce failed/canceled subscription states.
+          console.error('Stripe subscription references an unconfigured price; no new plan will be granted.');
+          if (status === 'cancelled') {
+            await query(
+              `UPDATE users SET plan='free',subscription_status='cancelled',stripe_subscription_id=NULL,
+                 stripe_price_id=NULL,updated_at=NOW() WHERE id=$1 AND stripe_customer_id=$2`,
+              [userId, subscription.customer]
+            );
+          } else {
+            const updated = await query(
+              'UPDATE users SET subscription_status=$1,stripe_subscription_id=$2,stripe_customer_id=COALESCE(stripe_customer_id,$3),updated_at=NOW() WHERE id=$4 AND (stripe_customer_id IS NULL OR stripe_customer_id=$3) AND (stripe_subscription_id IS NULL OR stripe_subscription_id=$2)',
+              [status, subscription.id, subscription.customer, userId]
+            );
+            if (updated.rowCount !== 1) throw new Error('Could not safely associate legacy subscription update with account.');
+          }
+          break;
+        }
+
         const updated = await query(
           `UPDATE users SET plan=$1,subscription_status=$2,stripe_price_id=$3,
              stripe_subscription_id=$4,stripe_customer_id=COALESCE(stripe_customer_id,$5),updated_at=NOW()
