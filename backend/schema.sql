@@ -104,6 +104,24 @@ CREATE TABLE IF NOT EXISTS audits (
   completed_at TIMESTAMPTZ
 );
 
+-- ── DURABLE AUDIT JOB QUEUE ───────────────────────────────────────
+CREATE TABLE IF NOT EXISTS audit_jobs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  audit_id UUID NOT NULL UNIQUE REFERENCES audits(id) ON DELETE CASCADE,
+  website_id UUID NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','running','complete','failed')),
+  attempts INTEGER NOT NULL DEFAULT 0,
+  available_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  locked_at TIMESTAMPTZ,
+  locked_by TEXT,
+  last_error TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_audit_jobs_queue ON audit_jobs(status, available_at, created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_jobs_user ON audit_jobs(user_id, created_at DESC);
+
 -- ── KEYWORDS ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS keywords (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
