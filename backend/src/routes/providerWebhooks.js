@@ -66,23 +66,35 @@ router.post('/lemon-squeezy', async (req, res) => {
       if (attrs.status === 'active' && plan && subscriptionId) {
         const conflict = await queryOne('SELECT id FROM users WHERE provider_subscription_id=$1 AND id<>$2 LIMIT 1', [subscriptionId,user.id]);
         if (conflict) throw new Error('Provider subscription is already linked to another account.');
+        const endsAt = attrs.ends_at && !Number.isNaN(Date.parse(attrs.ends_at)) ? new Date(attrs.ends_at) : null;
         const updated = await query(
-          "UPDATE users SET plan=$1,subscription_status='active',payment_provider='lemon_squeezy',provider_subscription_id=$2,provider_customer_id=$3,provider_variant_id=$4,provider_subscription_updated_at=COALESCE($6,NOW()),updated_at=NOW() WHERE id=$5 AND stripe_subscription_id IS NULL AND (payment_provider IS NULL OR payment_provider='lemon_squeezy') AND (provider_subscription_id IS NULL OR provider_subscription_id=$2)",
-          [plan,subscriptionId,String(attrs.customer_id || ''),String(attrs.variant_id),user.id,eventUpdatedAt]
+          "UPDATE users SET plan=$1,subscription_status='active',payment_provider='lemon_squeezy',provider_subscription_id=$2,provider_customer_id=$3,provider_variant_id=$4,provider_subscription_updated_at=COALESCE($6,NOW()),provider_subscription_ends_at=$7,updated_at=NOW() WHERE id=$5 AND stripe_subscription_id IS NULL AND (payment_provider IS NULL OR payment_provider='lemon_squeezy') AND (provider_subscription_id IS NULL OR provider_subscription_id=$2)",
+          [plan,subscriptionId,String(attrs.customer_id || ''),String(attrs.variant_id),user.id,eventUpdatedAt,endsAt]
         );
         if (updated.rowCount !== 1) throw new Error('Subscription could not be safely linked to this account.');
       } else if (attrs.status && attrs.status !== 'active' && subscriptionId) {
         await query("UPDATE users SET subscription_status='past_due',provider_subscription_updated_at=COALESCE($3,NOW()),updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId,eventUpdatedAt]);
       }
-    } else if (eventName === 'subscription_cancelled' || eventName === 'subscription_expired') {
-      if (subscriptionId) await query("UPDATE users SET plan='free',subscription_status='cancelled',provider_subscription_id=NULL,provider_variant_id=NULL,provider_subscription_updated_at=COALESCE($3,NOW()),updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId,eventUpdatedAt]);
+    } else if (eventName === 'subscription_cancelled') {
+      if (subscriptionId) {
+        const endsAt = attrs.ends_at && !Number.isNaN(Date.parse(attrs.ends_at)) ? new Date(attrs.ends_at) : null;
+        if (endsAt && endsAt > new Date()) {
+          // Keep the paid plan until the provider's current paid-through date.
+          await query("UPDATE users SET subscription_status='active',provider_subscription_ends_at=$3,provider_subscription_updated_at=COALESCE($4,NOW()),updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId,endsAt,eventUpdatedAt]);
+        } else {
+          await query("UPDATE users SET plan='free',subscription_status='cancelled',provider_subscription_id=NULL,provider_variant_id=NULL,provider_subscription_ends_at=NULL,provider_subscription_updated_at=COALESCE($3,NOW()),updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId,eventUpdatedAt]);
+        }
+      }
+    } else if (eventName === 'subscription_expired') {
+      if (subscriptionId) await query("UPDATE users SET plan='free',subscription_status='cancelled',provider_subscription_id=NULL,provider_variant_id=NULL,provider_subscription_ends_at=NULL,provider_subscription_updated_at=COALESCE($3,NOW()),updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId,eventUpdatedAt]);
     } else if (eventName === 'subscription_paused') {
       if (subscriptionId) await query("UPDATE users SET subscription_status='paused',provider_subscription_updated_at=COALESCE($3,NOW()),updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId,eventUpdatedAt]);
     } else if (eventName === 'subscription_payment_failed') {
       if (subscriptionId) await query("UPDATE users SET subscription_status='past_due',provider_subscription_updated_at=COALESCE($3,NOW()),updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId,eventUpdatedAt]);
     } else if (eventName === 'subscription_payment_success') {
       if (attrs.status === 'active' && plan && subscriptionId) {
-        await query("UPDATE users SET plan=$1,subscription_status='active',provider_variant_id=$2,provider_subscription_updated_at=COALESCE($5,NOW()),updated_at=NOW() WHERE id=$3 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$4", [plan,String(attrs.variant_id),user.id,subscriptionId,eventUpdatedAt]);
+        const endsAt = attrs.ends_at && !Number.isNaN(Date.parse(attrs.ends_at)) ? new Date(attrs.ends_at) : null;
+        await query("UPDATE users SET plan=$1,subscription_status='active',provider_variant_id=$2,provider_subscription_ends_at=$6,provider_subscription_updated_at=COALESCE($5,NOW()),updated_at=NOW() WHERE id=$3 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$4", [plan,String(attrs.variant_id),user.id,subscriptionId,eventUpdatedAt,endsAt]);
       }
     }
     return res.status(200).json({ received: true });
