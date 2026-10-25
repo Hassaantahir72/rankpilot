@@ -10,11 +10,14 @@ function SignupForm() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [signupPlan, setSignupPlan] = useState('');
+  const [signupInterval, setSignupInterval] = useState<'monthly' | 'annual'>('monthly');
+  const planPrices: Record<string, { monthly: number; annual: number }> = { starter: { monthly: 15, annual: 12 }, growth: { monthly: 29, annual: 23 }, pro: { monthly: 59, annual: 47 }, agency: { monthly: 99, annual: 79 } };
   const router = useRouter();
 
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get('plan') || '';
     setSignupPlan(['starter', 'growth', 'pro', 'agency'].includes(requested) ? requested : '');
+    setSignupInterval(new URLSearchParams(window.location.search).get('interval') === 'annual' ? 'annual' : 'monthly');
   }, []);
   const set = (k:string) => (e:any) => setForm(f=>({...f,[k]:e.target.value}));
 
@@ -47,10 +50,20 @@ function SignupForm() {
             <span style={{fontWeight:700,fontSize:18,color:'#fff'}}>RankPilot</span>
           </Link>
           <h1 style={{fontSize:26,fontWeight:800,marginBottom:8,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{signupPlan ? 'Create your RankPilot account' : 'Start your 14-day free trial'}</h1>
-          <p style={{fontSize:14,color:'rgba(255,255,255,0.38)'}}>{signupPlan ? `Selected plan: ${signupPlan[0].toUpperCase()+signupPlan.slice(1)} · Verify your email, complete secure checkout, then set up your workspace.` : '14 days free · No card required to start · Cancel any time'}</p>
+          <p style={{fontSize:14,color:'rgba(255,255,255,0.55)',lineHeight:1.7}}>{signupPlan ? 'Create your account first. After email verification, you’ll continue to secure checkout and then workspace setup.' : 'Start with the 14-day trial. No card is required; you can upgrade from your dashboard whenever you’re ready.'}</p>
+          <div style={{display:'flex',justifyContent:'center',gap:8,marginTop:18,flexWrap:'wrap'}}>
+            {['1 · Account','2 · '+(signupPlan ? 'Secure checkout' : 'Free trial'),'3 · Workspace'].map((step,i)=><span key={step} style={{fontSize:11,padding:'7px 10px',borderRadius:100,border:'1px solid '+(i===0?'rgba(129,140,248,.5)':'rgba(255,255,255,.1)'),background:i===0?'rgba(99,102,241,.13)':'rgba(255,255,255,.025)',color:i===0?'#c7d2fe':'rgba(255,255,255,.45)'}}>{step}</span>)}
+          </div>
+          {signupPlan && <div style={{marginTop:18,padding:16,textAlign:'left',borderRadius:14,border:'1px solid rgba(129,140,248,.25)',background:'rgba(99,102,241,.07)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center'}}>
+              <strong style={{fontSize:15,color:'#fff'}}>{signupPlan[0].toUpperCase()+signupPlan.slice(1)} plan</strong>
+              <strong style={{fontSize:16,color:'#c7d2fe'}}>${planPrices[signupPlan][signupInterval]}/mo</strong>
+            </div>
+            <p style={{fontSize:12,color:'rgba(255,255,255,.48)',marginTop:7}}>{signupInterval==='annual'?'Annual billing; paid yearly.':'Monthly billing.'} Payment is collected by the provider only after you review the checkout total.</p>
+          </div>}
         </div>
         <div style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:20,padding:32}}>
-          <p style={{fontSize:11,lineHeight:1.6,color:'rgba(255,255,255,0.42)',marginTop:12}}>To help prevent repeated free-trial abuse, RankPilot checks a privacy-preserving device signal. Basic display, platform, language and timezone attributes are converted to a one-way hash on our server; raw attributes are not stored. This signal is approximate and is not a guaranteed unique hardware identifier.</p>
+          {!signupPlan && <p style={{fontSize:11,lineHeight:1.6,color:'rgba(255,255,255,0.42)',marginTop:12}}>To reduce repeated free-trial abuse across browsers, RankPilot checks a privacy-preserving device signal. Only a one-way hash is stored; raw browser/device attributes are not saved. Web browsers do not expose a guaranteed unique hardware ID, so this is an anti-abuse measure rather than perfect device identification.</p>}
           <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:18}}>
             {error&&<div style={{background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.22)',color:'#fca5a5',padding:'12px 16px',borderRadius:10,fontSize:14}}>{error}</div>}
             <div>
@@ -77,7 +90,7 @@ function SignupForm() {
           </p>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginTop:16}}>
-          {['✓ No credit card','✓ 14-day trial','✓ Cancel anytime'].map(f=>(
+          {(signupPlan ? ['✓ Secure hosted checkout','✓ Payment verified server-side','✓ Workspace setup after payment'] : ['✓ No credit card','✓ 14-day trial','✓ One trial per device']).map(f=>(
             <div key={f} style={{textAlign:'center',fontSize:12,color:'rgba(255,255,255,0.3)',background:'rgba(255,255,255,0.02)',borderRadius:10,padding:'10px',border:'1px solid rgba(255,255,255,0.06)'}}>{f}</div>
           ))}
         </div>
