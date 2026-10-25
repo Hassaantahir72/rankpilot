@@ -58,7 +58,7 @@ const register = async (req, res) => {
         [userId, email.toLowerCase(), name, passwordHash, userPlan, userPlan, null, paidPlanIntent ? requestedPlan : null, paidPlanIntent ? requestedInterval : null, otp, otpExpires]
       );
       if (claim) await query('UPDATE trial_device_claims SET user_id=$1 WHERE device_hash=$2', [user.id, deviceHash]);
-      await sendOTPEmail(user.email, user.name, otp, 'verify');
+      await sendOTPEmail(user.email, user.name, otp, 'verify', user.plan);
       res.status(201).json({ message: 'Account created! Check your email for the 6-digit verification code.', userId: user.id, requiresVerification: true });
     } catch (err) {
       // Keep the device claim if account creation succeeded; only release an unassigned claim on a failed registration.
@@ -89,7 +89,7 @@ const verifyOTP = async (req, res) => {
       "UPDATE users SET email_verified=true,trial_ends_at=CASE WHEN plan='trial' AND subscription_status='trial' THEN NOW() + INTERVAL '14 days' ELSE trial_ends_at END,otp_code=NULL,otp_purpose=NULL,otp_expires_at=NULL,otp_attempts=0,updated_at=NOW() WHERE id=$1 RETURNING *",
       [userId]
     );
-    await sendWelcomeEmail(verifiedUser.email, verifiedUser.name, verifiedUser.plan);
+    await sendWelcomeEmail(verifiedUser.email, verifiedUser.name, verifiedUser.plan).catch(err => console.error('Welcome email delivery failed after verification:', err.message));
     const token = signToken(verifiedUser);
     res.json({ message: 'Email verified! Welcome to RankPilot.', token, user: { id:verifiedUser.id, email:verifiedUser.email, name:verifiedUser.name, plan:verifiedUser.plan, subscription_status:verifiedUser.subscription_status, trial_ends_at:verifiedUser.trial_ends_at, signup_plan:verifiedUser.signup_plan || null, signup_interval:verifiedUser.signup_interval || null, onboarding_completed:verifiedUser.onboarding_completed || false, email_verified:true, role:verifiedUser.role||'user' } });
   } catch (err) {
@@ -102,7 +102,7 @@ const verifyOTP = async (req, res) => {
 const resendOTP = async (req, res) => {
   const { userId } = req.body;
   try {
-    const user = await queryOne('SELECT email,name,email_verified FROM users WHERE id=$1', [userId]);
+    const user = await queryOne('SELECT email,name,email_verified,plan FROM users WHERE id=$1', [userId]);
     if (!user || user.email_verified) return res.status(400).json({ error: 'If verification is still required, a new code can be requested.' });
     const otp = generateOTP();
     const expires = new Date(Date.now() + 10 * 60 * 1000);
