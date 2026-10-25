@@ -35,7 +35,7 @@ router.post('/checkout', authMiddleware, requireVerified, async (req, res) => {
           type: 'checkouts',
           attributes: {
             checkout_data: { email: req.user.email, name: req.user.name || undefined, custom: { user_id: String(req.user.id), plan, interval } },
-            product_options: { redirect_url: frontend.origin + '/dashboard/billing?checkout=complete' },
+            product_options: { redirect_url: frontend.origin + '/onboarding?checkout=complete&plan=' + encodeURIComponent(plan) + '&interval=' + encodeURIComponent(interval) },
             test_mode: process.env.LEMONSQUEEZY_TEST_MODE === 'true',
           },
           relationships: {
