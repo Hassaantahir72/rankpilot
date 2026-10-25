@@ -35,11 +35,37 @@ const NAV = [
   { href:'/dashboard/support',           icon:'🛟', label:'Support' },
 ];
 
+const NAV_FEATURES: Record<string, string> = {
+  '/dashboard/ads': 'ads',
+  '/dashboard/reports': 'reports',
+  '/dashboard/backlinks': 'advanced_seo',
+  '/dashboard/content-gap': 'advanced_seo',
+  '/dashboard/local-seo': 'advanced_seo',
+  '/dashboard/schema': 'advanced_seo',
+  '/dashboard/pagespeed': 'advanced_seo',
+  '/dashboard/internal-links': 'advanced_seo',
+  '/dashboard/cannibalization': 'advanced_seo',
+  '/dashboard/sitemap': 'advanced_seo',
+  '/dashboard/monitor': 'advanced_seo',
+  '/dashboard/blog': 'advanced_seo',
+  '/dashboard/email-marketing': 'email_marketing',
+  '/dashboard/reviews': 'advanced_seo',
+  '/dashboard/competitors': 'competitor_analysis',
+  '/dashboard/pmax': 'google_ads',
+  '/dashboard/pdf-reports': 'pdf_reports',
+};
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, canUse } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const visibleNav = NAV.filter((item: any) => item.divider || !item.href || !NAV_FEATURES[item.href] || isAdmin || canUse(NAV_FEATURES[item.href]))
+    .filter((item: any, index: number, items: any[]) => {
+      if (!item.divider) return true;
+      const nextDivider = items.findIndex((candidate, candidateIndex) => candidateIndex > index && candidate.divider);
+      return items.slice(index + 1, nextDivider < 0 ? items.length : nextDivider).some((candidate: any) => !candidate.divider);
+    });
 
   useEffect(() => {
     if (user && user.onboarding_completed === false && !isAdmin && pathname !== '/dashboard/billing') router.replace('/onboarding');
@@ -83,7 +109,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Nav */}
         <nav style={{ flex:1, padding:'8px 8px', overflowY:'auto' }}>
-          {NAV.map((item:any, i:number) => {
+          {visibleNav.map((item:any, i:number) => {
             if (item.divider) return (
               !collapsed ? <div key={i} style={{ padding:'12px 8px 4px', fontSize:9, fontWeight:700, color:'rgba(255,255,255,0.2)', letterSpacing:'0.08em', textTransform:'uppercase' }}>{item.label}</div> : <div key={i} style={{ height:8 }}/>
             );
