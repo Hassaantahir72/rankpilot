@@ -16,7 +16,8 @@ function SignupForm() {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      const { data } = await authApi.register(form);
+      const deviceSignature = [navigator.platform || 'unknown', screen.width, screen.height, screen.colorDepth, window.devicePixelRatio || 1, Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown', navigator.language || 'unknown', navigator.hardwareConcurrency || 0, (navigator as any).deviceMemory || 0].join('|');
+      const { data } = await authApi.register({ ...form, deviceSignature });
       const requestedPlan = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('plan') : null;
       const allowedPlans = ['starter', 'growth', 'pro', 'agency'];
       const selectedInterval = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('interval') : null;
@@ -42,6 +43,7 @@ function SignupForm() {
           <p style={{fontSize:14,color:'rgba(255,255,255,0.38)'}}>14 days free · No credit card · Cancel any time</p>
         </div>
         <div style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:20,padding:32}}>
+          <p style={{fontSize:11,lineHeight:1.6,color:'rgba(255,255,255,0.42)',marginTop:12}}>To help prevent repeated free-trial abuse, RankPilot checks a privacy-preserving device signal. Basic display, platform, language and timezone attributes are converted to a one-way hash on our server; raw attributes are not stored. This signal is approximate and is not a guaranteed unique hardware identifier.</p>
           <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:18}}>
             {error&&<div style={{background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.22)',color:'#fca5a5',padding:'12px 16px',borderRadius:10,fontSize:14}}>{error}</div>}
             <div>
