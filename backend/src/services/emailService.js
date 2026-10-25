@@ -59,18 +59,20 @@ const sendOTPEmail = async (email, name, otp, type) => {
   await send(email, subjects[type], html);
 };
 
-const sendWelcomeEmail = async (email, name) => {
+const sendWelcomeEmail = async (email, name, plan = 'trial') => {
+  const isTrial = plan === 'trial';
+  const nextStep = isTrial
+    ? '<p>Your 14-day Free Trial starts now. Here is how to get your first results fast:</p>'
+    : '<p>Your email is verified and your RankPilot account is ready. Continue with your selected plan to finish setup.</p>';
   const html = base(`
     <h2>Welcome to RankPilot, ${escapeHtml(name)}! 🎉</h2>
-    <p>Your 14-day free trial has started. Here is how to get your first results fast:</p>
+    ${nextStep}
     <p>✅ <strong>Step 1:</strong> Add your website URL</p>
     <p>✅ <strong>Step 2:</strong> Run your first AI SEO audit (takes 3–5 minutes)</p>
     <p>✅ <strong>Step 3:</strong> Review your keyword recommendations and content fixes</p>
-    <p>✅ <strong>Step 4:</strong> Set up your first ad campaign</p>
-    <a href="${process.env.FRONTEND_URL}/dashboard" class="btn">Go to your dashboard →</a>
-    <div class="note">Questions? Reply to this email — we respond within 24 hours.</div>
+    <p>Open your dashboard to continue.</p>
   `);
-  await send(email, 'Welcome to RankPilot — your trial starts now 🚀', html);
+  await sendMail(email, 'Welcome to RankPilot', html);
 };
 
 const sendAuditCompleteEmail = async (email, name, websiteName, score, auditId) => {
