@@ -25,9 +25,9 @@ function SignupForm() {
       const requestedPlan = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('plan') : null;
       const allowedPlans = ['starter', 'growth', 'pro', 'agency'];
       const selectedPlan = requestedPlan && allowedPlans.includes(requestedPlan) ? requestedPlan : '';
-      const deviceSignature = [navigator.platform || 'unknown', screen.width, screen.height, screen.colorDepth, window.devicePixelRatio || 1, Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown', navigator.language || 'unknown', navigator.hardwareConcurrency || 0, (navigator as any).deviceMemory || 0].join('|');
-      const { data } = await authApi.register({ ...form, deviceSignature, selectedPlan });
       const selectedInterval = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('interval') : null;
+      const deviceSignature = [navigator.platform || 'unknown', screen.width, screen.height, screen.colorDepth, window.devicePixelRatio || 1, Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown', navigator.language || 'unknown', navigator.hardwareConcurrency || 0, (navigator as any).deviceMemory || 0].join('|');
+      const { data } = await authApi.register({ ...form, deviceSignature, selectedPlan, selectedInterval: selectedInterval === 'annual' ? 'annual' : 'monthly' });
       const intervalParam = selectedInterval === 'annual' ? '&interval=annual' : '';
       const planParam = requestedPlan && allowedPlans.includes(requestedPlan) ? `&plan=${encodeURIComponent(requestedPlan)}` : '';
       router.push(`/auth/verify-email?userId=${encodeURIComponent(data.userId)}&type=verify${planParam}${intervalParam}`);
