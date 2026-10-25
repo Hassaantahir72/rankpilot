@@ -16,7 +16,7 @@ const pool = new Pool({
         // set DB_SSL_CA to the provider CA for strict verification, or explicitly
         // set DB_SSL_REJECT_UNAUTHORIZED=false as a documented temporary fallback.
         rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
-        ...(process.env.DB_SSL_CA ? { ca: process.env.DB_SSL_CA.replace(/\\n/g, '\n') } : {}),
+        ...(process.env.DB_SSL_CA ? { ca: process.env.DB_SSL_CA } : {}),
       }
     : undefined,
 });
