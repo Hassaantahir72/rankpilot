@@ -3,11 +3,11 @@
  */
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, requireMinimumPlan, requirePlanFeature } = require('../middleware/auth');
 const { queryOne, queryAll, query } = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
 
-router.use(authMiddleware);
+router.use(authMiddleware, requireMinimumPlan('trial'));
 
 // ── FEATURE 1: BACKLINK ANALYZER ─────────────────────────────────
 router.post('/backlinks/analyze', async (req, res) => {
@@ -96,7 +96,7 @@ router.post('/pagespeed/analyze', async (req, res) => {
 });
 
 // ── FEATURE 6: EMAIL MARKETING ────────────────────────────────────
-router.post('/email-marketing/sequence', async (req, res) => {
+router.post('/email-marketing/sequence', requireMinimumPlan('starter'), async (req, res) => {
   const { websiteId, sequenceType, goal, targetAudience } = req.body;
   try {
     const website = await queryOne('SELECT * FROM websites WHERE id=$1 AND user_id=$2', [websiteId, req.user.id]);
@@ -107,7 +107,7 @@ router.post('/email-marketing/sequence', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.post('/email-marketing/subjects', async (req, res) => {
+router.post('/email-marketing/subjects', requireMinimumPlan('starter'), async (req, res) => {
   const { topic, businessName } = req.body;
   const { generateSubjectLines } = require('../services/emailMarketingService');
   const subjects = await generateSubjectLines(topic, businessName);
@@ -144,7 +144,7 @@ router.post('/reviews/analyze', async (req, res) => {
 });
 
 // ── FEATURE 8: COMPETITOR TRACKING ───────────────────────────────
-router.post('/competitors/track', async (req, res) => {
+router.post('/competitors/track', requirePlanFeature('competitor_analysis'), async (req, res) => {
   const { websiteId, competitorUrls } = req.body;
   try {
     const website = await queryOne('SELECT * FROM websites WHERE id=$1 AND user_id=$2', [websiteId, req.user.id]);
@@ -155,7 +155,7 @@ router.post('/competitors/track', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.post('/competitors/snapshot', async (req, res) => {
+router.post('/competitors/snapshot', requirePlanFeature('competitor_analysis'), async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ error: 'URL required.' });
   const { fetchCompetitorSnapshot } = require('../services/competitorTrackingService');
@@ -163,7 +163,7 @@ router.post('/competitors/snapshot', async (req, res) => {
   res.json(snapshot);
 });
 
-router.post('/competitors/report', async (req, res) => {
+router.post('/competitors/report', requirePlanFeature('competitor_analysis'), async (req, res) => {
   const { yourDomain, competitors } = req.body;
   const { generateCompetitorReport } = require('../services/competitorTrackingService');
   const report = await generateCompetitorReport(yourDomain, competitors || []);
@@ -209,7 +209,7 @@ router.post('/blog/publish-wordpress', async (req, res) => {
 });
 
 // ── FEATURE 10: PERFORMANCE MAX ───────────────────────────────────
-router.post('/pmax/generate', async (req, res) => {
+router.post('/pmax/generate', requirePlanFeature('google_ads'), async (req, res) => {
   const { websiteId, goal, budget, targetAudience, location } = req.body;
   try {
     const website = await queryOne('SELECT * FROM websites WHERE id=$1 AND user_id=$2', [websiteId, req.user.id]);
@@ -221,7 +221,7 @@ router.post('/pmax/generate', async (req, res) => {
 });
 
 // ── FEATURE 11: PDF REPORTS ───────────────────────────────────────
-router.post('/reports/generate-pdf', async (req, res) => {
+router.post('/reports/generate-pdf', requireMinimumPlan('pro'), async (req, res) => {
   const { websiteId } = req.body;
   try {
     const website = await queryOne('SELECT * FROM websites WHERE id=$1 AND user_id=$2', [websiteId, req.user.id]);
