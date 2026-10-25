@@ -41,7 +41,7 @@ const TABLE = [
   {f:'Social Media Posts',s:'—',g:'20/mo',p:'100/mo',a:'Unlimited'},
   {f:'White-label',s:'—',g:'—',p:'—',a:'✓'},
   {f:'API Access',s:'—',g:'—',p:'—',a:'✓'},
-  {f:'Reports',s:'Monthly',g:'Weekly',p:'Branded PDF',a:'Custom'},
+  {f:'Reports',s:'—',g:'Weekly',p:'Branded PDF',a:'Custom'},
   {f:'Support',s:'48hr email',g:'12hr priority',p:'4hr dedicated',a:'Custom'},
 ];
 
