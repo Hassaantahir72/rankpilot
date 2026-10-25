@@ -241,9 +241,10 @@ const impersonateUser = async (req, res) => {
 const deleteUser = async (req, res) => {
   const { userId } = req.params;
   if (userId === req.user.id) return res.status(400).json({ error: 'You cannot delete yourself.' });
-  const target = await queryOne('SELECT email,role FROM users WHERE id=$1', [userId]);
+  const target = await queryOne('SELECT email,role,stripe_subscription_id FROM users WHERE id=$1', [userId]);
   if (!target) return res.status(404).json({ error: 'User not found.' });
   if (['admin','superadmin'].includes(target.role)) return res.status(403).json({ error: 'Cannot delete admin accounts.' });
+  if (target.stripe_subscription_id) return res.status(409).json({ error: 'Cancel or resolve this user’s Stripe subscription in Manage Stripe billing before deleting the account.', code: 'ACTIVE_STRIPE_SUBSCRIPTION' });
   await query('DELETE FROM users WHERE id=$1', [userId]);
   await logAction(req.user.id, 'delete_user', userId, { deletedEmail: target.email, adminEmail: req.user.email });
   await logSecurityEvent('user_deleted', req.adminIp, req.user.id, { targetEmail: target.email });
