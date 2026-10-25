@@ -22,7 +22,7 @@ const PLANS = [
   },
   {
     id:'agency', name:'Agency', price:99, color:'#f59e0b',
-    features:['10 websites','100 SEO audits/month','200 AI content generations/month','Google + Meta Ads AI tools','A/B testing','100 social posts/month','Branded PDF reports'],
+    features:['10 websites','100 SEO audits/month','200 AI content generations/month','Google + Meta Ads AI tools','100 social posts/month','Branded PDF reports'],
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || '',
   },
 ];
