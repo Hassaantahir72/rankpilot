@@ -124,7 +124,7 @@ export default function PricingPage() {
             </div>
             <AvailablePaymentMethods />
             <ScrollReveal className="text-center" style={{marginTop:36}}>
-              <p style={{fontSize:13,color:'rgba(255,255,255,0.25)'}}>Free plan available · Paid plans from $15/month · Payment methods are shown when configured</p>
+              <p style={{fontSize:13,color:'rgba(255,255,255,0.25)'}}>14-day Free Trial available without a card · Paid subscriptions start after secure checkout · Payment methods appear when configured</p>
             </ScrollReveal>
           </div>
         </section>
@@ -166,7 +166,7 @@ export default function PricingPage() {
             <ScrollReveal className="text-center" style={{marginBottom:52}}>
               <h2 style={{fontSize:'clamp(1.6rem,3.5vw,2.4rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Pricing questions</h2>
             </ScrollReveal>
-            <PricingFAQ q="Is there a free trial?" a="Yes — every plan includes a full 14-day free trial with access to all features. No credit card required to start." />
+            <PricingFAQ q="Is there a free trial?" a="RankPilot offers a separate 14-day Free Trial with no card required. Paid subscriptions begin only after you select a plan and complete checkout. Trial and paid-plan limits differ." />
             <PricingFAQ q="Can I change plans?" a="Yes, upgrade or downgrade any time from your account settings. Changes take effect immediately. Downgrades apply at the next billing cycle." />
             <PricingFAQ q="Do you offer refunds?" a="If you are not happy within the first 30 days, we will refund you in full — no questions asked. We want you to succeed." />
             <PricingFAQ q="What payment methods do you accept?" a="Available payment methods appear here when a provider is configured and has passed checkout and webhook verification. If no method is shown, please contact support while payments are being set up." />
