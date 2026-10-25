@@ -44,23 +44,27 @@ export default function BillingPage() {
   }, []);
 
   const upgrade = async (priceId: string) => {
-    // Existing subscriptions must be changed in the billing portal, not by creating a second subscription.
-    if (hasPaidPlan) {
-      await openPortal();
-      return;
-    }
     if (!priceId) {
-      setMsg('⚠️ Stripe checkout is not configured yet. Please contact support.');
+      setMsg('Stripe checkout is not configured yet. Please contact support.');
       return;
     }
     setLoading(priceId);
     try {
       const { data } = await billingApi.createCheckout(priceId);
-      window.location.href = data.url;
+      if (!data.url || !data.url.startsWith('https://checkout.stripe.com/')) {
+        throw new Error('Stripe returned an invalid checkout URL.');
+      }
+      window.location.assign(data.url);
     } catch (err: any) {
-      setMsg(err.response?.data?.error || 'Failed to open checkout.');
+      // The backend, not frontend plan labels, decides whether a Stripe subscription already exists.
+      if (err.response?.data?.code === 'SUBSCRIPTION_EXISTS') {
+        await openPortal();
+      } else {
+        setMsg(err.response?.data?.error || err.message || 'Failed to open checkout.');
+      }
+    } finally {
+      setLoading('');
     }
-    setLoading('');
   };
 
   const openPortal = async () => {
