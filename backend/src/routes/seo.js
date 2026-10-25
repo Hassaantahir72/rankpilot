@@ -1,0 +1,20 @@
+const express = require('express');
+const router = express.Router();
+const { authMiddleware } = require('../middleware/auth');
+const c = require('../controllers/seoController');
+
+router.use(authMiddleware);
+router.get('/websites',                           c.getWebsites);
+router.post('/websites',                          c.addWebsite);
+router.delete('/websites/:websiteId',             c.deleteWebsite);
+router.post('/websites/:websiteId/audit',         c.runAudit);
+router.get('/websites/:websiteId/audits',         c.getAudits);
+router.get('/websites/:websiteId/audits/:auditId',c.getAuditDetail);
+router.get('/websites/:websiteId/keywords',       c.getKeywords);
+router.post('/websites/:websiteId/content',       c.generateContent);
+router.get('/websites/:websiteId/content',        c.getContentHistory);
+router.get('/websites/:websiteId/rankings',       c.getRankings);
+router.get('/websites/:websiteId/competitors',    c.getCompetitors);
+router.post('/websites/:websiteId/competitors',   c.analyzeCompetitors);
+router.get('/websites/:websiteId/technical',      c.getTechnicalIssues);
+module.exports = router;

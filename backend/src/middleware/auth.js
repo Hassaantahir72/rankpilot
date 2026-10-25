@@ -1,0 +1,94 @@
+const jwt = require('jsonwebtoken');
+const { queryOne, query } = require('../config/db');
+
+const authMiddleware = async (req, res, next) => {
+  try {
+    const header = req.headers.authorization;
+    if (!header?.startsWith('Bearer ')) return res.status(401).json({ error: 'No token provided.' });
+    const token = header.replace('Bearer ', '');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await queryOne(
+      'SELECT id,email,name,plan,subscription_status,trial_ends_at,email_verified,role,is_banned FROM users WHERE id=$1',
+      [decoded.userId]
+    );
+    if (!user) return res.status(401).json({ error: 'User not found.' });
+    if (user.is_banned) return res.status(403).json({ error: 'Account suspended.' });
+
+    req.user = user;
+    next();
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') return res.status(401).json({ error: 'Token expired.' });
+    return res.status(401).json({ error: 'Invalid token.' });
+  }
+};
+
+const requireVerified = (req, res, next) => {
+  if (!req.user.email_verified) return res.status(403).json({ error: 'Please verify your email first.', code: 'EMAIL_NOT_VERIFIED' });
+  next();
+};
+
+const requireSubscription = (req, res, next) => {
+  const { subscription_status, trial_ends_at } = req.user;
+  const trialValid = trial_ends_at && new Date(trial_ends_at) > new Date();
+  if (!trialValid && subscription_status !== 'active' && req.user.plan !== 'free') {
+    return res.status(403).json({ error: 'Active subscription required.', code: 'SUBSCRIPTION_REQUIRED' });
+  }
+  next();
+};
+
+const requirePlanFeature = (feature) => async (req, res, next) => {
+  try {
+    const limits = await queryOne('SELECT * FROM plan_limits WHERE plan=$1', [req.user.plan]);
+    if (!limits || !limits[feature]) {
+      return res.status(403).json({ error: `Your ${req.user.plan} plan does not include this feature.`, code: 'UPGRADE_REQUIRED', feature });
+    }
+    req.planLimits = limits;
+    next();
+  } catch (err) { next(err); }
+};
+
+const checkUsageLimit = (action) => async (req, res, next) => {
+  try {
+    const month = new Date().toISOString().slice(0, 7);
+    const limits = await queryOne('SELECT * FROM plan_limits WHERE plan=$1', [req.user.plan]);
+    const usage  = await queryOne('SELECT count FROM usage_tracking WHERE user_id=$1 AND action=$2 AND month=$3', [req.user.id, action, month]);
+
+    const limitMap = {
+      audit:   limits?.max_audits_per_month,
+      content: limits?.max_content_per_month,
+      social:  limits?.max_social_posts_per_month,
+    };
+    const limit = limitMap[action];
+    const used  = usage?.count || 0;
+
+    if (limit !== undefined && limit !== 9999 && used >= limit) {
+      return res.status(403).json({ error: `You have used all ${limit} ${action}s this month. Upgrade to get more.`, code: 'USAGE_LIMIT_REACHED', used, limit });
+    }
+    req.planLimits = limits;
+    req.currentUsage = used;
+    next();
+  } catch (err) { next(err); }
+};
+
+const incrementUsage = async (userId, action) => {
+  const month = new Date().toISOString().slice(0, 7);
+  await query(
+    `INSERT INTO usage_tracking (user_id, action, month, count, updated_at)
+     VALUES ($1,$2,$3,1,NOW())
+     ON CONFLICT (user_id,action,month) DO UPDATE SET count=usage_tracking.count+1, updated_at=NOW()`,
+    [userId, action, month]
+  );
+};
+
+const requireAdmin = (req, res, next) => {
+  if (!['admin','superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Admin access required.' });
+  next();
+};
+
+const requireSuperAdmin = (req, res, next) => {
+  if (req.user.role !== 'superadmin') return res.status(403).json({ error: 'Superadmin access required.' });
+  next();
+};
+
+module.exports = { authMiddleware, requireVerified, requireSubscription, requirePlanFeature, checkUsageLimit, incrementUsage, requireAdmin, requireSuperAdmin };
