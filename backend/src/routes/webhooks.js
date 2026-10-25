@@ -176,12 +176,22 @@ router.post('/stripe', async (req, res) => {
           trialing: 'past_due',
         };
         const status = statusMap[subscription.status] || 'past_due';
-        await query(
-          `UPDATE users SET plan=$1,subscription_status=$2,stripe_price_id=$3,
-             stripe_subscription_id=$4,updated_at=NOW() WHERE stripe_subscription_id=$4 OR stripe_customer_id=$5`,
-          [status === 'active' ? plan : (status === 'cancelled' ? 'free' : plan), status, priceId,
-            subscription.id, subscription.customer]
+        const metadataUserId = subscription.metadata?.userId;
+        const customerOwner = await queryOne(
+          'SELECT id FROM users WHERE stripe_customer_id=$1 ORDER BY created_at ASC LIMIT 1',
+          [subscription.customer]
         );
+        const userId = customerOwner?.id || metadataUserId;
+        if (!userId) break;
+        const updated = await query(
+          `UPDATE users SET plan=$1,subscription_status=$2,stripe_price_id=$3,
+             stripe_subscription_id=$4,stripe_customer_id=COALESCE(stripe_customer_id,$5),updated_at=NOW()
+           WHERE id=$6 AND (stripe_customer_id IS NULL OR stripe_customer_id=$5)
+             AND (stripe_subscription_id IS NULL OR stripe_subscription_id=$4)`,
+          [status === 'active' ? plan : (status === 'cancelled' ? 'free' : plan), status, priceId,
+            subscription.id, subscription.customer, userId]
+        );
+        if (updated.rowCount !== 1) throw new Error('Could not safely associate subscription update with account.');
         break;
       }
     }
