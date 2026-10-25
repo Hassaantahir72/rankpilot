@@ -72,7 +72,7 @@ export default function PricingPage() {
               Way cheaper than any agency.<br/><span className="gradient-text">Way more powerful.</span>
             </h1>
             <p className="animate-fade-up delay-2" style={{fontSize:18,color:'rgba(255,255,255,0.45)',maxWidth:520,margin:'0 auto 40px',lineHeight:1.7}}>
-              SEO tools that scale with your business, starting at $15/month.
+              Choose your workspace plan or start with the separate 14-day Free Trial. Review billing details before secure payment.
             </p>
             <div className="animate-fade-up delay-3" style={{display:'inline-flex',alignItems:'center',gap:14,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'6px 8px 6px 16px'}}>
               <span style={{fontSize:14,fontWeight:500,color:!annual?'#fff':'rgba(255,255,255,0.4)'}}>Monthly</span>
@@ -115,7 +115,7 @@ export default function PricingPage() {
                         </li>
                       ))}
                     </ul>
-                    <Link href={`/auth/signup?plan=${plan.name.toLowerCase()}&interval=${annual ? 'annual' : 'monthly'}`} className="btn-primary" style={{width:'100%',justifyContent:'center',background:plan.popular?'linear-gradient(135deg,#6366f1,#7c3aed)':'rgba(255,255,255,0.05)',boxShadow:plan.popular?undefined:'none',border:plan.popular?'none':'1px solid rgba(255,255,255,0.1)'}}>
+                    <Link href={`/checkout?plan=${plan.id}&interval=${annual ? 'annual' : 'monthly'}`} className="btn-primary" style={{width:'100%',justifyContent:'center',background:plan.popular?'linear-gradient(135deg,#6366f1,#7c3aed)':'rgba(255,255,255,0.05)',boxShadow:plan.popular?undefined:'none',border:plan.popular?'none':'1px solid rgba(255,255,255,0.1)'}}>
                       Choose plan
                     </Link>
                   </div>
@@ -181,9 +181,10 @@ export default function PricingPage() {
               <div style={{textAlign:'center',padding:'72px 40px',background:'linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.06))',border:'1px solid rgba(99,102,241,0.22)',borderRadius:32,position:'relative',overflow:'hidden'}}>
                 <div style={{position:'absolute',top:-80,left:'50%',transform:'translateX(-50%)',width:400,height:400,background:'radial-gradient(circle,rgba(99,102,241,0.12),transparent 65%)',pointerEvents:'none'}}/>
                 <h2 style={{fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:900,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.1,marginBottom:18}}>Start your free trial today</h2>
-                <p style={{fontSize:16,color:'rgba(255,255,255,0.45)',marginBottom:40}}>No credit card. 14 days full access. Cancel any time.</p>
+                <p style={{fontSize:16,color:'rgba(255,255,255,0.55)',marginBottom:20,maxWidth:650,marginInline:'auto',lineHeight:1.7}}>14 days with no card required. The Free Trial is a separate plan with clear usage limits—not an automatic paid subscription.</p>
+                <div style={{display:'flex',justifyContent:'center',gap:10,flexWrap:'wrap',marginBottom:32}}>{['1 website','5 audits/month','10 AI content/month','5 social posts/month','Competitor analysis','Weekly tracking'].map(item=><span key={item} style={{fontSize:12,padding:'8px 12px',borderRadius:100,border:'1px solid rgba(129,140,248,.25)',background:'rgba(99,102,241,.08)',color:'rgba(255,255,255,.75)'}}>{item}</span>)}</div>
                 <div style={{display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap'}}>
-                  <Link href="/auth/signup" className="btn-primary" style={{fontSize:16,padding:'15px 32px'}}>Get started free →</Link>
+                  <Link href="/auth/signup?flow=trial" className="btn-primary" style={{fontSize:16,padding:'15px 32px'}}>Get started free →</Link>
                   <Link href="/contact" className="btn-ghost" style={{fontSize:16,padding:'15px 32px'}}>Talk to sales</Link>
                 </div>
               </div>
