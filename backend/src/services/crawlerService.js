@@ -4,8 +4,8 @@
  * Uses: axios + cheerio (no paid API needed)
  */
 
-const axios = require('axios');
 const cheerio = require('cheerio');
+const safeHttp = require('./safeHttpService');
 
 const DEFAULT_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (compatible; RankPilotBot/1.0; +https://rankpilot.ai/bot)',
@@ -19,12 +19,7 @@ const DEFAULT_HEADERS = {
 const fetchPage = async (url, timeout = 15000) => {
   try {
     const start = Date.now();
-    const res = await axios.get(url, {
-      headers: DEFAULT_HEADERS,
-      timeout,
-      maxRedirects: 5,
-      validateStatus: s => s < 500,
-    });
+    const res = await safeHttp.fetchPublicUrl(url, { timeout, maxBytes: 2 * 1024 * 1024, userAgent: DEFAULT_HEADERS['User-Agent'] });
     const loadTime = Date.now() - start;
     const $ = cheerio.load(res.data);
 
@@ -50,7 +45,7 @@ const fetchPage = async (url, timeout = 15000) => {
       const href = $(el).attr('href');
       if (!href) return;
       try {
-        const absolute = href.startsWith('http') ? href : `${baseUrl}${href.startsWith('/') ? href : '/' + href}`;
+        const absolute = new URL(href, url).toString();
         const parsed = new URL(absolute);
         if (parsed.origin === baseUrl && !absolute.includes('#') && !absolute.match(/\.(pdf|jpg|png|gif|zip|css|js)$/i)) {
           links.push(absolute);
@@ -92,7 +87,7 @@ const checkSitemap = async (baseUrl) => {
   const paths = ['/sitemap.xml', '/sitemap_index.xml', '/sitemap/sitemap.xml'];
   for (const path of paths) {
     try {
-      const res = await axios.get(`${baseUrl}${path}`, { timeout: 8000, headers: DEFAULT_HEADERS });
+      const res = await safeHttp.fetchPublicUrl(`${baseUrl}${path}`, { timeout: 8000, maxBytes: 512 * 1024, userAgent: DEFAULT_HEADERS['User-Agent'] });
       if (res.status === 200 && (res.data.includes('<sitemap') || res.data.includes('<url'))) {
         return { exists: true, url: `${baseUrl}${path}` };
       }
@@ -104,7 +99,7 @@ const checkSitemap = async (baseUrl) => {
 // ── CHECK ROBOTS.TXT ─────────────────────────────────────────────
 const checkRobots = async (baseUrl) => {
   try {
-    const res = await axios.get(`${baseUrl}/robots.txt`, { timeout: 5000, headers: DEFAULT_HEADERS });
+    const res = await safeHttp.fetchPublicUrl(`${baseUrl}/robots.txt`, { timeout: 5000, maxBytes: 128 * 1024, userAgent: DEFAULT_HEADERS['User-Agent'] });
     return { exists: res.status === 200, content: res.data?.slice(0, 500) || '' };
   } catch {
     return { exists: false, content: '' };
@@ -139,7 +134,7 @@ const crawlWebsite = async (url, maxPages = 30) => {
   console.log(`Crawling: ${url}`);
 
   // Normalize URL
-  if (!url.startsWith('http')) url = `https://${url}`;
+  url = await safeHttp.validatePublicUrl(url);
   const baseUrl = new URL(url).origin;
 
   const visited = new Set();
