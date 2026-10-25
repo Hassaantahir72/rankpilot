@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import { adminApi } from '@/lib/api';
 
-type Tab = 'overview'|'users'|'settings'|'security'|'contacts'|'billing'|'log';
+type Tab = 'overview'|'users'|'settings'|'security'|'contacts'|'billing'|'payment-methods'|'log';
 
 function StatCard({ icon, label, value, color, sub }: any) {
   return (
@@ -47,6 +47,10 @@ export default function AdminPage() {
   const [msg, setMsg] = useState('');
   const [msgType, setMsgType] = useState<'ok'|'err'>('ok');
   const [settingEdits, setSettingEdits] = useState<Record<string,string>>({});
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [newProvider, setNewProvider] = useState('safepay');
+  const [newMethodName, setNewMethodName] = useState('Safepay');
+  const [newMethodDescription, setNewMethodDescription] = useState('Pakistan-focused payments');
 
   useEffect(() => {
     if (!loading && !isAdmin) { router.push('/dashboard'); return; }
@@ -57,6 +61,7 @@ export default function AdminPage() {
     if (tab === 'users')    loadUsers();
     if (tab === 'contacts') loadContacts();
     if (tab === 'billing')  loadBilling();
+    if (tab === 'payment-methods' && user?.role === 'superadmin') loadPaymentMethods();
     if (tab === 'log')      loadAuditLog();
     if (tab === 'settings' && user?.role === 'superadmin') loadSettings();
     if (tab === 'security') { loadSecEvents(); if (user?.role === 'superadmin') loadBlockedIPs(); }
@@ -81,6 +86,26 @@ export default function AdminPage() {
   const loadAuditLog  = async () => { try { const { data } = await adminApi.getAuditLog(); setAuditLog(data.log || []); } catch {} };
   const loadSecEvents = async () => { try { const { data } = await adminApi.getSecurityEvents(); setSecEvents(data.events || []); } catch {} };
   const loadSettings  = async () => { try { const { data } = await adminApi.getSiteSettings(); setSettings(data.settings || []); } catch {} };
+  const loadPaymentMethods = async () => { try { const { data } = await adminApi.getPaymentMethods(); setPaymentMethods(data.methods || []); } catch (e:any) { showMsg(e.response?.data?.error || 'Could not load payment methods.', 'err'); } };
+  const doCreatePaymentMethod = async () => {
+    try {
+      await adminApi.createPaymentMethod({ provider_key: newProvider, display_name: newMethodName, description: newMethodDescription });
+      showMsg('Payment method added in disabled state. Configure server-side credentials and complete adapter testing before enabling it.');
+      loadPaymentMethods();
+    } catch (e:any) { showMsg(e.response?.data?.error || 'Could not add payment method.', 'err'); }
+  };
+  const doTogglePaymentMethod = async (method:any) => {
+    try {
+      await adminApi.updatePaymentMethod(method.id, { enabled: !method.enabled });
+      showMsg(!method.enabled ? 'Payment method published to the website.' : 'Payment method hidden from the website.');
+      loadPaymentMethods();
+    } catch (e:any) { showMsg(e.response?.data?.error || 'Cannot change payment method state.', 'err'); }
+  };
+  const doDeletePaymentMethod = async (method:any) => {
+    if (!confirm('Remove ' + method.display_name + ' from payment methods?')) return;
+    try { await adminApi.deletePaymentMethod(method.id); showMsg('Payment method removed.'); loadPaymentMethods(); }
+    catch (e:any) { showMsg(e.response?.data?.error || 'Could not remove payment method.', 'err'); }
+  };
   const loadBlockedIPs= async () => { try { const { data } = await adminApi.getBlockedIPs(); setBlockedIPs(data.blockedIPs || []); } catch {} };
 
   const loadUserDetail = async (u: any) => {
@@ -170,6 +195,7 @@ export default function AdminPage() {
     { id:'security',  l:'Security',  i:'🛡️' },
     { id:'contacts',  l:'Messages',  i:'💬' },
     { id:'billing',   l:'Billing',   i:'💰' },
+    { id:'payment-methods', l:'Payment Methods', i:'💳' },
     { id:'log',       l:'Audit Log', i:'📋' },
   ] as const;
 
@@ -387,6 +413,51 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* PAYMENT METHODS (superadmin only) */}
+      {tab === 'payment-methods' && (
+        isSuperAdmin ? (
+          <div style={{ display:'flex',flexDirection:'column',gap:16 }}>
+            <div style={{ background:'rgba(245,158,11,0.06)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:12,padding:'14px 16px' }}>
+              <p style={{ fontSize:13,color:'#fbbf24',fontWeight:700,marginBottom:5 }}>Provider-independent payment controls</p>
+              <p style={{ fontSize:12,color:'rgba(255,255,255,0.55)',lineHeight:1.7 }}>The public website reads enabled methods from the backend. New methods start disabled. Secret keys belong only in Render environment variables. A provider cannot be published until credentials are present and its checkout + signed-webhook adapter is marked ready after sandbox tests. This repository currently does not mark either provider adapter as ready.</p>
+            </div>
+            <div style={{ background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:20 }}>
+              <h3 style={{ fontSize:14,fontWeight:700,marginBottom:14 }}>Add payment provider</h3>
+              <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:10 }}>
+                <select className="input-dark" value={newProvider} onChange={e => { setNewProvider(e.target.value); const presets:any={safepay:['Safepay','Pakistan-focused payments'],lemon_squeezy:['Lemon Squeezy','International SaaS subscriptions'],manual_bank_transfer:['Manual bank transfer','Manual verification required']}; setNewMethodName(presets[e.target.value][0]); setNewMethodDescription(presets[e.target.value][1]); }} style={{ fontSize:13,padding:'9px 12px' }}>
+                  <option value="safepay">Safepay</option><option value="lemon_squeezy">Lemon Squeezy</option><option value="manual_bank_transfer">Manual bank transfer</option>
+                </select>
+                <input className="input-dark" value={newMethodName} onChange={e => setNewMethodName(e.target.value)} maxLength={80} placeholder="Public display name" style={{ fontSize:13,padding:'9px 12px' }} />
+                <input className="input-dark" value={newMethodDescription} onChange={e => setNewMethodDescription(e.target.value)} maxLength={240} placeholder="Public description" style={{ fontSize:13,padding:'9px 12px' }} />
+                <button onClick={doCreatePaymentMethod} className="btn-primary" style={{ fontSize:13,padding:'9px 16px' }}>Add disabled method</button>
+              </div>
+            </div>
+            <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
+              {paymentMethods.map(method => (
+                <div key={method.id} style={{ background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:13,padding:18 }}>
+                  <div style={{ display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start',flexWrap:'wrap' }}>
+                    <div style={{ flex:1,minWidth:200 }}>
+                      <p style={{ fontSize:14,fontWeight:700,marginBottom:4 }}>{method.display_name}</p>
+                      <p style={{ fontSize:12,color:'rgba(255,255,255,0.4)',marginBottom:8 }}>{method.description || method.provider_key}</p>
+                      <div style={{ display:'flex',gap:6,flexWrap:'wrap' }}>
+                        <span style={{ fontSize:10,padding:'3px 8px',borderRadius:100,background:'rgba(255,255,255,0.05)',color:'rgba(255,255,255,0.55)' }}>{method.provider_key}</span>
+                        <span style={{ fontSize:10,padding:'3px 8px',borderRadius:100,background:method.configured?'rgba(74,222,128,0.1)':'rgba(245,158,11,0.1)',color:method.configured?'#4ade80':'#fbbf24' }}>{method.configured?'Credentials detected':'Credentials missing'}</span>
+                        <span style={{ fontSize:10,padding:'3px 8px',borderRadius:100,background:method.adapterReady?'rgba(74,222,128,0.1)':'rgba(239,68,68,0.1)',color:method.adapterReady?'#4ade80':'#fca5a5' }}>{method.adapterReady?'Adapter ready':'Checkout/webhook tests pending'}</span>
+                      </div>
+                    </div>
+                    <div style={{ display:'flex',gap:8,alignItems:'center' }}>
+                      <button onClick={() => doTogglePaymentMethod(method)} disabled={!method.enabled && (!method.configured || !method.adapterReady)} style={{ padding:'8px 12px',background:method.enabled?'rgba(74,222,128,0.08)':'rgba(99,102,241,0.1)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:method.enabled?'#4ade80':'#a5b4fc',cursor:(!method.enabled && (!method.configured || !method.adapterReady))?'not-allowed':'pointer',opacity:(!method.enabled && (!method.configured || !method.adapterReady))?0.45:1,fontSize:12,fontFamily:'inherit' }}>{method.enabled?'Disable':'Enable on website'}</button>
+                      <button onClick={() => doDeletePaymentMethod(method)} style={{ padding:'8px 12px',background:'rgba(239,68,68,0.07)',border:'1px solid rgba(239,68,68,0.18)',borderRadius:8,color:'#fca5a5',cursor:'pointer',fontSize:12,fontFamily:'inherit' }}>Remove</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {!paymentMethods.length && <p style={{ textAlign:'center',padding:36,color:'rgba(255,255,255,0.35)',fontSize:13 }}>No payment methods configured. Add Safepay or Lemon Squeezy above.</p>}
+            </div>
+          </div>
+        ) : <div style={{ padding:40,textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:14 }}>Superadmin access required to manage payment methods.</div>
       )}
 
       {/* SETTINGS (superadmin only) */}
