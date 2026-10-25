@@ -5,13 +5,15 @@
 
 const axios = require('axios');
 const cheerio = require('cheerio');
+const safeHttp = require('./safeHttpService');
 const { queryOne } = require('../config/db');
 
 const HEADERS = { 'User-Agent': 'Mozilla/5.0 (compatible; RankPilotBot/1.0)' };
 
 // ── CRAWL AND BUILD URL LIST ──────────────────────────────────────
 const crawlForSitemap = async (baseUrl, maxPages = 200) => {
-  const urlObj = new URL(baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`);
+  const validatedBaseUrl = await safeHttp.validatePublicUrl(baseUrl);
+  const urlObj = new URL(validatedBaseUrl);
   const origin = urlObj.origin;
   const visited = new Set();
   const queue = [origin + '/'];
@@ -42,7 +44,7 @@ const crawlForSitemap = async (baseUrl, maxPages = 200) => {
     if (cleanUrl.match(/\.(jpg|jpeg|png|gif|svg|pdf|zip|css|js|ico|xml|txt|woff|woff2|ttf)$/i)) continue;
 
     try {
-      const { data, headers, status } = await axios.get(cleanUrl, { headers: HEADERS, timeout: 10000, maxRedirects: 3 });
+      const { data, headers, status } = await safeHttp.fetchPublicUrl(cleanUrl, { userAgent: HEADERS['User-Agent'], timeout: 10000, maxBytes: 2 * 1024 * 1024 });
       if (status !== 200) continue;
       if (!headers['content-type']?.includes('html')) continue;
 

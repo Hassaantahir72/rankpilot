@@ -4,11 +4,18 @@ const { incrementUsage } = require('../middleware/auth');
 const crawlerService = require('../services/crawlerService');
 const keywordService = require('../services/keywordService');
 const aiService = require('../services/aiService');
+const safeHttp = require('../services/safeHttpService');
 
 // WEBSITES
 const addWebsite = async (req, res) => {
   const { name, url, industry } = req.body;
   if (!name || !url) return res.status(400).json({ error: 'Name and URL are required.' });
+  let normalizedUrl;
+  try {
+    normalizedUrl = await safeHttp.validatePublicUrl(url);
+  } catch (err) {
+    return res.status(400).json({ error: err.message || 'A valid public website URL is required.' });
+  }
 
   const limits = await queryOne('SELECT max_websites FROM plan_limits WHERE plan=$1', [req.user.plan]);
   const count = await queryOne('SELECT COUNT(*) FROM websites WHERE user_id=$1', [req.user.id]);
@@ -18,7 +25,7 @@ const addWebsite = async (req, res) => {
 
   const website = await queryOne(
     'INSERT INTO websites (id,user_id,name,url,industry,status,created_at) VALUES ($1,$2,$3,$4,$5,$$active$$,NOW()) RETURNING *',
-    [uuidv4(), req.user.id, name, url, industry]
+    [uuidv4(), req.user.id, name, normalizedUrl, industry]
   );
   res.status(201).json({ message: 'Website added!', website });
 };
@@ -48,56 +55,30 @@ const runAudit = async (req, res) => {
   }
 
   const auditId = uuidv4();
-  await queryOne('INSERT INTO audits (id,website_id,user_id,status,started_at) VALUES ($1,$2,$3,$$running$$,NOW()) RETURNING id',
-    [auditId, websiteId, req.user.id]);
+  const jobId = uuidv4();
+  const auditUserId = req.user.id;
+  const queued = await queryOne(
+    `WITH new_audit AS (
+       INSERT INTO audits (id,website_id,user_id,status,started_at)
+       VALUES ($1,$2,$3,'running',NOW()) RETURNING id
+     )
+     INSERT INTO audit_jobs (id,audit_id,website_id,user_id,status,attempts,available_at,created_at,updated_at)
+     SELECT $4,id,$2,$3,'pending',0,NOW(),NOW(),NOW() FROM new_audit
+     RETURNING audit_id`,
+    [auditId, websiteId, auditUserId, jobId]
+  );
+  if (!queued) return res.status(500).json({ error: 'Could not queue audit. Please try again.' });
+  await incrementUsage(auditUserId, 'audit');
 
-  res.json({ message: 'Audit started! Results ready in 3-5 minutes.', auditId });
-
-  // Run in background
-  setImmediate(async () => {
-    try {
-      await incrementUsage(req.user.id, 'audit');
-      const crawlData = await crawlerService.crawlWebsite(website.url);
-      const technicalIssuesRaw = await crawlerService.analyzeTechnical(crawlData);
-      const technicalIssues = Array.isArray(technicalIssuesRaw) ? technicalIssuesRaw : [];
-      const keywordsRaw = await keywordService.researchForWebsite(website.url, website.industry, crawlData.content);
-      const keywords = Array.isArray(keywordsRaw) ? keywordsRaw : [];
-      const aiAnalysis = await aiService.analyzeWebsiteForSEO({ website, crawlData, keywords: keywords.slice(0,20), technicalIssues });
-      const pageRecs = await aiService.generatePageRecommendations({ website, pages: crawlData.pages?.slice(0,10) || [], keywords: keywords.slice(0,10) });
-      const score = calculateScore(technicalIssues, crawlData);
-
-      await query(
-        `UPDATE audits SET status='complete',overall_score=$1,pages_crawled=$2,issues_found=$3,
-         keywords_found_count=$4,crawl_data=$5,technical_issues=$6,keywords_found=$7,
-         ai_analysis=$8,page_recommendations=$9,completed_at=NOW() WHERE id=$10`,
-        [score, crawlData.pagesCount||crawlData.totalPages||0, technicalIssues.length, keywords.length,
-         JSON.stringify(crawlData), JSON.stringify(technicalIssues), JSON.stringify(keywords),
-         JSON.stringify(aiAnalysis), JSON.stringify(pageRecs), auditId]
-      );
-      await query('UPDATE websites SET last_audit_at=NOW(),last_score=$1 WHERE id=$2', [score, websiteId]);
-
-      // Save keywords
-      for (const kw of keywords.slice(0, 100)) {
-        await query(
-          `INSERT INTO keywords (id,website_id,user_id,keyword,search_volume,difficulty,cpc,intent,priority,created_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW()) ON CONFLICT (website_id,keyword) DO UPDATE SET search_volume=$5,difficulty=$6,updated_at=NOW()`,
-          [uuidv4(), websiteId, req.user.id, kw.keyword, kw.searchVolume||0, kw.difficulty||50, kw.cpc||0, kw.intent||'informational', kw.priority||0]
-        );
-      }
-    } catch (err) {
-      console.error('Audit background error:', err);
-      await query("UPDATE audits SET status='failed',error=$1 WHERE id=$2", [err.message, auditId]);
-    }
-  });
+  res.status(202).json({ message: 'Audit queued. Results will appear when processing completes.', auditId });
 };
-
 const calculateScore = (issues, crawlData) => {
   let score = 100;
   const critical = issues.filter(i => i.severity === 'critical').length;
   const warnings = issues.filter(i => i.severity === 'warning').length;
   score -= critical * 8;
   score -= warnings * 3;
-  if (crawlData.avgPageSpeed && crawlData.avgPageSpeed < 50) score -= 10;
+  if (crawlData.pageSpeedData?.performance != null && crawlData.pageSpeedData.performance < 50) score -= 10;
   if (!crawlData.hasSitemap) score -= 5;
   if (!crawlData.hasRobots) score -= 3;
   return Math.max(0, Math.min(100, score));
