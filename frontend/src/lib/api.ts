@@ -107,6 +107,7 @@ export const adminApi = {
   // Users
   getUsers:    (p?: any) => api.get('/admin/users', { params: p }),
   getUser:     (id:string)=> api.get(`/admin/users/${id}`),
+  createUserBillingPortal: (id:string) => api.post(`/admin/users/${id}/billing-portal`),
   updatePlan:  (id:string,d:any) => api.patch(`/admin/users/${id}/plan`, d),
   toggleBan:   (id:string,d:any) => api.patch(`/admin/users/${id}/ban`, d),
   updateRole:  (id:string,d:any) => api.patch(`/admin/users/${id}/role`, d),
