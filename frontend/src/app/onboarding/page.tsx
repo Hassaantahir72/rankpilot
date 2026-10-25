@@ -32,7 +32,7 @@ export default function OnboardingPage() {
       router.replace('/dashboard');
       return;
     }
-  }, [authLoading, user, router]);
+  }, [authLoading, user, router, checkoutComplete]);
 
   useEffect(() => {
     if (!checkoutComplete || authLoading || !user) return;
