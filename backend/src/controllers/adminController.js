@@ -121,6 +121,36 @@ const getUser = async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Failed to load user.' }); }
 };
 
+const createUserBillingPortal = async (req, res) => {
+  const { userId } = req.params;
+  try {
+    if (!process.env.STRIPE_SECRET_KEY || !process.env.FRONTEND_URL) {
+      return res.status(503).json({ error: 'Stripe billing is not configured.' });
+    }
+    const returnUrl = new URL('/dashboard/admin', process.env.FRONTEND_URL);
+    if (process.env.NODE_ENV === 'production' && returnUrl.protocol !== 'https:') {
+      return res.status(503).json({ error: 'The configured frontend URL must use HTTPS.' });
+    }
+    const target = await queryOne('SELECT id,email,stripe_customer_id,stripe_subscription_id FROM users WHERE id=$1', [userId]);
+    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (!target.stripe_customer_id) return res.status(400).json({ error: 'This user has no Stripe customer yet.' });
+
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    const session = await stripe.billingPortal.sessions.create({
+      customer: target.stripe_customer_id,
+      return_url: returnUrl.origin + returnUrl.pathname,
+    });
+    if (!session.url || !session.url.startsWith('https://billing.stripe.com/')) {
+      throw new Error('Stripe did not return a valid billing portal URL.');
+    }
+    await logAction(req.user.id, 'open_user_billing_portal', userId, { adminEmail: req.user.email });
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('Admin billing portal error:', err.message);
+    res.status(500).json({ error: 'Could not open this user’s Stripe billing portal.' });
+  }
+};
+
 const updateUserPlan = async (req, res) => {
   const { userId } = req.params;
   const { plan, subscription_status } = req.body;
@@ -132,6 +162,14 @@ const updateUserPlan = async (req, res) => {
     return res.status(400).json({ error: 'Plan and subscription status do not match.' });
   }
   try {
+    const target = await queryOne('SELECT id,stripe_subscription_id FROM users WHERE id=$1', [userId]);
+    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (target.stripe_subscription_id) {
+      return res.status(409).json({
+        error: 'This user has a Stripe-managed subscription. Use Manage Stripe billing so the plan change is applied to the actual subscription.',
+        code: 'STRIPE_SUBSCRIPTION_MANAGED',
+      });
+    }
     const user = await queryOne('UPDATE users SET plan=$1,subscription_status=$2,updated_at=NOW() WHERE id=$3 RETURNING id,email,name,plan,subscription_status', [plan, status, userId]);
     if (!user) return res.status(404).json({ error: 'User not found.' });
     await logAction(req.user.id, 'update_plan', userId, { plan, subscription_status: status, adminEmail: req.user.email });
@@ -314,7 +352,7 @@ const getGrowthStats = async (req, res) => {
 };
 
 module.exports = {
-  getDashboardStats, getUsers, getUser, updateUserPlan, toggleBan, updateRole,
+  getDashboardStats, getUsers, getUser, createUserBillingPortal, updateUserPlan, toggleBan, updateRole,
   resetUserPassword, verifyUserEmail, impersonateUser, deleteUser,
   getSiteSettings, updateSiteSetting,
   getBlockedIPs, blockIP, unblockIP,
