@@ -7,13 +7,13 @@ const PROVIDERS = {
     description: 'Pakistan-focused payments',
     // Checkout and signed-webhook adapters must be implemented and verified before enabling.
     configured: () => Boolean(process.env.SAFEPAY_API_KEY && process.env.SAFEPAY_SECRET_KEY && process.env.SAFEPAY_WEBHOOK_SECRET),
-    adapterReady: () => process.env.SAFEPAY_ADAPTER_READY === 'true',
+    adapterReady: () => false,
   },
   lemon_squeezy: {
     displayName: 'Lemon Squeezy',
     description: 'International subscriptions',
-    configured: () => Boolean(process.env.LEMONSQUEEZY_API_KEY && process.env.LEMONSQUEEZY_STORE_ID && process.env.LEMONSQUEEZY_WEBHOOK_SECRET),
-    adapterReady: () => process.env.LEMONSQUEEZY_ADAPTER_READY === 'true',
+    configured: () => Boolean(process.env.LEMONSQUEEZY_API_KEY && process.env.LEMONSQUEEZY_STORE_ID && process.env.LEMONSQUEEZY_WEBHOOK_SECRET && process.env.LEMONSQUEEZY_VARIANT_STARTER_MONTHLY && process.env.LEMONSQUEEZY_VARIANT_GROWTH_MONTHLY && process.env.LEMONSQUEEZY_VARIANT_PRO_MONTHLY && process.env.LEMONSQUEEZY_VARIANT_AGENCY_MONTHLY && process.env.LEMONSQUEEZY_VARIANT_STARTER_ANNUAL && process.env.LEMONSQUEEZY_VARIANT_GROWTH_ANNUAL && process.env.LEMONSQUEEZY_VARIANT_PRO_ANNUAL && process.env.LEMONSQUEEZY_VARIANT_AGENCY_ANNUAL),
+    adapterReady: () => true,
   },
   manual_bank_transfer: {
     displayName: 'Manual bank transfer',
