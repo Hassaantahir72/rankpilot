@@ -149,6 +149,8 @@ const getCompetitors = async (req, res) => {
 const analyzeCompetitors = async (req, res) => {
   const website = await queryOne('SELECT * FROM websites WHERE id=$1 AND user_id=$2', [req.params.websiteId, req.user.id]);
   if (!website) return res.status(404).json({ error: 'Website not found.' });
+  const planLimits = await queryOne('SELECT competitor_analysis FROM plan_limits WHERE plan=$1', [req.user.plan]);
+  if (!planLimits?.competitor_analysis) return res.status(403).json({ error: 'Competitor analysis is not included in your plan.', code: 'UPGRADE_REQUIRED' });
   const dataforSeoService = require('../services/dataforSeoService');
   try {
     const competitors = await dataforSeoService.getCompetitors(website.url);
