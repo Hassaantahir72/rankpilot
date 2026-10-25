@@ -28,6 +28,7 @@ router.post('/verify-login-otp', [
 ], c.verifyLoginOTP);
 
 router.get('/me', authMiddleware, c.getMe);
+router.post('/onboarding/complete', authMiddleware, c.completeOnboarding);
 router.post('/forgot-password', [body('email').isEmail().normalizeEmail()], c.forgotPassword);
 router.post('/reset-password', [body('userId').notEmpty(), body('otp').isLength({ min: 6, max: 6 }).isNumeric(), body('password').isLength({ min: 8 })], c.resetPassword);
 router.get('/google', c.googleAuthUrl);
