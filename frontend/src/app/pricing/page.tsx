@@ -8,7 +8,7 @@ import ScrollReveal from '@/components/ui/ScrollReveal';
 const PLANS = [
   {
     name:'Starter', monthly:99, annual:79, desc:'Perfect for a single local business', color:'#6366f1', popular:false,
-    features:['1 website','Full SEO audit & scoring','AI keyword research (100+ keywords)','AI content generation per page','Monthly rank tracking','Basic competitor snapshot','Monthly email report','Email support (48hr)'],
+    features:['1 website','Full SEO audit & scoring','AI keyword research (100+ keywords)','AI content generation per page','Monthly rank tracking','Basic competitor snapshot','Audit history & recommendations','Email support (48hr)'],
     not:['Google Ads automation','Meta Ads automation','Social media posts','White-label dashboard'],
   },
   {
