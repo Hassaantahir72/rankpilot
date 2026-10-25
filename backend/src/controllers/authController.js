@@ -89,7 +89,7 @@ const verifyOTP = async (req, res) => {
       "UPDATE users SET email_verified=true,trial_ends_at=CASE WHEN plan='trial' AND subscription_status='trial' THEN NOW() + INTERVAL '14 days' ELSE trial_ends_at END,otp_code=NULL,otp_purpose=NULL,otp_expires_at=NULL,otp_attempts=0,updated_at=NOW() WHERE id=$1 RETURNING *",
       [userId]
     );
-    await sendWelcomeEmail(verifiedUser.email, verifiedUser.name);
+    await sendWelcomeEmail(verifiedUser.email, verifiedUser.name, verifiedUser.plan);
     const token = signToken(verifiedUser);
     res.json({ message: 'Email verified! Welcome to RankPilot.', token, user: { id:verifiedUser.id, email:verifiedUser.email, name:verifiedUser.name, plan:verifiedUser.plan, subscription_status:verifiedUser.subscription_status, trial_ends_at:verifiedUser.trial_ends_at, signup_plan:verifiedUser.signup_plan || null, signup_interval:verifiedUser.signup_interval || null, onboarding_completed:verifiedUser.onboarding_completed || false, email_verified:true, role:verifiedUser.role||'user' } });
   } catch (err) {
