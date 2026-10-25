@@ -1,5 +1,7 @@
 const axios = require('axios');
+const safeHttp = require('./safeHttpService');
 const analyzePageSpeed = async (url) => {
+  url = await safeHttp.validatePublicUrl(url);
   const results = {};
   for (const strategy of ['mobile','desktop']) {
     try {
