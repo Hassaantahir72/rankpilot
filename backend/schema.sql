@@ -78,7 +78,7 @@ ON CONFLICT (plan) DO UPDATE SET
   competitor_analysis=EXCLUDED.competitor_analysis,
   weekly_reports=EXCLUDED.weekly_reports,
   priority_support=EXCLUDED.priority_support,
-  rank_tracking_frequency=EXCLUDED.rank_tracking_frequency
+  rank_tracking_frequency=EXCLUDED.rank_tracking_frequency;
 
 -- ── WEBSITES ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS websites (
