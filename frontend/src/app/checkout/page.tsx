@@ -67,7 +67,7 @@ export default function CheckoutPage() {
       setError('Secure checkout is not available yet. No payment method is currently enabled for customers.');
       return;
     }
-    if (!details.name.trim() || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(details.email.trim()) || !/^[A-Za-z]{2}$/.test(details.country === 'OTHER' ? otherCountryCode : details.country)) {
+    if (!details.name.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(details.email.trim()) || !/^[A-Za-z]{2}$/.test(details.country === 'OTHER' ? otherCountryCode : details.country)) {
       setError('Enter your billing name, a valid billing email, and select your billing country.');
       return;
     }
