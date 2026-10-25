@@ -19,19 +19,39 @@ const register = async (req, res) => {
     const existing = await queryOne('SELECT id FROM users WHERE email=$1', [email.toLowerCase()]);
     if (existing) return res.status(400).json({ error: 'Email already registered. Please sign in.' });
 
-    const passwordHash = await bcrypt.hash(password, 12);
-    const otp = generateOTP();
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
-    const trialEnds = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
-
-    const user = await queryOne(
-      `INSERT INTO users (id,email,name,password_hash,plan,subscription_status,trial_ends_at,email_verified,otp_code,otp_expires_at,otp_attempts,created_at,updated_at)
-       VALUES ($1,$2,$3,$4,'trial','trial',$5,false,$6,$7,0,NOW(),NOW()) RETURNING id,email,name,plan,subscription_status,trial_ends_at,role`,
-      [uuidv4(), email.toLowerCase(), name, passwordHash, trialEnds, otp, otpExpires]
+    // This is a coarse, privacy-preserving anti-abuse signal, not a unique hardware ID.
+    // The client sends only basic platform/display/timezone attributes; only an HMAC is stored.
+    const suppliedSignature = typeof req.body.deviceSignature === 'string' ? req.body.deviceSignature.slice(0, 1000) : '';
+    if (!suppliedSignature) return res.status(400).json({ error: 'Please refresh the page and try signup again.' });
+    const deviceHash = crypto.createHmac('sha256', process.env.JWT_SECRET)
+      .update('rankpilot-trial-device-v1:' + suppliedSignature).digest('hex');
+    const ipValue = String(req.ip || req.socket?.remoteAddress || 'unknown').slice(0, 100);
+    const ipHash = crypto.createHmac('sha256', process.env.JWT_SECRET)
+      .update('rankpilot-trial-ip-v1:' + ipValue).digest('hex');
+    const claim = await queryOne(
+      'INSERT INTO trial_device_claims (device_hash,ip_hash,created_at) VALUES ($1,$2,NOW()) ON CONFLICT (device_hash) DO NOTHING RETURNING device_hash',
+      [deviceHash, ipHash]
     );
+    if (!claim) return res.status(409).json({ error: 'A free trial has already been claimed from this device. Please sign in or choose a paid plan.' });
 
-    await sendOTPEmail(user.email, user.name, otp, 'verify');
-    res.status(201).json({ message: 'Account created! Check your email for the 6-digit verification code.', userId: user.id, requiresVerification: true });
+    try {
+      const passwordHash = await bcrypt.hash(password, 12);
+      const otp = generateOTP();
+      const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+      const trialEnds = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+      const userId = uuidv4();
+      const user = await queryOne(
+        `INSERT INTO users (id,email,name,password_hash,plan,subscription_status,trial_ends_at,email_verified,otp_code,otp_expires_at,otp_attempts,created_at,updated_at)
+         VALUES ($1,$2,$3,$4,'trial','trial',$5,false,$6,$7,0,NOW(),NOW()) RETURNING id,email,name,plan,subscription_status,trial_ends_at,role`,
+        [userId, email.toLowerCase(), name, passwordHash, trialEnds, otp, otpExpires]
+      );
+      await query('UPDATE trial_device_claims SET user_id=$1 WHERE device_hash=$2', [user.id, deviceHash]);
+      await sendOTPEmail(user.email, user.name, otp, 'verify');
+      res.status(201).json({ message: 'Account created! Check your email for the 6-digit verification code.', userId: user.id, requiresVerification: true });
+    } catch (err) {
+      await query('DELETE FROM trial_device_claims WHERE device_hash=$1 AND user_id IS NULL', [deviceHash]).catch(() => {});
+      throw err;
+    }
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ error: 'Registration failed. Please try again.' });
@@ -140,6 +160,17 @@ const getMe = async (req, res) => {
   res.json({ user: req.user, limits });
 };
 
+// Mark onboarding complete only for the authenticated account.
+const completeOnboarding = async (req, res) => {
+  try {
+    await query('UPDATE users SET onboarding_completed=TRUE,updated_at=NOW() WHERE id=$1', [req.user.id]);
+    return res.json({ success: true, onboarding_completed: true });
+  } catch (err) {
+    console.error('Onboarding completion failed:', err.message);
+    return res.status(500).json({ error: 'Could not save onboarding status.' });
+  }
+};
+
 // FORGOT PASSWORD
 const forgotPassword = async (req, res) => {
   const errors = validationResult(req);
@@ -245,4 +276,4 @@ const logout = async (req, res) => {
   }
 };
 
-module.exports = { register, verifyOTP, resendOTP, login, verifyLoginOTP, getMe, forgotPassword, resetPassword, googleAuthUrl, googleCallback, logout };
+module.exports = { register, verifyOTP, resendOTP, login, verifyLoginOTP, getMe, completeOnboarding, forgotPassword, resetPassword, googleAuthUrl, googleCallback, logout };
