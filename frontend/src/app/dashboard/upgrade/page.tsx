@@ -33,7 +33,7 @@ export default function UpgradePage() {
   const [error, setError] = useState('');
 
   const upgrade = async (priceId: string, planId: string) => {
-    if (!priceId || priceId === 'price_starter_id' || priceId === 'price_growth_id' || priceId === 'price_pro_id' || priceId === 'price_agency_id') {
+    if (!priceId) {
       setError('Stripe price IDs not configured yet. Add them to frontend/.env.local');
       return;
     }
