@@ -3,6 +3,7 @@
  * Crawls website, generates proper XML sitemap, submits to Google
  */
 
+const axios = require('axios');
 const cheerio = require('cheerio');
 const safeHttp = require('./safeHttpService');
 const { queryOne } = require('../config/db');
