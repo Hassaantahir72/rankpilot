@@ -1,9 +1,9 @@
 'use client';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
-import { billingApi, paymentMethodsApi } from '@/lib/api';
+
 import AvailablePaymentMethods from '@/components/billing/AvailablePaymentMethods';
-import { useEffect, useState } from 'react';
+
 import { useRouter } from 'next/navigation';
 
 const PLANS = [
@@ -28,17 +28,6 @@ const PLANS = [
 export default function UpgradePage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [loading, setLoading] = useState('');
-  const [error, setError] = useState('');
-  const [availableProviders, setAvailableProviders] = useState<string[]>([]);
-
-  useEffect(() => {
-    const refreshMethods = () => paymentMethodsApi.listPublic().then(({ data }) => setAvailableProviders((data.methods || []).map((m:any) => m.provider))).catch(() => setAvailableProviders([]));
-    refreshMethods();
-    const methodsInterval = window.setInterval(refreshMethods, 15000);
-    window.addEventListener('focus', refreshMethods);
-    return () => { window.clearInterval(methodsInterval); window.removeEventListener('focus', refreshMethods); };
-  }, []);
 
   const upgrade = (planId: string) => {
     router.push('/checkout?plan=' + encodeURIComponent(planId) + '&interval=monthly');
