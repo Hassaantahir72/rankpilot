@@ -23,7 +23,7 @@ const PLANS = [
   },
   {
     id:'agency', name:'Agency', monthly:99, annual:79, desc:'Higher limits for agency workflows', color:'#f59e0b', popular:false,
-    features:['10 websites','100 SEO audits/month','200 AI content generations/month','Weekly rank tracking','Google + Meta Ads AI tools','A/B ad testing','100 social posts/month','Branded PDF reports','Agency-level usage limits'],
+    features:['10 websites','100 SEO audits/month','200 AI content generations/month','Weekly rank tracking','Google + Meta Ads AI tools','100 social posts/month','Branded PDF reports','Agency-level usage limits'],
     not:[],
   },
 ];
