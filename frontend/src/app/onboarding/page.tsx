@@ -131,7 +131,7 @@ export default function OnboardingPage() {
         <div style={styles.mark}>R</div>
         <p style={styles.eyebrow}>{checkoutComplete ? 'PLAN CONFIRMED' : 'YOUR WORKSPACE'}</p>
         <h1 style={styles.heading}>Let’s set up RankPilot</h1>
-        <p style={styles.muted}>A couple of details help us tailor your SEO workspace. You can skip the website for now and add it later.</p>
+        <p style={styles.muted}>Step 3 of 3 · A couple of details help us tailor your SEO workspace. You can skip the website for now and add it later.</p>
         <div style={styles.planCard}>
           <span style={styles.planLabel}>YOUR CURRENT PLAN</span>
           <strong style={styles.plan}>{user.plan === 'trial' ? 'Free trial' : user.plan[0].toUpperCase() + user.plan.slice(1)}</strong>
@@ -139,6 +139,7 @@ export default function OnboardingPage() {
             ? <span style={styles.small}>{trialDays} day{trialDays === 1 ? '' : 's'} left in your 14-day trial · No card is required for the trial.</span>
             : <span style={styles.small}>{user.plan === 'free' ? 'Free plan · You can upgrade any time.' : 'Your subscription is active.'}</span>}
           {limits && <span style={styles.small}>Included now: {limits.max_websites} website{limits.max_websites === 1 ? '' : 's'} · {limits.max_audits_per_month} SEO audits/month · {limits.max_content_per_month} AI content generations/month · {limits.max_social_posts_per_month} social posts/month.</span>}
+          {limits && <span style={styles.small}>Feature access: {limits.competitor_analysis ? 'Competitor analysis' : 'Basic competitor tools'}{limits.google_ads ? ' · Google Ads AI' : ''}{limits.meta_ads ? ' · Meta Ads AI' : ''}{limits.weekly_reports ? ' · Weekly reports' : ''}{limits.priority_support ? ' · Priority support' : ''}.</span>}
         </div>
         {error && <p style={styles.error}>{error}</p>}
         <form onSubmit={finish} style={styles.form}>
