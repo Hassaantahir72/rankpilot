@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
   password_hash TEXT,
+  token_version INTEGER NOT NULL DEFAULT 0,
   google_id TEXT,
   role TEXT DEFAULT 'user' CHECK (role IN ('user','admin','superadmin')),
   plan TEXT DEFAULT 'free' CHECK (plan IN ('free','trial','starter','growth','pro','agency')),
