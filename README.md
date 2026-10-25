@@ -98,9 +98,9 @@ UPDATE users SET role = 'superadmin' WHERE email = 'your@email.com';
 
 ## 💳 Pricing and entitlements
 
-- **Starter — $15/month:** 1 website, 5 SEO audits/month, 10 AI content generations/month, monthly rank tracking, basic competitor analysis.
+- **Starter — $15/month:** 1 website, 5 SEO audits/month, 10 AI content generations/month, monthly rank tracking, competitor analysis.
 - **Growth — $29/month:** 3 websites, 15 audits/month, 30 AI content generations/month, 10 social posts/month, weekly tracking/reports, Google Ads AI tools.
-- **Pro — $59/month:** 5 websites, 40 audits/month, 80 AI content generations/month, 30 social posts/month, Google + Meta Ads AI tools, A/B testing, branded PDF reports.
+- **Pro — $59/month:** 5 websites, 40 audits/month, 80 AI content generations/month, 30 social posts/month, Google + Meta Ads AI tools, branded PDF reports.
 - **Agency — $99/month:** 10 websites, 100 audits/month, 200 AI content generations/month, 100 social posts/month, Google + Meta Ads AI tools, branded PDF reports.
 - Free and Trial remain separate. The database plan_limits table is the source of truth for quotas and feature flags.
 - Create real monthly and annual Stripe Price IDs before enabling checkout. Configure matching variables in both Vercel and Render.
