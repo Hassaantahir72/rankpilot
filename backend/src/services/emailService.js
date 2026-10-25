@@ -1,5 +1,10 @@
 const nodemailer = require('nodemailer');
 
+// Escape all user-controlled text before placing it into HTML email templates.
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>\"']/g, (char) => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;',
+}[char]));
+
 const transporter = () => nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.SMTP_PORT) || 587,
@@ -40,9 +45,9 @@ const sendOTPEmail = async (email, name, otp, type) => {
   const subjects = { verify: 'Verify your email — RankPilot', login: 'Your login code — RankPilot', reset: 'Password reset code — RankPilot' };
   const titles = { verify: 'Verify your email address', login: 'Your sign-in code', reset: 'Reset your password' };
   const descs = {
-    verify: `Welcome to RankPilot, ${name}! Enter the code below to verify your email and activate your 14-day free trial.`,
-    login: `Hi ${name}, here is your sign-in verification code.`,
-    reset: `Hi ${name}, use the code below to reset your password. It expires in 15 minutes.`,
+    verify: `Welcome to RankPilot, ${escapeHtml(name)}! Enter the code below to verify your email and activate your 14-day free trial.`,
+    login: `Hi ${escapeHtml(name)}, here is your sign-in verification code.`,
+    reset: `Hi ${escapeHtml(name)}, use the code below to reset your password. It expires in 15 minutes.`,
   };
   const html = base(`
     <h2>${titles[type]}</h2>
@@ -56,7 +61,7 @@ const sendOTPEmail = async (email, name, otp, type) => {
 
 const sendWelcomeEmail = async (email, name) => {
   const html = base(`
-    <h2>Welcome to RankPilot, ${name}! 🎉</h2>
+    <h2>Welcome to RankPilot, ${escapeHtml(name)}! 🎉</h2>
     <p>Your 14-day free trial has started. Here is how to get your first results fast:</p>
     <p>✅ <strong>Step 1:</strong> Add your website URL</p>
     <p>✅ <strong>Step 2:</strong> Run your first AI SEO audit (takes 3–5 minutes)</p>
@@ -72,35 +77,35 @@ const sendAuditCompleteEmail = async (email, name, websiteName, score, auditId) 
   const col = score >= 70 ? '#4ade80' : score >= 40 ? '#f59e0b' : '#ef4444';
   const label = score >= 70 ? 'Good' : score >= 40 ? 'Needs Work' : 'Critical Issues';
   const html = base(`
-    <h2>Your SEO Audit is Ready, ${name}!</h2>
-    <p>We finished analysing <strong>${websiteName}</strong>.</p>
+    <h2>Your SEO Audit is Ready, ${escapeHtml(name)}!</h2>
+    <p>We finished analysing <strong>${escapeHtml(websiteName)}</strong>.</p>
     <div style="text-align:center;margin:28px 0">
-      <div style="display:inline-block;width:110px;height:110px;border-radius:50%;background:${col};line-height:110px;font-size:32px;font-weight:900;color:#fff">${score}</div>
+      <div style="display:inline-block;width:110px;height:110px;border-radius:50%;background:${col};line-height:110px;font-size:32px;font-weight:900;color:#fff">${escapeHtml(score)}</div>
       <div style="margin-top:10px;font-size:16px;font-weight:700;color:${col}">${label}</div>
     </div>
     <p>Your full report includes technical issues, keyword opportunities, page-by-page fixes, and AI-written optimized content.</p>
-    <a href="${process.env.FRONTEND_URL}/dashboard/seo/audits/${auditId}" class="btn">View full report →</a>
+    <a href="${process.env.FRONTEND_URL}/dashboard/seo/audits/${encodeURIComponent(String(auditId ?? ''))}" class="btn">View full report →</a>
   `);
-  await send(email, `✅ SEO Audit complete — Score: ${score}/100`, html);
+  await send(email, `✅ SEO Audit complete — Score: ${escapeHtml(score)}/100`, html);
 };
 
 const sendWeeklyReport = async (email, name, report) => {
   const html = base(`
-    <h2>${report.subject || 'Your weekly marketing report'}</h2>
-    <p>${report.summary || ''}</p>
-    ${report.biggestWin ? `<div class="note">🏆 <strong>Biggest win:</strong> ${report.biggestWin}</div>` : ''}
-    <p style="margin-top:20px"><strong>Rankings:</strong> ${report.rankingChanges?.improved || 0} improved · ${report.rankingChanges?.declined || 0} declined · ${report.rankingChanges?.new || 0} new</p>
+    <h2>${escapeHtml(report.subject || 'Your weekly marketing report')}</h2>
+    <p>${escapeHtml(report.summary || '')}</p>
+    ${report.biggestWin ? `<div class="note">🏆 <strong>Biggest win:</strong> ${escapeHtml(report.biggestWin)}</div>` : ''}
+    <p style="margin-top:20px"><strong>Rankings:</strong> ${escapeHtml(report.rankingChanges?.improved || 0)} improved · ${escapeHtml(report.rankingChanges?.declined || 0)} declined · ${escapeHtml(report.rankingChanges?.new || 0)} new</p>
     <a href="${process.env.FRONTEND_URL}/dashboard/reports" class="btn">View full report →</a>
-    ${report.encouragingNote ? `<p style="margin-top:20px;font-style:italic;color:rgba(255,255,255,0.45)">${report.encouragingNote}</p>` : ''}
+    ${report.encouragingNote ? `<p style="margin-top:20px;font-style:italic;color:rgba(255,255,255,0.45)">${escapeHtml(report.encouragingNote)}</p>` : ''}
   `);
   await send(email, report.subject || 'Your RankPilot weekly report', html);
 };
 
 const sendPasswordResetEmail = async (email, name, token) => {
-  const url = `${process.env.FRONTEND_URL}/auth/reset-password?token=${token}`;
+  const url = `${process.env.FRONTEND_URL}/auth/reset-password?token=${encodeURIComponent(String(token ?? ''))}`;
   const html = base(`
     <h2>Reset your password</h2>
-    <p>Hi ${name}, you requested a password reset. Click below to set a new password.</p>
+    <p>Hi ${escapeHtml(name)}, you requested a password reset. Click below to set a new password.</p>
     <a href="${url}" class="btn">Reset password →</a>
     <div class="note">This link expires in 1 hour. If you did not request this, ignore this email.</div>
   `);
@@ -109,11 +114,11 @@ const sendPasswordResetEmail = async (email, name, token) => {
 
 const sendTrialEndingEmail = async (email, name, daysLeft) => {
   const html = base(`
-    <h2>Your trial ends in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}</h2>
-    <p>Hi ${name}, don't lose your SEO progress! Upgrade to keep full access.</p>
+    <h2>Your trial ends in ${escapeHtml(daysLeft)} day${daysLeft !== 1 ? 's' : ''}</h2>
+    <p>Hi ${escapeHtml(name)}, don't lose your SEO progress! Upgrade to keep full access.</p>
     <a href="${process.env.FRONTEND_URL}/dashboard/billing" class="btn">Upgrade now →</a>
   `);
-  await send(email, `⏰ Your RankPilot trial ends in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`, html);
+  await send(email, `⏰ Your RankPilot trial ends in ${escapeHtml(daysLeft)} day${daysLeft !== 1 ? 's' : ''}`, html);
 };
 
 module.exports = { sendOTPEmail, sendWelcomeEmail, sendAuditCompleteEmail, sendWeeklyReport, sendPasswordResetEmail, sendTrialEndingEmail };
@@ -121,26 +126,26 @@ module.exports = { sendOTPEmail, sendWelcomeEmail, sendAuditCompleteEmail, sendW
 const sendSupportTicketEmail = async (email, name, ticketNumber, subject) => {
   const html = base(`
     <h2>Support ticket received ✅</h2>
-    <p>Hi ${name}, we've received your support request and created ticket <strong style="color:#818cf8">#${ticketNumber}</strong>.</p>
+    <p>Hi ${escapeHtml(name)}, we've received your support request and created ticket <strong style="color:#818cf8">#${escapeHtml(ticketNumber)}</strong>.</p>
     <div class="note">
-      <strong>Subject:</strong> ${subject}<br/>
+      <strong>Subject:</strong> ${escapeHtml(subject)}<br/>
       <strong>Expected response:</strong> Within 2-4 hours (Mon-Fri, 9am-6pm GMT)
     </div>
     <p>You'll receive an email notification when we reply. You can also view and reply to your ticket from your dashboard.</p>
     <a href="${process.env.FRONTEND_URL}/dashboard/support" class="btn">View ticket →</a>
   `);
-  await send(email, `Support ticket #${ticketNumber} — RankPilot`, html);
+  await send(email, `Support ticket #${escapeHtml(ticketNumber)} — RankPilot`, html);
 };
 
 const sendTicketReplyEmail = async (email, name, ticketNumber, message, subject) => {
   const html = base(`
     <h2>New reply on your ticket</h2>
-    <p>Hi ${name}, our support team has replied to your ticket <strong style="color:#818cf8">#${ticketNumber}</strong>.</p>
-    <p style="font-style:italic;color:rgba(255,255,255,0.5)">"${subject}"</p>
-    <div class="note" style="margin:20px 0">${message}</div>
+    <p>Hi ${escapeHtml(name)}, our support team has replied to your ticket <strong style="color:#818cf8">#${escapeHtml(ticketNumber)}</strong>.</p>
+    <p style="font-style:italic;color:rgba(255,255,255,0.5)">"${escapeHtml(subject)}"</p>
+    <div class="note" style="margin:20px 0">${escapeHtml(message)}</div>
     <a href="${process.env.FRONTEND_URL}/dashboard/support" class="btn">View & Reply →</a>
   `);
-  await send(email, `Reply on ticket #${ticketNumber} — RankPilot Support`, html);
+  await send(email, `Reply on ticket #${escapeHtml(ticketNumber)} — RankPilot Support`, html);
 };
 
 module.exports = Object.assign(module.exports, { sendSupportTicketEmail, sendTicketReplyEmail });
