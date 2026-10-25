@@ -126,7 +126,7 @@ const verifyLoginOTP = async (req, res) => {
       return res.status(400).json({ error: 'Invalid code.' });
     }
     await query('UPDATE users SET otp_code=NULL,otp_expires_at=NULL,otp_attempts=0 WHERE id=$1', [userId]);
-    const token = signToken(user.id);
+    const token = signToken(user);
     res.json({ token, user: { id:user.id, email:user.email, name:user.name, plan:user.plan, subscription_status:user.subscription_status, trial_ends_at:user.trial_ends_at, email_verified:user.email_verified, role:user.role||'user' } });
   } catch (err) {
     console.error('Verify login OTP error:', err);
@@ -227,7 +227,7 @@ const googleCallback = async (req, res) => {
       );
     }
 
-    const token = signToken(user.id);
+    const token = signToken(user);
     res.redirect(process.env.FRONTEND_URL + '/auth/callback?token=' + token);
   } catch (err) {
     console.error('Google OAuth error:', err.message);
