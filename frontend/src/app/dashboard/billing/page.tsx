@@ -7,10 +7,10 @@ import { UsageBar } from '@/components/dashboard/PlanGate';
 
 const PLANS = [
   { id:'free',    name:'Free',    price:0,   desc:'Get started',              color:'#6b7280', priceId: '' },
-  { id:'starter', name:'Starter', price:99,  desc:'For single businesses',    color:'#6366f1', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 'price_starter' },
-  { id:'growth',  name:'Growth',  price:299, desc:'For growing teams',        color:'#8b5cf6', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH || 'price_growth' },
-  { id:'pro',     name:'Pro',     price:499, desc:'For power marketers',      color:'#ec4899', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || 'price_pro' },
-  { id:'agency',  name:'Agency',  price:999, desc:'For agencies',             color:'#f59e0b', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || 'price_agency' },
+  { id:'starter', name:'Starter', price:99,  desc:'For single businesses',    color:'#6366f1', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || '' },
+  { id:'growth',  name:'Growth',  price:299, desc:'For growing teams',        color:'#8b5cf6', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH || '' },
+  { id:'pro',     name:'Pro',     price:499, desc:'For power marketers',      color:'#ec4899', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || '' },
+  { id:'agency',  name:'Agency',  price:999, desc:'For agencies',             color:'#f59e0b', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || '' },
 ];
 
 const FEATURES: Record<string, { free: string; starter: string; growth: string; pro: string; agency: string }> = {
@@ -31,11 +31,16 @@ export default function BillingPage() {
   const [loading, setLoading] = useState('');
   const [msg, setMsg] = useState('');
   const [usage, setUsage] = useState<any>(null);
+  const [requestedPlan, setRequestedPlan] = useState('');
 
   useEffect(() => {
-    // Load usage from localStorage or API
+    // Usage is currently cached client-side; backend usage reporting should replace this.
     const stored = localStorage.getItem('rp_usage');
-    if (stored) setUsage(JSON.parse(stored));
+    if (stored) {
+      try { setUsage(JSON.parse(stored)); } catch { localStorage.removeItem('rp_usage'); }
+    }
+    const selected = new URLSearchParams(window.location.search).get('plan') || '';
+    if (['starter', 'growth', 'pro', 'agency'].includes(selected)) setRequestedPlan(selected);
   }, []);
 
   const upgrade = async (priceId: string) => {
@@ -112,14 +117,15 @@ export default function BillingPage() {
           const isCurrent = plan.id === user?.plan;
           const isDowngrade = PLANS.findIndex(p => p.id === plan.id) < currentPlanIdx;
           return (
-            <div key={plan.id} style={{ background: isCurrent ? `${plan.color}12` : 'rgba(255,255,255,0.02)', border: `1px solid ${isCurrent ? plan.color + '40' : 'rgba(255,255,255,0.08)'}`, borderRadius: 14, padding: '20px 16px', position: 'relative' }}>
+            <div key={plan.id} style={{ background: isCurrent || requestedPlan === plan.id ? `${plan.color}12` : 'rgba(255,255,255,0.02)', border: `1px solid ${isCurrent || requestedPlan === plan.id ? plan.color + '70' : 'rgba(255,255,255,0.08)'}`, borderRadius: 14, padding: '20px 16px', position: 'relative' }}>
               {isCurrent && <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: plan.color, color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 12px', borderRadius: 100, whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>CURRENT</div>}
+              {!isCurrent && requestedPlan === plan.id && <div style={{ position: 'absolute', top: -10, right: 10, background: plan.color, color: '#fff', fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 100 }}>SELECTED</div>}
               <p style={{ fontSize: 11, fontWeight: 700, color: plan.color, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{plan.name}</p>
               <p style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Plus Jakarta Sans',sans-serif", marginBottom: 4 }}>${plan.price}<span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(255,255,255,0.35)' }}>/mo</span></p>
               <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', marginBottom: 16 }}>{plan.desc}</p>
               {!isCurrent && (
                 <button onClick={() => upgrade(plan.priceId)} disabled={!!loading} style={{ width: '100%', padding: '9px', background: isDowngrade ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${plan.color},${plan.color}cc)`, border: isDowngrade ? '1px solid rgba(255,255,255,0.1)' : 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', boxShadow: isDowngrade ? 'none' : `0 4px 16px ${plan.color}35` }}>
-                  {loading === plan.priceId ? 'Redirecting...' : isDowngrade ? 'Downgrade' : 'Upgrade'}
+                  {loading === plan.priceId ? 'Redirecting...' : !plan.priceId ? 'Configure Stripe' : requestedPlan === plan.id ? 'Continue with this plan' : isDowngrade ? 'Downgrade' : 'Upgrade'}
                 </button>
               )}
             </div>
