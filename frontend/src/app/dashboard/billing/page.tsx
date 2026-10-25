@@ -157,7 +157,7 @@ export default function BillingPage() {
               {!isCurrent && requestedPlan === plan.id && <div style={{ position: 'absolute', top: -10, right: 10, background: plan.color, color: '#fff', fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 100 }}>SELECTED</div>}
               <p style={{ fontSize: 11, fontWeight: 700, color: plan.color, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{plan.name}</p>
               <p style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Plus Jakarta Sans',sans-serif", marginBottom: 4 }}>${billingInterval === 'annual' ? (plan.annualPrice ?? 0) : plan.price}<span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(255,255,255,0.35)' }}>/mo</span></p>
-              {billingInterval === 'annual' && plan.id !== 'free' && <p style={{ fontSize: 11, color: '#4ade80', marginBottom: 8 }}>Billed ${(plan.annualPrice ?? 0) * 12}/year</p>}
+              {billingInterval === 'annual' && !['free','trial'].includes(plan.id) && <p style={{ fontSize: 11, color: '#4ade80', marginBottom: 8 }}>Billed ${(plan.annualPrice ?? 0) * 12}/year</p>}
               <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', marginBottom: 16 }}>{plan.desc}</p>
               {!isCurrent && (
                 <button onClick={() => hasPaidPlan ? openPortal() : upgrade(plan.id)} disabled={!!loading} style={{ width: '100%', padding: '9px', background: isDowngrade ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${plan.color},${plan.color}cc)`, border: isDowngrade ? '1px solid rgba(255,255,255,0.1)' : 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', boxShadow: isDowngrade ? 'none' : `0 4px 16px ${plan.color}35` }}>
