@@ -22,7 +22,6 @@ const FEATURES: Record<string, { free: string; starter: string; growth: string; 
   'Social posts/month':  { free:'—', starter:'—', growth:'10', pro:'30', agency:'100' },
   'Competitor analysis': { free:'—', starter:'✓', growth:'✓', pro:'✓', agency:'✓' },
   'Weekly reports':      { free:'—', starter:'—', growth:'✓', pro:'✓', agency:'✓' },
-  'Branded PDF reports': { free:'—', starter:'—', growth:'—', pro:'✓', agency:'✓' },
   'A/B testing':         { free:'—', starter:'—', growth:'—', pro:'✓', agency:'✓' },
   'Branded PDF reports': { free:'—', starter:'—', growth:'—', pro:'✓', agency:'✓' },
 };
