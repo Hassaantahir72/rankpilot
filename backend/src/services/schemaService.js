@@ -4,7 +4,8 @@ const generateLocalBusinessSchema = (data) => {
   const schemaType=Object.keys(typeMap).find(k=>industry?.includes(k))?typeMap[Object.keys(typeMap).find(k=>industry?.includes(k))]:'LocalBusiness';
   return {
     '@context':'https://schema.org','@type':schemaType,name,url,
-    ...(phone&&{telephone:phone}),(email&&{email})||({}),
+    ...(phone && { telephone: phone }),
+    ...(email && { email }),
     ...(description&&{description}),
     ...(address&&{address:{'@type':'PostalAddress',streetAddress:address,addressLocality:city||'',addressCountry:country||'GB',postalCode:postcode||''}}),
     ...(rating&&{aggregateRating:{'@type':'AggregateRating',ratingValue:rating,reviewCount:reviewCount||1,bestRating:5,worstRating:1}}),
