@@ -47,6 +47,7 @@ export const authApi = {
   forgotPassword: (email: string)    => api.post('/auth/forgot-password', { email }),
   resetPassword:  (d: any)           => api.post('/auth/reset-password', d),
   logout:         ()                 => api.post('/auth/logout'),
+  completeOnboarding: ()             => api.post('/auth/onboarding/complete'),
 };
 
 // ── SEO ───────────────────────────────────────────────────────────
