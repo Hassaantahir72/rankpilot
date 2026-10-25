@@ -18,7 +18,7 @@ const PLANS = [
   },
   {
     id:'pro', name:'Pro', monthly:59, annual:47, desc:'Advanced marketing for active teams', color:'#ec4899', popular:false,
-    features:['5 websites','40 SEO audits/month','80 AI content generations/month','Weekly rank tracking','Google + Meta Ads AI tools','A/B ad testing','30 social posts/month','Branded PDF reports','Priority support'],
+    features:['5 websites','40 SEO audits/month','80 AI content generations/month','Weekly rank tracking','Google + Meta Ads AI tools','30 social posts/month','Branded PDF reports','Priority support'],
     not:[],
   },
   {
@@ -36,11 +36,9 @@ const TABLE = [
   {f:'Competitor Analysis',s:'✓',g:'✓',p:'✓',a:'✓'},
   {f:'Google Ads AI',s:'—',g:'✓',p:'✓',a:'✓'},
   {f:'Meta Ads AI',s:'—',g:'—',p:'✓',a:'✓'},
-  {f:'A/B Ad Testing',s:'—',g:'—',p:'✓',a:'✓'},
   {f:'Social Media Posts',s:'—',g:'10/mo',p:'30/mo',a:'100/mo'},
   {f:'Weekly Reports',s:'—',g:'✓',p:'✓',a:'✓'},
   {f:'Branded PDF Reports',s:'—',g:'—',p:'✓',a:'✓'},
-  {f:'Support',s:'Email',g:'Priority',p:'Priority',a:'Agency support'},
 ];
 
 function PricingFAQ({q,a}:{q:string;a:string}) {
