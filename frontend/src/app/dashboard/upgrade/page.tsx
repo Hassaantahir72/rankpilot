@@ -6,26 +6,26 @@ import { useState } from 'react';
 
 const PLANS = [
   {
-    id:'starter', name:'Starter', price:99, color:'#6366f1',
-    features:['1 website','Full SEO audit','AI keyword research','AI content writing','Monthly rank tracking','Email support'],
+    id:'starter', name:'Starter', price:15, color:'#6366f1',
+    features:['1 website','5 SEO audits/month','10 AI content generations/month','Monthly rank tracking','Basic competitor analysis','Email support'],
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || '',
   },
   {
-    id:'growth', name:'Growth', price:299, color:'#8b5cf6', popular:true,
-    features:['3 websites','Everything in Starter','Google Ads AI','Weekly rank tracking','Competitor analysis','Social posts (20/mo)','Priority support'],
+    id:'growth', name:'Growth', price:29, color:'#8b5cf6', popular:true,
+    features:['3 websites','15 SEO audits/month','30 AI content generations/month','Weekly rank tracking','Google Ads AI tools','10 social posts/month','Weekly reports'],
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH || '',
   },
   {
-    id:'pro', name:'Pro', price:499, color:'#ec4899',
-    features:['10 websites','Everything in Growth','Meta Ads AI','Auto A/B testing','Advanced analytics','Branded reports','Dedicated support'],
+    id:'pro', name:'Pro', price:59, color:'#ec4899',
+    features:['5 websites','40 SEO audits/month','80 AI content generations/month','Google + Meta Ads AI tools','A/B testing','30 social posts/month','Branded PDF reports'],
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || '',
   },
   {
-    id:'agency', name:'Agency', price:999, color:'#f59e0b',
-    features:['Unlimited websites','Everything in Pro','White-label dashboard','Client portal','API access','Custom integrations','Custom onboarding'],
+    id:'agency', name:'Agency', price:99, color:'#f59e0b',
+    features:['10 websites','100 SEO audits/month','200 AI content generations/month','100 social posts/month','White-label dashboard','Client management','API access'],
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || '',
   },
-];
+];;
 
 export default function UpgradePage() {
   const { user } = useAuth();
@@ -33,7 +33,7 @@ export default function UpgradePage() {
   const [error, setError] = useState('');
 
   const upgrade = async (priceId: string, planId: string) => {
-    if (!priceId || priceId.startsWith('price_s') || priceId.startsWith('price_g') || priceId.startsWith('price_p') || priceId.startsWith('price_a')) {
+    if (!priceId || priceId === 'price_starter_id' || priceId === 'price_growth_id' || priceId === 'price_pro_id' || priceId === 'price_agency_id') {
       setError('Stripe price IDs not configured yet. Add them to frontend/.env.local');
       return;
     }
