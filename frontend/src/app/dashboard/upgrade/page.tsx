@@ -31,7 +31,11 @@ export default function UpgradePage() {
   const [availableProviders, setAvailableProviders] = useState<string[]>([]);
 
   useEffect(() => {
-    paymentMethodsApi.listPublic().then(({ data }) => setAvailableProviders((data.methods || []).map((m:any) => m.provider))).catch(() => setAvailableProviders([]));
+    const refreshMethods = () => paymentMethodsApi.listPublic().then(({ data }) => setAvailableProviders((data.methods || []).map((m:any) => m.provider))).catch(() => setAvailableProviders([]));
+    refreshMethods();
+    const methodsInterval = window.setInterval(refreshMethods, 15000);
+    window.addEventListener('focus', refreshMethods);
+    return () => { window.clearInterval(methodsInterval); window.removeEventListener('focus', refreshMethods); };
   }, []);
 
   const upgrade = async (planId: string) => {
