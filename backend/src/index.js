@@ -31,6 +31,7 @@ try { gscRoutes = require('./routes/gsc'); } catch(e) { console.log('GSC routes 
 // Jobs
 const { runWeeklyRankCheck } = require('./jobs/rankTracker');
 const { runWeeklyReports, runMonthlyContentRefresh } = require('./jobs/contentRefresher');
+const { startAuditWorker } = require('./jobs/auditWorker');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -106,6 +107,7 @@ cron.schedule('0 8 * * 1', () => { console.log('Sending reports...');    runWeek
 cron.schedule('0 7 1 * *', () => { console.log('Content refresh...');    runMonthlyContentRefresh(); });
 
 app.listen(PORT, () => {
+  startAuditWorker();
   console.log('\n🚀 RankPilot API v2.0 running on :' + PORT);
   console.log('🗄  Database: PostgreSQL');
   console.log('🔒 Security: IP blocking, Rate limiting, Admin guards active');
