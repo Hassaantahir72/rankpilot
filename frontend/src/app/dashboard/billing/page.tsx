@@ -7,11 +7,11 @@ import { UsageBar } from '@/components/dashboard/PlanGate';
 import AvailablePaymentMethods from '@/components/billing/AvailablePaymentMethods';
 
 const PLANS = [
-  { id:'free',    name:'Free',    price:0,   desc:'Get started', color:'#6b7280', priceId: '' },
-  { id:'starter', name:'Starter', price:15, annualPrice:12, desc:'Essential SEO for one website', color:'#6366f1', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_ANNUAL || '' },
-  { id:'growth',  name:'Growth',  price:29, annualPrice:23, desc:'More capacity for growing businesses', color:'#8b5cf6', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH_ANNUAL || '' },
-  { id:'pro',     name:'Pro',     price:59, annualPrice:47, desc:'Advanced marketing for active teams', color:'#ec4899', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL || '' },
-  { id:'agency',  name:'Agency',  price:99, annualPrice:79, desc:'Higher limits for agency workflows', color:'#f59e0b', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY_ANNUAL || '' },
+  { id:'free',    name:'Free',    price:0,   desc:'Get started', color:'#6b7280' },
+  { id:'starter', name:'Starter', price:15, annualPrice:12, desc:'Essential SEO for one website', color:'#6366f1' },
+  { id:'growth',  name:'Growth',  price:29, annualPrice:23, desc:'More capacity for growing businesses', color:'#8b5cf6' },
+  { id:'pro',     name:'Pro',     price:59, annualPrice:47, desc:'Advanced marketing for active teams', color:'#ec4899' },
+  { id:'agency',  name:'Agency',  price:99, annualPrice:79, desc:'Higher limits for agency workflows', color:'#f59e0b' },
 ];
 
 const FEATURES: Record<string, { free: string; starter: string; growth: string; pro: string; agency: string }> = {
