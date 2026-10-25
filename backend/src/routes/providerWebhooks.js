@@ -15,7 +15,7 @@ const variantPlans = () => {
 };
 
 const validSignature = (rawBody, supplied, secret) => {
-  if (!Buffer.isBuffer(rawBody) || typeof supplied !== 'string' || !secret) return false;
+  if (!Buffer.isBuffer(rawBody) || typeof supplied !== 'string' || !secret || !/^[a-f0-9]{64}$/i.test(supplied)) return false;
   const expected = crypto.createHmac('sha256', secret).update(rawBody).digest();
   let actual;
   try { actual = Buffer.from(supplied, 'hex'); } catch { return false; }
