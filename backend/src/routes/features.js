@@ -179,7 +179,7 @@ router.post('/blog/write', async (req, res) => {
     if (!website) return res.status(404).json({ error: 'Website not found.' });
     const month = new Date().toISOString().slice(0, 7);
     const limits = await queryOne('SELECT max_content_per_month FROM plan_limits WHERE plan=$1', [req.user.plan]);
-    const usage = await queryOne('SELECT count FROM usage_tracking WHERE user_id=$1 AND action=$content$ AND month=$2', [req.user.id, month]);
+    const usage = await queryOne('SELECT count FROM usage_tracking WHERE user_id=$1 AND action=$2 AND month=$3', [req.user.id, 'content', month]);
     const used = Number(usage?.count || 0);
     const limit = Number(limits?.max_content_per_month ?? 0);
     if (!limits || (limit !== 9999 && used >= limit)) return res.status(403).json({ error: 'Your monthly AI content limit has been reached.', code: 'USAGE_LIMIT_REACHED', used, limit });
