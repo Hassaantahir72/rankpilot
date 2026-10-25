@@ -25,7 +25,7 @@ const PLANS = [
     features:['10 websites','100 SEO audits/month','200 AI content generations/month','100 social posts/month','White-label dashboard','Client management','API access'],
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || '',
   },
-];;
+];
 
 export default function UpgradePage() {
   const { user } = useAuth();
