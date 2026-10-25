@@ -73,3 +73,7 @@ Official docs:
 8. Only after these tests and provider approval should live mode be enabled.
 
 The website intentionally fails closed: no configured/verified provider means no public payment method and no new checkout.
+
+
+## Subscription cancellation timing
+A signed Lemon Squeezy cancellation event with a future `ends_at` keeps the paid plan active until that date. The API checks the paid-through date on authenticated requests and downgrades the account to Free once it has passed. An immediate cancellation or expiry downgrades access at once. The migration adds `provider_subscription_ends_at`; apply the provider linkage migration before deploying this behavior.
