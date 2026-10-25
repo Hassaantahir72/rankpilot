@@ -48,6 +48,29 @@ const getDashboardStats = async (req, res) => {
 
 // ── USERS ─────────────────────────────────────────────────────────
 const getUsers = async (req, res) => {
+  const { search, plan, status, role, banned } = req.query;
+  const page = Number.parseInt(req.query.page, 10) || 1;
+  const requestedLimit = Number.parseInt(req.query.limit, 10) || 25;
+  const limit = Math.min(100, Math.max(1, requestedLimit));
+  if (page < 1) return res.status(400).json({ error: 'Page must be a positive integer.' });
+  if (req.query.page !== undefined && (!Number.isInteger(Number(req.query.page)) || page < 1)) {
+    return res.status(400).json({ error: 'Invalid page.' });
+  }
+  if (req.query.limit !== undefined && (!Number.isInteger(Number(req.query.limit)) || Number(req.query.limit) < 1)) {
+    return res.status(400).json({ error: 'Invalid limit.' });
+  }
+  const validPlans = ['free','trial','starter','growth','pro','agency'];
+  const validStatuses = ['free','trial','active','past_due','cancelled','paused'];
+  const validRoles = ['user','admin','superadmin'];
+  if (plan && !validPlans.includes(plan)) return res.status(400).json({ error: 'Invalid plan filter.' });
+  if (status && !validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status filter.' });
+  if (role && !validRoles.includes(role)) return res.status(400).json({ error: 'Invalid role filter.' });
+  if (banned !== undefined && !['true','false'].includes(banned)) return res.status(400).json({ error: 'Invalid banned filter.' });
+  if (search !== undefined && (typeof search !== 'string' || search.length > 100)) return res.status(400).json({ error: 'Search must be 100 characters or fewer.' });
+
+  const offset = (page - 1) * limit;
+  const conds = ['1=1'], params = [];
+  if (search?.trim()) { params.push(`%${search.trim().replace(/[\\\\%_]/g, '\\\\const getUsers = async (req, res) => {
   const { page = 1, limit = 25, search, plan, status, role, banned } = req.query;
   const offset = (page - 1) * limit;
   const conds = ['1=1'], params = [];
@@ -76,13 +99,41 @@ const getUsers = async (req, res) => {
     console.error('Get users error:', err);
     res.status(500).json({ error: 'Failed to load users.' });
   }
+};')}%`); conds.push(`(u.email ILIKE ${params.length} ESCAPE '\\\\' OR u.name ILIKE ${params.length} ESCAPE '\\\\')`); }
+  if (plan)   { params.push(plan);   conds.push(`u.plan=${params.length}`); }
+  if (status) { params.push(status); conds.push(`u.subscription_status=${params.length}`); }
+  if (role)   { params.push(role);   conds.push(`u.role=${params.length}`); }
+  if (banned === 'true') conds.push('u.is_banned=true');
+  if (banned === 'false') conds.push('u.is_banned=false');
+
+  params.push(limit, offset);
+  try {
+    const users = await queryAll(
+      `SELECT u.id,u.email,u.name,u.plan,u.subscription_status,u.email_verified,u.role,u.is_banned,u.ban_reason,
+              u.created_at,u.last_login,u.trial_ends_at,(u.stripe_customer_id IS NOT NULL) AS has_stripe_customer,
+              (u.stripe_subscription_id IS NOT NULL) AS has_stripe_subscription,
+              (SELECT COUNT(*) FROM websites WHERE user_id=u.id) as website_count,
+              (SELECT COUNT(*) FROM audits WHERE user_id=u.id) as audit_count
+       FROM users u WHERE ${conds.join(' AND ')} ORDER BY u.created_at DESC LIMIT ${params.length-1} OFFSET ${params.length}`,
+      params
+    );
+    const total = await queryOne(`SELECT COUNT(*) FROM users u WHERE ${conds.join(' AND ')}`, params.slice(0,-2));
+    res.json({ users, total: parseInt(total.count, 10), page, limit });
+  } catch (err) {
+    console.error('Get users error:', err.message);
+    res.status(500).json({ error: 'Failed to load users.' });
+  }
 };
 
 const getUser = async (req, res) => {
   const { userId } = req.params;
   try {
     const [user, websites, usage, billing, auditLog, secEvents] = await Promise.all([
-      queryOne('SELECT * FROM users WHERE id=$1', [userId]),
+      queryOne(`SELECT id,email,name,plan,subscription_status,trial_ends_at,email_verified,role,is_banned,ban_reason,
+                       created_at,updated_at,last_login,
+                       (stripe_customer_id IS NOT NULL) AS has_stripe_customer,
+                       (stripe_subscription_id IS NOT NULL) AS has_stripe_subscription
+                FROM users WHERE id=$1`, [userId]),
       queryAll('SELECT id,name,url,last_score,status,created_at FROM websites WHERE user_id=$1 ORDER BY created_at DESC', [userId]),
       queryAll('SELECT action,count,month FROM usage_tracking WHERE user_id=$1 ORDER BY month DESC', [userId]),
       queryAll('SELECT * FROM billing_history WHERE user_id=$1 ORDER BY created_at DESC LIMIT 10', [userId]),
@@ -90,9 +141,6 @@ const getUser = async (req, res) => {
       queryAll('SELECT event,ip_address,created_at FROM security_events WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20', [userId]),
     ]);
     if (!user) return res.status(404).json({ error: 'User not found.' });
-    // Never expose password hash
-    delete user.password_hash;
-    delete user.otp_code;
     res.json({ user, websites, usage, billing, auditLog, secEvents });
   } catch (err) { res.status(500).json({ error: 'Failed to load user.' }); }
 };
@@ -101,11 +149,16 @@ const updateUserPlan = async (req, res) => {
   const { userId } = req.params;
   const { plan, subscription_status } = req.body;
   const validPlans = ['free','trial','starter','growth','pro','agency'];
+  const validStatuses = ['free','trial','active'];
+  const status = subscription_status || (plan === 'free' ? 'free' : plan === 'trial' ? 'trial' : 'active');
   if (!validPlans.includes(plan)) return res.status(400).json({ error: 'Invalid plan.' });
+  if (!validStatuses.includes(status) || (plan === 'free' && status !== 'free') || (plan === 'trial' && status !== 'trial') || (['starter','growth','pro','agency'].includes(plan) && status !== 'active')) {
+    return res.status(400).json({ error: 'Plan and subscription status do not match.' });
+  }
   try {
-    const user = await queryOne('UPDATE users SET plan=$1,subscription_status=$2,updated_at=NOW() WHERE id=$3 RETURNING id,email,name,plan', [plan, subscription_status || 'active', userId]);
+    const user = await queryOne('UPDATE users SET plan=$1,subscription_status=$2,updated_at=NOW() WHERE id=$3 RETURNING id,email,name,plan,subscription_status', [plan, status, userId]);
     if (!user) return res.status(404).json({ error: 'User not found.' });
-    await logAction(req.user.id, 'update_plan', userId, { plan, subscription_status, adminEmail: req.user.email });
+    await logAction(req.user.id, 'update_plan', userId, { plan, subscription_status: status, adminEmail: req.user.email });
     res.json({ message: `Plan updated to ${plan}.`, user });
   } catch (err) { res.status(500).json({ error: 'Failed to update plan.' }); }
 };
