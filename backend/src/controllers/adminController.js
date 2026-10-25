@@ -168,10 +168,14 @@ const createUserBillingPortal = async (req, res) => {
 const updateUserPlan = async (req, res) => {
   const { userId } = req.params;
   const { plan, subscription_status } = req.body;
+  const trialDays = req.body?.trial_days === undefined ? 14 : Number(req.body.trial_days);
   const validPlans = ['free','trial','starter','growth','pro','agency'];
   const validStatuses = ['free','trial','active'];
   const status = subscription_status || (plan === 'free' ? 'free' : plan === 'trial' ? 'trial' : 'active');
   if (!validPlans.includes(plan)) return res.status(400).json({ error: 'Invalid plan.' });
+  if (plan === 'trial' && (!Number.isInteger(trialDays) || trialDays < 1 || trialDays > 90)) {
+    return res.status(400).json({ error: 'Trial duration must be between 1 and 90 days.' });
+  }
   if (!validStatuses.includes(status) || (plan === 'free' && status !== 'free') || (plan === 'trial' && status !== 'trial') || (['starter','growth','pro','agency'].includes(plan) && status !== 'active')) {
     return res.status(400).json({ error: 'Plan and subscription status do not match.' });
   }
@@ -184,11 +188,27 @@ const updateUserPlan = async (req, res) => {
         code: 'PROVIDER_SUBSCRIPTION_MANAGED',
       });
     }
-    const user = await queryOne('UPDATE users SET plan=$1,subscription_status=$2,updated_at=NOW() WHERE id=$3 RETURNING id,email,name,plan,subscription_status', [plan, status, userId]);
+    const user = await queryOne(
+      `UPDATE users
+       SET plan=$1,subscription_status=$2,
+           trial_ends_at=CASE WHEN $1='trial' THEN NOW() + ($3 * INTERVAL '1 day') ELSE NULL END,
+           updated_at=NOW()
+       WHERE id=$4
+       RETURNING id,email,name,plan,subscription_status,trial_ends_at`,
+      [plan, status, plan === 'trial' ? trialDays : 0, userId]
+    );
     if (!user) return res.status(404).json({ error: 'User not found.' });
-    await logAction(req.user.id, 'update_plan', userId, { plan, subscription_status: status, adminEmail: req.user.email });
-    res.json({ message: `Plan updated to ${plan}.`, user });
-  } catch (err) { res.status(500).json({ error: 'Failed to update plan.' }); }
+    await logAction(req.user.id, 'update_plan', userId, {
+      plan, subscription_status: status,
+      trial_days: plan === 'trial' ? trialDays : null,
+      trial_ends_at: user.trial_ends_at,
+      adminEmail: req.user.email,
+    });
+    res.json({ message: plan === 'trial' ? `Trial set for ${trialDays} days.` : `Plan updated to ${plan}.`, user });
+  } catch (err) {
+    console.error('Admin plan update failed:', err.message);
+    res.status(500).json({ error: 'Failed to update plan.' });
+  }
 };
 
 const toggleBan = async (req, res) => {
