@@ -37,6 +37,7 @@ Set the following environment variables on the **Render backend only**. Never pu
 - `LEMONSQUEEZY_VARIANT_PRO_ANNUAL`
 - `LEMONSQUEEZY_VARIANT_AGENCY_ANNUAL`
 - `LEMONSQUEEZY_TEST_MODE=true` while testing
+- `LEMONSQUEEZY_ADAPTER_READY=true` only after all sandbox checkout, webhook, cancellation, failure, and cross-account tests pass in a staging environment. It defaults to disabled.
 - `FRONTEND_URL=https://rankpilot-sync786.vercel.app` (use your actual production frontend origin)
 
 In Lemon Squeezy, create a webhook pointing to:
@@ -45,7 +46,7 @@ In Lemon Squeezy, create a webhook pointing to:
 
 Set the exact signing secret in `LEMONSQUEEZY_WEBHOOK_SECRET`. Subscribe at minimum to subscription-created, subscription-updated, subscription-resumed, subscription-cancelled, subscription-expired, subscription-paused, subscription-payment-success, and subscription-payment-failed events. Confirm the event names against the current Lemon Squeezy dashboard/API docs before production.
 
-After configuring the variables, create the Lemon Squeezy entry in Admin → Payment Methods. It starts disabled. The backend checks all credentials and eight monthly/annual variant IDs before allowing the superadmin to enable it. The frontend does not receive the API key or webhook secret.
+After configuring the variables, create the Lemon Squeezy entry in Admin → Payment Methods. It starts disabled. The backend checks all credentials and eight monthly/annual variant IDs plus the explicit `LEMONSQUEEZY_ADAPTER_READY=true` gate before allowing the superadmin to enable it. Leave that flag unset until sandbox tests have passed. The frontend does not receive the API key or webhook secret.
 
 Official docs:
 - Supported countries and payout eligibility: https://docs.lemonsqueezy.com/help/getting-started/supported-countries
