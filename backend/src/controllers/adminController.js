@@ -216,7 +216,7 @@ const resetUserPassword = async (req, res) => {
   const { newPassword } = req.body || {};
   if (typeof newPassword !== 'string' || newPassword.length < 8 || newPassword.length > 128) return res.status(400).json({ error: 'Password must be between 8 and 128 characters.' });
   const hash = await bcrypt.hash(newPassword, 12);
-  const updated = await query('UPDATE users SET password_hash=$1,otp_code=NULL,otp_expires_at=NULL,otp_attempts=0,updated_at=NOW() WHERE id=$2', [hash, userId]);
+  const updated = await query('UPDATE users SET password_hash=$1,otp_code=NULL,otp_expires_at=NULL,otp_attempts=0,token_version=token_version+1,updated_at=NOW() WHERE id=$2', [hash, userId]);
   if (updated.rowCount !== 1) return res.status(404).json({ error: 'User not found.' });
   await logAction(req.user.id, 'reset_user_password', userId, { adminEmail: req.user.email });
   await logSecurityEvent('admin_password_reset', req.adminIp, req.user.id, { targetUserId: userId });
