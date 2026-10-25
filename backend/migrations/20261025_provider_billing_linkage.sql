@@ -7,6 +7,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS provider_subscription_id TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS provider_variant_id TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS provider_order_id TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS provider_subscription_updated_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS provider_subscription_ends_at TIMESTAMPTZ;
 CREATE UNIQUE INDEX IF NOT EXISTS users_provider_subscription_unique
   ON users (payment_provider, provider_subscription_id)
   WHERE provider_subscription_id IS NOT NULL;
