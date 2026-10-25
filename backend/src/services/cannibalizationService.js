@@ -3,8 +3,8 @@
  * Finds pages competing for the same keyword — hurts rankings
  */
 
-const axios = require('axios');
 const cheerio = require('cheerio');
+const safeHttp = require('./safeHttpService');
 const { groq, parseJSON } = require('./aiHelpers');
 
 const HEADERS = { 'User-Agent': 'Mozilla/5.0 (compatible; RankPilotBot/1.0)' };
@@ -69,10 +69,11 @@ const detectCannibalization = async (websiteUrl, keywords = []) => {
 };
 
 const crawlPages = async (baseUrl, maxPages = 25) => {
+  const safeBaseUrl = await safeHttp.validatePublicUrl(baseUrl);
+  const origin = new URL(safeBaseUrl).origin;
   const visited = new Set();
-  const queue = [baseUrl];
+  const queue = [safeBaseUrl];
   const pages = [];
-  const origin = new URL(baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`).origin;
 
   while (queue.length > 0 && pages.length < maxPages) {
     const url = queue.shift();
@@ -80,7 +81,7 @@ const crawlPages = async (baseUrl, maxPages = 25) => {
     visited.add(url);
 
     try {
-      const { data } = await axios.get(url, { headers: HEADERS, timeout: 10000 });
+      const { data } = await safeHttp.fetchPublicUrl(url, { userAgent: HEADERS['User-Agent'], timeout: 10000, maxBytes: 2 * 1024 * 1024 });
       const $ = cheerio.load(data);
 
       const bodyText = $('body').text().replace(/\s+/g,' ').trim();
@@ -103,7 +104,7 @@ const crawlPages = async (baseUrl, maxPages = 25) => {
         const href = $(el).attr('href');
         if (!href) return;
         try {
-          const full = href.startsWith('/') ? origin+href : href;
+          const full = new URL(href, url).toString();
           const p = new URL(full);
           if (p.origin === origin && !visited.has(full) && !queue.includes(full) && !full.match(/\.(pdf|jpg|png|gif|zip|css|js)$/i)) {
             queue.push(full);
