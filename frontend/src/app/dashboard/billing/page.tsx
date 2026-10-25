@@ -113,7 +113,13 @@ export default function BillingPage() {
       </div>
 
       {/* Plans grid */}
-      <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 20 }}>Available plans</h2>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
+        <h2 style={{ fontSize: 17, fontWeight: 700 }}>Available plans</h2>
+        <div style={{ display: 'inline-flex', gap: 4, padding: 4, borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <button type="button" onClick={() => setBillingInterval('monthly')} aria-pressed={billingInterval === 'monthly'} style={{ padding: '7px 12px', border: 0, borderRadius: 7, background: billingInterval === 'monthly' ? 'rgba(99,102,241,0.25)' : 'transparent', color: billingInterval === 'monthly' ? '#fff' : 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 12 }}>Monthly</button>
+          <button type="button" onClick={() => setBillingInterval('annual')} aria-pressed={billingInterval === 'annual'} style={{ padding: '7px 12px', border: 0, borderRadius: 7, background: billingInterval === 'annual' ? 'rgba(99,102,241,0.25)' : 'transparent', color: billingInterval === 'annual' ? '#fff' : 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 12 }}>Annual · Save 20%</button>
+        </div>
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 14, marginBottom: 36 }}>
         {PLANS.filter(p => p.id !== 'free').map((plan, i) => {
           const isCurrent = plan.id === user?.plan;
@@ -127,7 +133,6 @@ export default function BillingPage() {
               <p style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Plus Jakarta Sans',sans-serif", marginBottom: 4 }}>${billingInterval === 'annual' ? (plan.annualPrice ?? 0) : plan.price}<span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(255,255,255,0.35)' }}>/mo</span></p>
               {billingInterval === 'annual' && plan.id !== 'free' && <p style={{ fontSize: 11, color: '#4ade80', marginBottom: 8 }}>Billed ${(plan.annualPrice ?? 0) * 12}/year</p>}
               <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', marginBottom: 16 }}>{plan.desc}</p>
-              {plan.id !== 'free' && <button type="button" onClick={() => setBillingInterval(v => v === 'monthly' ? 'annual' : 'monthly')} style={{ background: 'none', border: 'none', padding: 0, marginBottom: 12, color: '#a5b4fc', fontSize: 11, cursor: 'pointer' }}>{billingInterval === 'annual' ? 'Switch to monthly billing' : 'Switch to annual billing'}</button>}
               {!isCurrent && (
                 <button onClick={() => upgrade(selectedPriceId)} disabled={!!loading} style={{ width: '100%', padding: '9px', background: isDowngrade ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${plan.color},${plan.color}cc)`, border: isDowngrade ? '1px solid rgba(255,255,255,0.1)' : 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', boxShadow: isDowngrade ? 'none' : `0 4px 16px ${plan.color}35` }}>
                   {loading === selectedPriceId ? 'Redirecting...' : !selectedPriceId ? 'Configure Stripe' : requestedPlan === plan.id ? 'Continue with this plan' : isDowngrade ? 'Downgrade' : 'Upgrade'}
