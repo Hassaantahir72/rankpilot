@@ -129,4 +129,10 @@ const fetchPublicUrl = async (input, options = {}) => {
   throw new Error('Website redirect limit exceeded.');
 };
 
-module.exports = { fetchPublicUrl, parseHttpUrl, isPublicIp };
+const validatePublicUrl = async (input) => {
+  const url = parseHttpUrl(/^https?:\/\//i.test(String(input || '')) ? String(input) : `https://${String(input || '')}`);
+  await resolvePublicAddress(url.hostname.replace(/^\[|\]$/g, ''));
+  return url.toString();
+};
+
+module.exports = { fetchPublicUrl, validatePublicUrl, parseHttpUrl, isPublicIp };
