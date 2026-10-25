@@ -136,13 +136,13 @@ export default function AdminPage() {
     if (!selectedUser) return;
     try {
       const { data } = await adminApi.createUserBillingPortal(selectedUser.id);
-      if (!data.url || !data.url.startsWith('https://billing.stripe.com/')) {
-        showMsg('Stripe returned an invalid billing portal URL.', 'err');
+      if (!data.url || !(data.url.startsWith('https://billing.stripe.com/') || /^https:\/\/[a-z0-9.-]+\.lemonsqueezy\.com\//i.test(data.url))) {
+        showMsg('Payment provider returned an invalid billing portal URL.', 'err');
         return;
       }
       window.location.assign(data.url);
     } catch (e: any) {
-      showMsg(e.response?.data?.error || 'Could not open Stripe billing management.', 'err');
+      showMsg(e.response?.data?.error || 'Could not open payment provider billing management.', 'err');
     }
   };
 
@@ -383,7 +383,7 @@ export default function AdminPage() {
 
               {/* Quick actions */}
               <div style={{ display:'flex',flexDirection:'column',gap:8,marginBottom:16 }}>
-                {selectedUser.has_stripe_customer && <button onClick={doManageBilling} style={{ padding:'9px',background:'rgba(99,102,241,0.10)',border:'1px solid rgba(99,102,241,0.25)',borderRadius:9,color:'#a5b4fc',cursor:'pointer',fontSize:12,fontFamily:'inherit',fontWeight:600 }}>Manage Stripe billing & payment methods →</button>}
+                {(selectedUser.has_stripe_customer || selectedUser.has_provider_subscription) && <button onClick={doManageBilling} style={{ padding:'9px',background:'rgba(99,102,241,0.10)',border:'1px solid rgba(99,102,241,0.25)',borderRadius:9,color:'#a5b4fc',cursor:'pointer',fontSize:12,fontFamily:'inherit',fontWeight:600 }}>Manage provider billing & payment methods →</button>}
                 {!selectedUser.email_verified && (
                   <button onClick={doVerifyEmail} style={{ padding:'9px',background:'rgba(74,222,128,0.08)',border:'1px solid rgba(74,222,128,0.2)',borderRadius:9,color:'#4ade80',cursor:'pointer',fontSize:12,fontFamily:'inherit',fontWeight:600 }}>
                     ✓ Force verify email
