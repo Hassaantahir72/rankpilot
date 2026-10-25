@@ -413,7 +413,7 @@ export default function HomePage() {
               <h2 style={{ fontSize:'clamp(2rem,5vw,3.2rem)',fontWeight:900,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.08,marginBottom:20 }}>
                 Replace your agency.<br /><span className="gradient-text">Keep the results.</span>
               </h2>
-              <p style={{ fontSize:16,color:'rgba(255,255,255,0.45)',marginBottom:44,lineHeight:1.75,maxWidth:500,margin:'0 auto 44px' }}>Start your free 14-day trial. Full access to every feature. No credit card, no commitment.</p>
+              <p style={{ fontSize:16,color:'rgba(255,255,255,0.45)',marginBottom:44,lineHeight:1.75,maxWidth:500,margin:'0 auto 44px' }}>Start your 14-day Free Trial with no card required. Trial access and usage limits are shown in your workspace.</p>
               <div style={{ display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap' }}>
                 <Link href="/auth/signup" className="btn-primary" style={{ fontSize:16,padding:'16px 36px' }}>
                   Start free trial

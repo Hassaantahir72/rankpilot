@@ -23,6 +23,7 @@ const register = async (req, res) => {
     const paidPlanIntent = ['starter','growth','pro','agency'].includes(requestedPlan);
     const requestedInterval = req.body.selectedInterval === 'annual' ? 'annual' : 'monthly';
     let claim = null;
+    let deviceHash = null;
 
     // Only trial signups consume a trial claim. Abandoned paid signups must not burn the device's free trial.
     if (!paidPlanIntent) {
@@ -30,7 +31,7 @@ const register = async (req, res) => {
       // The client sends basic platform/display/timezone attributes; only an HMAC is stored.
       const suppliedSignature = typeof req.body.deviceSignature === 'string' ? req.body.deviceSignature.slice(0, 1000) : '';
       if (!suppliedSignature) return res.status(400).json({ error: 'Please refresh the page and try signup again.' });
-      const deviceHash = crypto.createHmac('sha256', process.env.JWT_SECRET)
+      deviceHash = crypto.createHmac('sha256', process.env.JWT_SECRET)
         .update('rankpilot-trial-device-v1:' + suppliedSignature).digest('hex');
       const ipValue = String(req.ip || req.socket?.remoteAddress || 'unknown').slice(0, 100);
       const ipHash = crypto.createHmac('sha256', process.env.JWT_SECRET)
@@ -102,7 +103,7 @@ const resendOTP = async (req, res) => {
     if (!user || user.email_verified) return res.status(400).json({ error: 'If verification is still required, a new code can be requested.' });
     const otp = generateOTP();
     const expires = new Date(Date.now() + 10 * 60 * 1000);
-    await query('UPDATE users SET otp_code=$1,otp_purpose='verify',otp_expires_at=$2,otp_attempts=0 WHERE id=$3', [otp, expires, userId]);
+    await query("UPDATE users SET otp_code=$1,otp_purpose='verify',otp_expires_at=$2,otp_attempts=0 WHERE id=$3", [otp, expires, userId]);
     await sendOTPEmail(user.email, user.name, otp, 'verify');
     res.json({ message: 'New code sent to your email.' });
   } catch (err) { res.status(500).json({ error: 'Could not resend code.' }); }
@@ -128,7 +129,7 @@ const login = async (req, res) => {
 
     if (!user.email_verified) {
       const otp = generateOTP();
-      await query('UPDATE users SET otp_code=$1,otp_purpose='verify',otp_expires_at=$2,otp_attempts=0 WHERE id=$3', [otp, new Date(Date.now()+10*60*1000), user.id]);
+      await query("UPDATE users SET otp_code=$1,otp_purpose='verify',otp_expires_at=$2,otp_attempts=0 WHERE id=$3", [otp, new Date(Date.now()+10*60*1000), user.id]);
       await sendOTPEmail(user.email, user.name, otp, 'verify');
       return res.json({ requiresVerification: true, userId: user.id, message: 'Please verify your email. A new code has been sent.' });
     }
@@ -136,7 +137,7 @@ const login = async (req, res) => {
     const otp = generateOTP();
     clearFailedAttempts(ip);
     await logSecurityEvent('login_success', ip, user.id, { email: user.email });
-    await query('UPDATE users SET otp_code=$1,otp_purpose='login',otp_expires_at=$2,otp_attempts=0,last_login=NOW() WHERE id=$3', [otp, new Date(Date.now()+10*60*1000), user.id]);
+    await query("UPDATE users SET otp_code=$1,otp_purpose='login',otp_expires_at=$2,otp_attempts=0,last_login=NOW() WHERE id=$3", [otp, new Date(Date.now()+10*60*1000), user.id]);
     await sendOTPEmail(user.email, user.name, otp, 'login');
     res.json({ requires2FA: true, userId: user.id, message: 'Enter the 6-digit code sent to your email.' });
   } catch (err) {
@@ -185,6 +186,21 @@ const completeOnboarding = async (req, res) => {
   }
 };
 
+// Allow a customer to explicitly abandon a pending paid-plan choice and continue on Free.
+const clearSignupPlan = async (req, res) => {
+  try {
+    const cleared = await queryOne(
+      "UPDATE users SET signup_plan=NULL,signup_interval=NULL,updated_at=NOW() WHERE id=$1 AND plan='free' AND subscription_status='free' AND stripe_subscription_id IS NULL AND provider_subscription_id IS NULL RETURNING id",
+      [req.user.id]
+    );
+    if (!cleared) return res.status(409).json({ error: 'This account already has a subscription or is not eligible to change its pending plan.' });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Clearing pending signup plan failed:', err.message);
+    return res.status(500).json({ error: 'Could not switch to the Free plan.' });
+  }
+};
+
 // FORGOT PASSWORD
 const forgotPassword = async (req, res) => {
   const errors = validationResult(req);
@@ -194,7 +210,7 @@ const forgotPassword = async (req, res) => {
     const user = await queryOne('SELECT id,name FROM users WHERE email=$1', [email.toLowerCase()]);
     if (!user) return res.json({ message: 'If that email exists, you will receive a reset code.' });
     const otp = generateOTP();
-    await query('UPDATE users SET otp_code=$1,otp_purpose='reset',otp_expires_at=$2,otp_attempts=0 WHERE id=$3', [otp, new Date(Date.now()+15*60*1000), user.id]);
+    await query("UPDATE users SET otp_code=$1,otp_purpose='reset',otp_expires_at=$2,otp_attempts=0 WHERE id=$3", [otp, new Date(Date.now()+15*60*1000), user.id]);
     await sendOTPEmail(email, user.name, otp, 'reset');
     res.json({ message: 'Reset code sent to your email.', userId: user.id });
   } catch (err) { res.status(500).json({ error: 'Failed to process request.' }); }
@@ -254,11 +270,11 @@ const googleCallback = async (req, res) => {
 
     let user = await queryOne('SELECT * FROM users WHERE email=$1', [email.toLowerCase()]);
     if (!user) {
-      const trialEnds = new Date(Date.now() + 14*24*60*60*1000);
+      // OAuth-created accounts start on Free; the trial is granted only by the guarded signup flow.
       user = await queryOne(
-        `INSERT INTO users (id,email,name,google_id,plan,subscription_status,trial_ends_at,email_verified,created_at)
-         VALUES ($1,$2,$3,$4,'trial','trial',$5,true,NOW()) RETURNING *`,
-        [uuidv4(), email.toLowerCase(), name, googleId, trialEnds]
+        `INSERT INTO users (id,email,name,google_id,plan,subscription_status,email_verified,onboarding_completed,created_at)
+         VALUES ($1,$2,$3,$4,'free','free',true,false,NOW()) RETURNING *`,
+        [uuidv4(), email.toLowerCase(), name, googleId]
       );
       await sendWelcomeEmail(email, name);
     }
@@ -291,4 +307,4 @@ const logout = async (req, res) => {
   }
 };
 
-module.exports = { register, verifyOTP, resendOTP, login, verifyLoginOTP, getMe, completeOnboarding, forgotPassword, resetPassword, googleAuthUrl, googleCallback, logout };
+module.exports = { register, verifyOTP, resendOTP, login, verifyLoginOTP, getMe, completeOnboarding, clearSignupPlan, forgotPassword, resetPassword, googleAuthUrl, googleCallback, logout };

@@ -25,7 +25,7 @@ const chatWithBot = async (req, res) => {
     [uuidv4(), session.id, req.user?.name||'Guest', message.trim()]);
 
   const systemPrompt = `You are Alex, RankPilot's AI support assistant. RankPilot is an AI SEO and marketing platform.
-Plans: Free ($0), Trial (14 days free), Starter ($99), Growth ($299 - adds Google Ads), Pro ($499 - adds Meta Ads), Agency ($999 - unlimited).
+Plans: Free ($0), Trial (14 days), Starter ($15/month or $12/month billed annually), Growth ($29/month or $23/month billed annually), Pro ($59/month or $47/month billed annually), Agency ($99/month or $79/month billed annually). Actual access limits come from the database plan_limits table; never promise unlimited usage.
 Key features: SEO audit, keyword research, AI content writing, rank tracking, Google Ads, Meta Ads, social posts, weekly reports.
 Auth: Email OTP on signup + 2FA OTP every login. Dashboard at /dashboard.
 Rules: Be warm and concise (2-3 sentences). If user wants human agent set escalate:true. For complex bugs set createTicket:true.

@@ -68,7 +68,7 @@ router.post('/lemon-squeezy', async (req, res) => {
         if (conflict) throw new Error('Provider subscription is already linked to another account.');
         const endsAt = attrs.ends_at && !Number.isNaN(Date.parse(attrs.ends_at)) ? new Date(attrs.ends_at) : null;
         const updated = await query(
-          "UPDATE users SET plan=$1,subscription_status='active',payment_provider='lemon_squeezy',provider_subscription_id=$2,provider_customer_id=$3,provider_variant_id=$4,provider_subscription_updated_at=COALESCE($6,NOW()),provider_subscription_ends_at=$7,updated_at=NOW() WHERE id=$5 AND stripe_subscription_id IS NULL AND (payment_provider IS NULL OR payment_provider='lemon_squeezy') AND (provider_subscription_id IS NULL OR provider_subscription_id=$2)",
+          "UPDATE users SET plan=$1,subscription_status='active',payment_provider='lemon_squeezy',provider_subscription_id=$2,provider_customer_id=$3,provider_variant_id=$4,provider_subscription_updated_at=COALESCE($6,NOW()),provider_subscription_ends_at=$7,signup_plan=NULL,signup_interval=NULL,updated_at=NOW() WHERE id=$5 AND stripe_subscription_id IS NULL AND (payment_provider IS NULL OR payment_provider='lemon_squeezy') AND (provider_subscription_id IS NULL OR provider_subscription_id=$2)",
           [plan,subscriptionId,String(attrs.customer_id || ''),String(attrs.variant_id),user.id,eventUpdatedAt,endsAt]
         );
         if (updated.rowCount !== 1) throw new Error('Subscription could not be safely linked to this account.');
@@ -94,7 +94,7 @@ router.post('/lemon-squeezy', async (req, res) => {
     } else if (eventName === 'subscription_payment_success') {
       if (attrs.status === 'active' && plan && subscriptionId) {
         const endsAt = attrs.ends_at && !Number.isNaN(Date.parse(attrs.ends_at)) ? new Date(attrs.ends_at) : null;
-        await query("UPDATE users SET plan=$1,subscription_status='active',provider_variant_id=$2,provider_subscription_ends_at=$6,provider_subscription_updated_at=COALESCE($5,NOW()),updated_at=NOW() WHERE id=$3 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$4", [plan,String(attrs.variant_id),user.id,subscriptionId,eventUpdatedAt,endsAt]);
+        await query("UPDATE users SET plan=$1,subscription_status='active',provider_variant_id=$2,provider_subscription_ends_at=$6,signup_plan=NULL,signup_interval=NULL,provider_subscription_updated_at=COALESCE($5,NOW()),updated_at=NOW() WHERE id=$3 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$4", [plan,String(attrs.variant_id),user.id,subscriptionId,eventUpdatedAt,endsAt]);
       }
     }
     return res.status(200).json({ received: true });

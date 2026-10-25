@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
-import { billingApi, dashboardApi, paymentMethodsApi } from '@/lib/api';
+import { useRouter } from 'next/navigation';
+import { authApi, billingApi, dashboardApi, paymentMethodsApi } from '@/lib/api';
 import { UsageBar } from '@/components/dashboard/PlanGate';
 import AvailablePaymentMethods from '@/components/billing/AvailablePaymentMethods';
 
@@ -27,13 +28,15 @@ const FEATURES: Record<string, { free: string; starter: string; growth: string; 
 };
 
 export default function BillingPage() {
-  const { user, limits, refreshUser, trialDaysLeft, isPaid } = useAuth();
+  const router = useRouter();
+  const { user, limits, refreshUser, trialDaysLeft, isPaid, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState('');
   const [msg, setMsg] = useState('');
   const [usage, setUsage] = useState<any>(null);
   const [requestedPlan, setRequestedPlan] = useState('');
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
   const [availableProviders, setAvailableProviders] = useState<string[]>([]);
+  const autoCheckoutStarted = useRef(false);
 
   useEffect(() => {
     const refreshMethods = () => paymentMethodsApi.listPublic().then(({ data }) => setAvailableProviders((data.methods || []).map((m:any) => m.provider))).catch(() => setAvailableProviders([]));
@@ -52,7 +55,7 @@ export default function BillingPage() {
 
   const upgrade = async (planId: string) => {
     if (!availableProviders.includes('lemon_squeezy')) {
-      setMsg('No verified payment provider is currently available. Please contact support while payment setup is completed.');
+      setMsg('Your selected plan is saved. Secure checkout is temporarily unavailable because no payment provider is enabled. You can retry from this page later; you will not be charged until checkout is completed.');
       return;
     }
     setLoading(planId);
@@ -64,6 +67,28 @@ export default function BillingPage() {
     } catch (err:any) {
       setMsg(err.response?.data?.error || err.message || 'Could not start checkout.');
     } finally { setLoading(''); }
+  };
+
+  useEffect(() => {
+    const alreadyPaid = !!user && !['free', 'trial'].includes(user.plan);
+    if (authLoading || !user || !requestedPlan || !availableProviders.includes('lemon_squeezy') || alreadyPaid || autoCheckoutStarted.current) return;
+    autoCheckoutStarted.current = true;
+    // Continue straight to hosted checkout for a plan selected before signup.
+    upgrade(requestedPlan);
+  }, [requestedPlan, availableProviders, authLoading, user?.id, user?.plan]);
+
+  const continueOnFree = async () => {
+    setLoading('free');
+    setMsg('');
+    try {
+      await authApi.clearSignupPlan();
+      await refreshUser();
+      router.push('/onboarding');
+    } catch (err: any) {
+      setMsg(err.response?.data?.error || 'Could not switch to the Free plan.');
+    } finally {
+      setLoading('');
+    }
   };
 
   const openPortal = async () => {
@@ -129,7 +154,7 @@ export default function BillingPage() {
         </div>
       </div>
 
-      <p style={{ fontSize:12,color:'rgba(255,255,255,0.38)',marginBottom:18 }}>New checkout providers are enabled only after server-side configuration and verified sandbox tests.</p>
+      <p style={{ fontSize:12,color:'rgba(255,255,255,0.38)',marginBottom:18 }}>Your selected plan is highlighted below. When a verified provider is enabled, you’ll continue directly to its secure hosted checkout; your card details never pass through RankPilot.</p>
 
       <AvailablePaymentMethods compact />
 
@@ -162,6 +187,18 @@ export default function BillingPage() {
           );
         })}
       </div>
+
+      {requestedPlan && user?.plan === 'free' && (
+        <div style={{ marginBottom: 28, padding: 18, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <strong style={{ fontSize: 13 }}>Not ready to subscribe?</strong>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.42)', marginTop: 5 }}>You can use the Free plan instead. No payment will be taken unless you finish the provider’s checkout.</p>
+          </div>
+          <button type="button" onClick={continueOnFree} disabled={!!loading} style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.04)', color: '#fff', cursor: 'pointer' }}>
+            {loading === 'free' ? 'Switching…' : 'Continue with Free'}
+          </button>
+        </div>
+      )}
 
       {/* Feature comparison */}
       <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 16 }}>Feature comparison</h2>
