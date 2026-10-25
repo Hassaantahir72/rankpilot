@@ -10,7 +10,7 @@ VALUES
   ('trial',   1,  100,   5,  10,   5,    false,false,false,false,false,true, false,false,'weekly'),
   ('starter', 1,  150,   5,  10,   0,    false,false,false,false,false,true, false,false,'monthly'),
   ('growth',  3,  300,  15,  30,  10,    true, false,false,false,false,true, true, true, 'weekly'),
-  ('pro',     5,  500,  40,  80,  30,    true, true, true, false,false,true, true, true, 'weekly'),
+  ('pro',     5,  500,  40,  80,  30,    true, true, false, false, false, true, true, true, 'weekly'),
   ('agency', 10, 1000, 100, 200, 100,    true, true, false, false, false, true, true, true, 'weekly')
 ON CONFLICT (plan) DO UPDATE SET
   max_websites=EXCLUDED.max_websites,
