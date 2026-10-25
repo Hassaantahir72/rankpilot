@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
@@ -36,7 +36,6 @@ export default function BillingPage() {
   const [requestedPlan, setRequestedPlan] = useState('');
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
   const [availableProviders, setAvailableProviders] = useState<string[]>([]);
-  const autoCheckoutStarted = useRef(false);
 
   useEffect(() => {
     const refreshMethods = () => paymentMethodsApi.listPublic().then(({ data }) => setAvailableProviders((data.methods || []).map((m:any) => m.provider))).catch(() => setAvailableProviders([]));
@@ -53,29 +52,10 @@ export default function BillingPage() {
     return () => { window.clearInterval(methodsInterval); window.removeEventListener('focus', refreshMethods); };
   }, []);
 
-  const upgrade = async (planId: string) => {
-    if (!availableProviders.includes('lemon_squeezy')) {
-      setMsg('Your selected plan is saved. Secure checkout is temporarily unavailable because no payment provider is enabled. You can retry from this page later; you will not be charged until checkout is completed.');
-      return;
-    }
-    setLoading(planId);
-    try {
-      const { data } = await billingApi.createProviderCheckout('lemon_squeezy', planId, billingInterval);
-      const checkoutUrl = new URL(data.url);
-      if (checkoutUrl.protocol !== 'https:' || !(checkoutUrl.hostname === 'lemonsqueezy.com' || checkoutUrl.hostname.endsWith('.lemonsqueezy.com'))) throw new Error('Payment provider returned an invalid checkout URL.');
-      window.location.assign(checkoutUrl.toString());
-    } catch (err:any) {
-      setMsg(err.response?.data?.error || err.message || 'Could not start checkout.');
-    } finally { setLoading(''); }
+  const upgrade = (planId: string) => {
+    const interval = billingInterval === 'annual' ? 'annual' : 'monthly';
+    router.push('/checkout?plan=' + encodeURIComponent(planId) + '&interval=' + interval);
   };
-
-  useEffect(() => {
-    const alreadyPaid = !!user && !['free', 'trial'].includes(user.plan);
-    if (authLoading || !user || !requestedPlan || !availableProviders.includes('lemon_squeezy') || alreadyPaid || autoCheckoutStarted.current) return;
-    autoCheckoutStarted.current = true;
-    // Continue straight to hosted checkout for a plan selected before signup.
-    upgrade(requestedPlan);
-  }, [requestedPlan, availableProviders, authLoading, user?.id, user?.plan]);
 
   const continueOnFree = async () => {
     setLoading('free');
@@ -154,7 +134,7 @@ export default function BillingPage() {
         </div>
       </div>
 
-      <p style={{ fontSize:12,color:'rgba(255,255,255,0.38)',marginBottom:18 }}>Your selected plan is highlighted below. When a verified provider is enabled, you’ll continue directly to its secure hosted checkout; your card details never pass through RankPilot.</p>
+      <p style={{ fontSize:12,color:'rgba(255,255,255,0.38)',marginBottom:18 }}>Choose a plan to review billing contact details, billing country, and the payment options currently enabled for customers.</p>
 
       <AvailablePaymentMethods compact />
 
@@ -180,7 +160,7 @@ export default function BillingPage() {
               <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', marginBottom: 16 }}>{plan.desc}</p>
               {!isCurrent && (
                 <button onClick={() => hasPaidPlan ? openPortal() : upgrade(plan.id)} disabled={!!loading} style={{ width: '100%', padding: '9px', background: isDowngrade ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg,${plan.color},${plan.color}cc)`, border: isDowngrade ? '1px solid rgba(255,255,255,0.1)' : 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', boxShadow: isDowngrade ? 'none' : `0 4px 16px ${plan.color}35` }}>
-                  {loading === plan.id ? 'Redirecting...' : hasPaidPlan ? 'Manage existing billing' : availableProviders.includes('lemon_squeezy') ? (requestedPlan === plan.id ? 'Continue with this plan' : 'Upgrade') : 'Payments unavailable'}
+                  {loading === plan.id ? 'Redirecting...' : hasPaidPlan ? 'Manage existing billing' : availableProviders.includes('lemon_squeezy') ? (requestedPlan === plan.id ? 'Continue with this plan' : 'Upgrade') : 'Review checkout'}
                 </button>
               )}
             </div>
