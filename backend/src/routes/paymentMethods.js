@@ -14,7 +14,7 @@ router.post('/checkout', authMiddleware, requireVerified, async (req, res) => {
   if (provider !== 'lemon_squeezy') return res.status(503).json({ error: 'This provider checkout integration is not available yet.' });
   if (!PLAN_IDS.includes(plan) || !INTERVALS.includes(interval)) return res.status(400).json({ error: 'Choose a valid plan and billing interval.' });
   const variantId = process.env[variantEnv(plan, interval)];
-  if (!process.env.LEMONSQUEEZY_API_KEY || !process.env.LEMONSQUEEZY_STORE_ID ||
+  if (process.env.LEMONSQUEEZY_ADAPTER_READY !== 'true' || !process.env.LEMONSQUEEZY_API_KEY || !process.env.LEMONSQUEEZY_STORE_ID ||
       !process.env.LEMONSQUEEZY_WEBHOOK_SECRET || !variantId || !process.env.FRONTEND_URL) {
     return res.status(503).json({ error: 'Lemon Squeezy is not fully configured for checkout.' });
   }
