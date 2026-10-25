@@ -87,6 +87,7 @@ const getUsers = async (req, res) => {
       'SELECT u.id,u.email,u.name,u.plan,u.subscription_status,u.email_verified,u.role,u.is_banned,u.ban_reason,' +
       ' u.created_at,u.last_login,u.trial_ends_at,(u.stripe_customer_id IS NOT NULL) AS has_stripe_customer,' +
       ' (u.stripe_subscription_id IS NOT NULL) AS has_stripe_subscription,' +
+      ' (u.provider_subscription_id IS NOT NULL) AS has_provider_subscription,' +
       ' (SELECT COUNT(*) FROM websites WHERE user_id=u.id) as website_count,' +
       ' (SELECT COUNT(*) FROM audits WHERE user_id=u.id) as audit_count' +
       ' FROM users u WHERE ' + conds.join(' AND ') + ' ORDER BY u.created_at DESC LIMIT $' +
@@ -164,12 +165,12 @@ const updateUserPlan = async (req, res) => {
     return res.status(400).json({ error: 'Plan and subscription status do not match.' });
   }
   try {
-    const target = await queryOne('SELECT id,stripe_subscription_id FROM users WHERE id=$1', [userId]);
+    const target = await queryOne('SELECT id,stripe_subscription_id,provider_subscription_id FROM users WHERE id=$1', [userId]);
     if (!target) return res.status(404).json({ error: 'User not found.' });
-    if (target.stripe_subscription_id) {
+    if (target.stripe_subscription_id || target.provider_subscription_id) {
       return res.status(409).json({
-        error: 'This user has a Stripe-managed subscription. Use Manage Stripe billing so the plan change is applied to the actual subscription.',
-        code: 'STRIPE_SUBSCRIPTION_MANAGED',
+        error: 'This user has a provider-managed subscription. Use that provider’s billing management so the plan change is applied to the actual subscription.',
+        code: 'PROVIDER_SUBSCRIPTION_MANAGED',
       });
     }
     const user = await queryOne('UPDATE users SET plan=$1,subscription_status=$2,updated_at=NOW() WHERE id=$3 RETURNING id,email,name,plan,subscription_status', [plan, status, userId]);
@@ -247,10 +248,10 @@ const impersonateUser = async (req, res) => {
 const deleteUser = async (req, res) => {
   const { userId } = req.params;
   if (userId === req.user.id) return res.status(400).json({ error: 'You cannot delete yourself.' });
-  const target = await queryOne('SELECT email,role,stripe_subscription_id FROM users WHERE id=$1', [userId]);
+  const target = await queryOne('SELECT email,role,stripe_subscription_id,provider_subscription_id FROM users WHERE id=$1', [userId]);
   if (!target) return res.status(404).json({ error: 'User not found.' });
   if (['admin','superadmin'].includes(target.role)) return res.status(403).json({ error: 'Cannot delete admin accounts.' });
-  if (target.stripe_subscription_id) return res.status(409).json({ error: 'Cancel or resolve this user’s Stripe subscription in Manage Stripe billing before deleting the account.', code: 'ACTIVE_STRIPE_SUBSCRIPTION' });
+  if (target.stripe_subscription_id || target.provider_subscription_id) return res.status(409).json({ error: 'Cancel or resolve this user’s payment-provider subscription before deleting the account.', code: 'ACTIVE_PROVIDER_SUBSCRIPTION' });
   await query('DELETE FROM users WHERE id=$1', [userId]);
   await logAction(req.user.id, 'delete_user', userId, { deletedEmail: target.email, adminEmail: req.user.email });
   await logSecurityEvent('user_deleted', req.adminIp, req.user.id, { targetEmail: target.email });
