@@ -127,30 +127,41 @@ const getUser = async (req, res) => {
 const createUserBillingPortal = async (req, res) => {
   const { userId } = req.params;
   try {
-    if (!process.env.STRIPE_SECRET_KEY || !process.env.FRONTEND_URL) {
-      return res.status(503).json({ error: 'Stripe billing is not configured.' });
-    }
-    const returnUrl = new URL('/dashboard/admin', process.env.FRONTEND_URL);
-    if (process.env.NODE_ENV === 'production' && returnUrl.protocol !== 'https:') {
-      return res.status(503).json({ error: 'The configured frontend URL must use HTTPS.' });
-    }
-    const target = await queryOne('SELECT id,email,stripe_customer_id,stripe_subscription_id FROM users WHERE id=$1', [userId]);
+    const target = await queryOne('SELECT id,email,stripe_customer_id,stripe_subscription_id,payment_provider,provider_subscription_id FROM users WHERE id=$1', [userId]);
     if (!target) return res.status(404).json({ error: 'User not found.' });
-    if (!target.stripe_customer_id) return res.status(400).json({ error: 'This user has no Stripe customer yet.' });
+    const returnUrl = new URL('/dashboard/admin', process.env.FRONTEND_URL || 'http://localhost:3000');
 
+    if (target.payment_provider === 'lemon_squeezy' && target.provider_subscription_id) {
+      if (!process.env.LEMONSQUEEZY_API_KEY) return res.status(503).json({ error: 'Lemon Squeezy billing is not configured.' });
+      const response = await fetch('https://api.lemonsqueezy.com/v1/subscriptions/' + encodeURIComponent(target.provider_subscription_id), {
+        headers: { 'Authorization': 'Bearer ' + process.env.LEMONSQUEEZY_API_KEY, 'Accept': 'application/vnd.api+json' },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) return res.status(502).json({ error: 'Could not retrieve this user’s provider billing portal.' });
+      const portalUrl = payload?.data?.attributes?.urls?.customer_portal || payload?.data?.attributes?.urls?.update_payment_method;
+      let parsed;
+      try { parsed = new URL(portalUrl); } catch {}
+      if (!parsed || parsed.protocol !== 'https:' || !(parsed.hostname === 'lemonsqueezy.com' || parsed.hostname.endsWith('.lemonsqueezy.com'))) {
+        return res.status(502).json({ error: 'Payment provider returned an invalid billing portal URL.' });
+      }
+      await logAction(req.user.id, 'open_user_billing_portal', userId, { provider: 'lemon_squeezy', adminEmail: req.user.email });
+      return res.json({ url: parsed.toString(), provider: 'lemon_squeezy' });
+    }
+
+    if (!process.env.STRIPE_SECRET_KEY || !process.env.FRONTEND_URL) return res.status(503).json({ error: 'No supported billing portal is configured for this user.' });
+    if (process.env.NODE_ENV === 'production' && returnUrl.protocol !== 'https:') return res.status(503).json({ error: 'The configured frontend URL must use HTTPS.' });
+    if (!target.stripe_customer_id) return res.status(400).json({ error: 'This user has no supported billing customer yet.' });
     const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
     const session = await stripe.billingPortal.sessions.create({
       customer: target.stripe_customer_id,
       return_url: returnUrl.origin + returnUrl.pathname,
     });
-    if (!session.url || !session.url.startsWith('https://billing.stripe.com/')) {
-      throw new Error('Stripe did not return a valid billing portal URL.');
-    }
-    await logAction(req.user.id, 'open_user_billing_portal', userId, { adminEmail: req.user.email });
-    res.json({ url: session.url });
+    if (!session.url || !session.url.startsWith('https://billing.stripe.com/')) throw new Error('Stripe did not return a valid billing portal URL.');
+    await logAction(req.user.id, 'open_user_billing_portal', userId, { provider: 'stripe_legacy', adminEmail: req.user.email });
+    return res.json({ url: session.url, provider: 'stripe_legacy' });
   } catch (err) {
     console.error('Admin billing portal error:', err.message);
-    res.status(500).json({ error: 'Could not open this user’s Stripe billing portal.' });
+    return res.status(500).json({ error: 'Could not open this user’s billing portal.' });
   }
 };
 
