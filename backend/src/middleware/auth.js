@@ -9,7 +9,7 @@ const authMiddleware = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await queryOne(
-      'SELECT id,email,name,plan,subscription_status,trial_ends_at,email_verified,onboarding_completed,role,is_banned,token_version,payment_provider,provider_subscription_id,provider_subscription_ends_at FROM users WHERE id=$1',
+      'SELECT id,email,name,plan,subscription_status,trial_ends_at,signup_plan,signup_interval,email_verified,onboarding_completed,role,is_banned,token_version,payment_provider,provider_subscription_id,provider_subscription_ends_at FROM users WHERE id=$1',
       [decoded.userId]
     );
     if (!user) return res.status(401).json({ error: 'User not found.' });
