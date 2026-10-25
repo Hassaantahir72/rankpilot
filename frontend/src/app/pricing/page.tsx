@@ -8,7 +8,7 @@ import ScrollReveal from '@/components/ui/ScrollReveal';
 const PLANS = [
   {
     id:'starter', name:'Starter', monthly:15, annual:12, desc:'Essential SEO for one website', color:'#6366f1', popular:false,
-    features:['1 website','5 SEO audits/month','10 AI content generations/month','Monthly rank tracking','Basic competitor analysis','Audit history & recommendations','Email support'],
+    features:['1 website','5 SEO audits/month','10 AI content generations/month','Monthly rank tracking','Competitor analysis','Audit history & recommendations','Email support'],
     not:['Google Ads tools','Meta Ads tools','Social media posts'],
   },
   {
@@ -22,7 +22,7 @@ const PLANS = [
     not:[],
   },
   {
-    id:'agency', name:'Agency', monthly:99, annual:79, desc:'Client workspaces and agency controls', color:'#f59e0b', popular:false,
+    id:'agency', name:'Agency', monthly:99, annual:79, desc:'Higher limits for agency workflows', color:'#f59e0b', popular:false,
     features:['10 websites','100 SEO audits/month','200 AI content generations/month','Weekly rank tracking','Google + Meta Ads AI tools','A/B ad testing','100 social posts/month','Branded PDF reports','Agency-level usage limits'],
     not:[],
   },
@@ -33,7 +33,7 @@ const TABLE = [
   {f:'SEO Audits / month',s:'5',g:'15',p:'40',a:'100'},
   {f:'AI Content / month',s:'10',g:'30',p:'80',a:'200'},
   {f:'Rank Tracking',s:'Monthly',g:'Weekly',p:'Weekly',a:'Weekly'},
-  {f:'Competitor Analysis',s:'Basic',g:'Full',p:'Full',a:'Full'},
+  {f:'Competitor Analysis',s:'✓',g:'✓',p:'✓',a:'✓'},
   {f:'Google Ads AI',s:'—',g:'✓',p:'✓',a:'✓'},
   {f:'Meta Ads AI',s:'—',g:'—',p:'✓',a:'✓'},
   {f:'A/B Ad Testing',s:'—',g:'—',p:'✓',a:'✓'},
