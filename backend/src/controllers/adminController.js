@@ -235,10 +235,10 @@ const impersonateUser = async (req, res) => {
   // Only superadmin can impersonate
   const { userId } = req.params;
   const jwt = require('jsonwebtoken');
-  const target = await queryOne('SELECT id,email,name,plan,subscription_status,trial_ends_at,email_verified,role FROM users WHERE id=$1', [userId]);
+  const target = await queryOne('SELECT id,email,name,plan,subscription_status,trial_ends_at,email_verified,role,token_version FROM users WHERE id=$1', [userId]);
   if (!target) return res.status(404).json({ error: 'User not found.' });
   if (['admin','superadmin'].includes(target.role)) return res.status(403).json({ error: 'Cannot impersonate admin accounts.' });
-  const token = jwt.sign({ userId: target.id, impersonatedBy: req.user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  const token = jwt.sign({ userId: target.id, impersonatedBy: req.user.id, tokenVersion: Number(target.token_version || 0) }, process.env.JWT_SECRET, { expiresIn: '1h' });
   await logAction(req.user.id, 'impersonate_user', userId, { adminEmail: req.user.email });
   await logSecurityEvent('user_impersonated', req.adminIp, req.user.id, { targetUserId: userId });
   res.json({ token, user: target, message: 'Impersonation token created (1 hour). Use carefully.' });
