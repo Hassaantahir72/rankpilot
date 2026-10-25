@@ -36,7 +36,7 @@ const NAV = [
 ];
 
 const NAV_FEATURES: Record<string, string> = {
-  '/dashboard/ads': 'ads',
+  '/dashboard/ads': 'social_posts',
   '/dashboard/reports': 'reports',
   '/dashboard/backlinks': 'advanced_seo',
   '/dashboard/content-gap': 'advanced_seo',
