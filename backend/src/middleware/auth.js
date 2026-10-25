@@ -15,6 +15,12 @@ const authMiddleware = async (req, res, next) => {
     if (!user) return res.status(401).json({ error: 'User not found.' });
     if (user.is_banned) return res.status(403).json({ error: 'Account suspended.' });
 
+    // Trial entitlements must expire even if the user's stored plan has not yet been changed.
+    if (user.plan === 'trial' && user.trial_ends_at && new Date(user.trial_ends_at) <= new Date()) {
+      user.plan = 'free';
+      user.subscription_status = 'expired';
+    }
+
     req.user = user;
     next();
   } catch (err) {
