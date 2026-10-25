@@ -13,7 +13,7 @@ const PROVIDERS = {
     displayName: 'Lemon Squeezy',
     description: 'International subscriptions',
     configured: () => Boolean(process.env.LEMONSQUEEZY_API_KEY && process.env.LEMONSQUEEZY_STORE_ID && process.env.LEMONSQUEEZY_WEBHOOK_SECRET && process.env.LEMONSQUEEZY_VARIANT_STARTER_MONTHLY && process.env.LEMONSQUEEZY_VARIANT_GROWTH_MONTHLY && process.env.LEMONSQUEEZY_VARIANT_PRO_MONTHLY && process.env.LEMONSQUEEZY_VARIANT_AGENCY_MONTHLY && process.env.LEMONSQUEEZY_VARIANT_STARTER_ANNUAL && process.env.LEMONSQUEEZY_VARIANT_GROWTH_ANNUAL && process.env.LEMONSQUEEZY_VARIANT_PRO_ANNUAL && process.env.LEMONSQUEEZY_VARIANT_AGENCY_ANNUAL),
-    adapterReady: () => true,
+    adapterReady: () => process.env.LEMONSQUEEZY_ADAPTER_READY === 'true',
   },
   manual_bank_transfer: {
     displayName: 'Manual bank transfer',
@@ -21,6 +21,16 @@ const PROVIDERS = {
     configured: () => Boolean(process.env.MANUAL_PAYMENT_INSTRUCTIONS),
     adapterReady: () => false,
   },
+};
+
+const safePublicConfig = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const allowed = ['badge','help_text','currency_label','country_note'];
+  const safe = {};
+  for (const key of allowed) {
+    if (typeof value[key] === 'string') safe[key] = value[key].slice(0, 120);
+  }
+  return safe;
 };
 
 const statusFor = (providerKey) => {
@@ -42,7 +52,7 @@ const publicList = async (_req, res) => {
       provider: row.provider_key,
       name: row.display_name,
       description: row.description,
-      config: row.public_config || {},
+      config: safePublicConfig(row.public_config),
     }));
     res.set('Cache-Control', 'no-store');
     return res.json({ methods });
@@ -55,7 +65,7 @@ const publicList = async (_req, res) => {
 const adminList = async (_req, res) => {
   try {
     const rows = await queryAll(
-      'SELECT id,provider_key,display_name,description,enabled,public_config,sort_order,created_at,updated_at FROM payment_methods ORDER BY sort_order,display_name'
+      'SELECT id,provider_key,display_name,description,enabled,sort_order,created_at,updated_at FROM payment_methods ORDER BY sort_order,display_name'
     );
     return res.json({ methods: rows.map(row => ({ ...row, ...statusFor(row.provider_key) })) });
   } catch (err) {
