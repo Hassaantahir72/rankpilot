@@ -58,7 +58,8 @@ export default function AdminPage() {
     if (tab === 'contacts') loadContacts();
     if (tab === 'billing')  loadBilling();
     if (tab === 'log')      loadAuditLog();
-    if (tab === 'security') { loadSecEvents(); if (user?.role === 'superadmin') { loadSettings(); loadBlockedIPs(); } }
+    if (tab === 'settings' && user?.role === 'superadmin') loadSettings();
+    if (tab === 'security') { loadSecEvents(); if (user?.role === 'superadmin') loadBlockedIPs(); }
   }, [tab]);
 
   const showMsg = (text: string, type: 'ok'|'err' = 'ok') => { setMsg(text); setMsgType(type); setTimeout(() => setMsg(''), 6000); };
@@ -187,7 +188,7 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div style={{ display:'flex',gap:4,background:'rgba(255,255,255,0.04)',padding:4,borderRadius:12,marginBottom:24,flexWrap:'wrap',width:'fit-content' }}>
-        {TABS.map(t => (
+        {TABS.filter(t => t.id !== 'settings' || user?.role === 'superadmin').map(t => (
           <button key={t.id} onClick={() => setTab(t.id as Tab)}
             style={{ display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:9,border:'none',background:tab===t.id?'rgba(255,255,255,0.1)':'transparent',color:tab===t.id?'#fff':'rgba(255,255,255,0.45)',fontSize:13,fontWeight:tab===t.id?600:400,cursor:'pointer',fontFamily:'inherit',transition:'all 0.2s' }}>
             {t.i} {t.l}
