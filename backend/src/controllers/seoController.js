@@ -142,7 +142,10 @@ const getRankings = async (req, res) => {
 
 // COMPETITORS
 const getCompetitors = async (req, res) => {
-  const competitors = await queryAll('SELECT * FROM competitors WHERE website_id=$1 ORDER BY shared_keywords DESC', [req.params.websiteId]);
+  const competitors = await queryAll(
+    'SELECT c.* FROM competitors c JOIN websites w ON w.id=c.website_id WHERE c.website_id=$1 AND w.user_id=$2 ORDER BY c.shared_keywords DESC',
+    [req.params.websiteId, req.user.id]
+  );
   res.json({ competitors });
 };
 
