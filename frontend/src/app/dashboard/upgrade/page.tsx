@@ -7,7 +7,7 @@ import { useState } from 'react';
 const PLANS = [
   {
     id:'starter', name:'Starter', price:15, color:'#6366f1',
-    features:['1 website','5 SEO audits/month','10 AI content generations/month','Monthly rank tracking','Basic competitor analysis','Email support'],
+    features:['1 website','5 SEO audits/month','10 AI content generations/month','Monthly rank tracking','Competitor analysis','Email support'],
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || '',
   },
   {
