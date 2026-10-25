@@ -72,10 +72,10 @@ export default function HomePage() {
             <TypingText words={['SEO Expert','Marketing Team','Ad Manager','Content Writer','Growth Engine']} />
           </h1>
           <p className="animate-fade-up delay-2" style={{ fontSize:'clamp(1rem,2vw,1.2rem)',color:'rgba(255,255,255,0.5)',maxWidth:580,margin:'0 auto 44px',lineHeight:1.75 }}>
-            Paste your URL. RankPilot audits your SEO, writes optimized content, runs your Google and Meta ads — everything a $5,000/month agency does, completely automated.
+            Paste your URL. RankPilot audits your SEO, writes optimized content, and helps prepare Google and Meta ad campaigns with AI-powered tools.
           </p>
           <div className="animate-fade-up delay-3" style={{ display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap',marginBottom:56 }}>
-            <Link href="/auth/signup" className="btn-primary" style={{ fontSize:16,padding:'15px 32px' }}>
+            <Link href={`/auth/signup?plan=${plan.name.toLowerCase()}&interval=monthly`} className="btn-primary" style={{ fontSize:16,padding:'15px 32px' }}>
               Start free — no card needed
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </Link>
@@ -150,7 +150,7 @@ export default function HomePage() {
             <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",marginBottom:16 }}>
               From zero to ranking in <span className="gradient-text">3 steps</span>
             </h2>
-            <p style={{ color:'rgba(255,255,255,0.45)',maxWidth:460,margin:'0 auto',fontSize:16 }}>No SEO knowledge needed. No agency. Just paste your URL and let the AI work.</p>
+            <p style={{ color:'rgba(255,255,255,0.45)',maxWidth:460,margin:'0 auto',fontSize:16 }}>No SEO knowledge needed. Start with one website and upgrade as your needs grow.</p>
           </ScrollReveal>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:40,position:'relative' }}>
             <div style={{ position:'absolute',top:22,left:'calc(33% + 20px)',right:'calc(33% + 20px)',height:1,background:'linear-gradient(90deg,rgba(99,102,241,0.5),rgba(99,102,241,0.1))' }} />
@@ -344,14 +344,14 @@ export default function HomePage() {
           <ScrollReveal className="text-center" style={{ marginBottom:64 }}>
             <span className="tag" style={{ marginBottom:20 }}>Pricing</span>
             <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",marginBottom:14 }}>Way cheaper than any agency</h2>
-            <p style={{ color:'rgba(255,255,255,0.4)',maxWidth:500,margin:'0 auto',fontSize:16 }}>14-day free trial on every plan. No credit card. Cancel any time.</p>
+            <p style={{ color:'rgba(255,255,255,0.4)',maxWidth:500,margin:'0 auto',fontSize:16 }}>Choose a plan that fits your workload. Start with a free trial and cancel any time.</p>
           </ScrollReveal>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:20 }}>
             {[
-              { name:'Starter',price:99,desc:'Perfect for a single business',features:['1 website','Full SEO audit','AI keyword research','AI content generation','Monthly rank tracking','Email reports','Email support'],col:'#6366f1',popular:false },
-              { name:'Growth',price:299,desc:'For growing businesses',features:['3 websites','Everything in Starter','Google Ads automation','Weekly rank tracking','Competitor analysis','Social media posts (20/mo)','Priority support'],col:'#8b5cf6',popular:true },
-              { name:'Pro',price:499,desc:'For serious marketers',features:['10 websites','Everything in Growth','Meta Ads automation','Automatic A/B testing','Advanced analytics dashboard','Custom branded reports','Dedicated support'],col:'#ec4899',popular:false },
-              { name:'Agency',price:999,desc:'For marketing agencies',features:['Unlimited websites','Everything in Pro','White-label dashboard','Client management portal','Full API access','Custom integrations','Custom onboarding call'],col:'#f59e0b',popular:false },
+              { name:'Starter',price:15,desc:'Essential SEO for one website',features:['1 website','5 SEO audits/month','10 AI content generations/month','Monthly rank tracking','Competitor analysis','Email support'],col:'#6366f1',popular:false },
+              { name:'Growth',price:29,desc:'More capacity for growing businesses',features:['3 websites','15 SEO audits/month','30 AI content generations/month','Weekly rank tracking','Google Ads AI tools','10 social posts/month','Weekly reports'],col:'#8b5cf6',popular:true },
+              { name:'Pro',price:59,desc:'Advanced marketing for active teams',features:['5 websites','40 SEO audits/month','80 AI content generations/month','Google + Meta Ads AI tools','A/B testing','30 social posts/month','Branded PDF reports'],col:'#ec4899',popular:false },
+              { name:'Agency',price:99,desc:'Higher limits for agency workflows',features:['10 websites','100 SEO audits/month','200 AI content generations/month','Google + Meta Ads AI tools','A/B testing','100 social posts/month','Branded PDF reports'],col:'#f59e0b',popular:false },
             ].map((plan,i) => (
               <ScrollReveal key={plan.name} delay={i*80} type="up">
                 <div className={`pricing-card ${plan.popular?'popular':''}`} style={{ height:'100%',display:'flex',flexDirection:'column' }}>
@@ -372,14 +372,14 @@ export default function HomePage() {
                     ))}
                   </ul>
                   <Link href="/auth/signup" className="btn-primary" style={{ width:'100%',justifyContent:'center',background:plan.popular?'linear-gradient(135deg,#6366f1,#7c3aed)':'rgba(255,255,255,0.05)',boxShadow:plan.popular?undefined:'none',border:plan.popular?'none':'1px solid rgba(255,255,255,0.1)' }}>
-                    Start free trial
+                    Choose plan
                   </Link>
                 </div>
               </ScrollReveal>
             ))}
           </div>
           <ScrollReveal className="text-center" style={{ marginTop:36 }}>
-            <p style={{ fontSize:13,color:'rgba(255,255,255,0.28)' }}>All plans · 14-day free trial · No credit card · Cancel any time · Secure payments via Stripe</p>
+            <p style={{ fontSize:13,color:'rgba(255,255,255,0.28)' }}>Free plan available · Paid plans from $15/month · Cancel any time · Secure payments via Stripe</p>
           </ScrollReveal>
         </div>
       </section>
