@@ -142,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return userPlanIdx >= minPlanIdx;
     }
 
-    return true; // default allow
+    return false; // Fail closed: unknown feature keys must not silently unlock gated UI.
   };
 
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
