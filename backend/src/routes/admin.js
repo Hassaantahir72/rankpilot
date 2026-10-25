@@ -14,6 +14,7 @@ router.get('/growth',          c.getGrowthStats);
 // Users (admin + superadmin)
 router.get('/users',           c.getUsers);
 router.get('/users/:userId',   c.getUser);
+router.post('/users/:userId/billing-portal', c.createUserBillingPortal);
 router.patch('/users/:userId/plan',     c.updateUserPlan);
 router.patch('/users/:userId/ban',      c.toggleBan);
 router.patch('/users/:userId/verify',   c.verifyUserEmail);
