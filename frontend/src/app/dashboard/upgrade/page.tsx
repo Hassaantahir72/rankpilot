@@ -30,6 +30,10 @@ export default function UpgradePage() {
   const router = useRouter();
 
   const upgrade = (planId: string) => {
+    if (user && !['free', 'trial'].includes(user.plan)) {
+      router.push('/dashboard/billing');
+      return;
+    }
     router.push('/checkout?plan=' + encodeURIComponent(planId) + '&interval=monthly');
   };
 
@@ -46,12 +50,6 @@ export default function UpgradePage() {
           You're on the <strong style={{ color:'#818cf8',textTransform:'capitalize' }}>{user?.plan}</strong> plan. Upgrade to unlock more features.
         </p>
       </div>
-
-      {error && (
-        <div style={{ marginBottom:24,padding:'12px 16px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.22)',borderRadius:10,fontSize:14,color:'#fca5a5',textAlign:'center' }}>
-          {error}
-        </div>
-      )}
 
       <AvailablePaymentMethods compact />
 
@@ -90,9 +88,8 @@ export default function UpgradePage() {
               ) : (
                 <button
                   onClick={() => upgrade(plan.id)}
-                  disabled={!!loading}
                   style={{ padding:'12px',background:isDowngrade?'rgba(255,255,255,0.05)':`linear-gradient(135deg,${plan.color},${plan.color}cc)`, border:isDowngrade?'1px solid rgba(255,255,255,0.1)':'none', borderRadius:10, color:'#fff', fontWeight:600, fontSize:13, cursor:'pointer', fontFamily:'inherit', boxShadow:isDowngrade?'none':`0 4px 20px ${plan.color}35`, transition:'all 0.2s' }}>
-                  {loading===plan.id ? 'Redirecting...' : isDowngrade ? 'Review plan options' : `Continue to checkout →`}
+                  {isDowngrade ? 'Review billing options' : 'Continue to checkout →'}
                 </button>
               )}
             </div>
