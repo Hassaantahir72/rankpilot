@@ -68,8 +68,8 @@ export default function DashboardPage() {
       {/* Free plan upsell */}
       {user?.plan==='free'&&(
         <div style={{marginBottom:24,padding:'14px 20px',background:'rgba(99,102,241,0.08)',border:'1px solid rgba(99,102,241,0.2)',borderRadius:12,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
-          <p style={{fontSize:14,color:'#a5b4fc'}}>🚀 You're on the free plan. Start your 14-day trial to unlock full SEO audits, AI content, and more.</p>
-          <Link href="/dashboard/billing" className="btn-primary" style={{fontSize:13,padding:'9px 20px'}}>Start free trial →</Link>
+          <p style={{fontSize:14,color:'#a5b4fc'}}>🚀 You're on the Free plan. Upgrade to unlock higher SEO audit and AI content limits, advanced tools, and marketing features.</p>
+          <Link href="/dashboard/billing" className="btn-primary" style={{fontSize:13,padding:'9px 20px'}}>View plans →</Link>
         </div>
       )}
 
