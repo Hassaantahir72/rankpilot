@@ -7,7 +7,7 @@ const { queryOne, query } = require('../config/db');
 const { sendWelcomeEmail, sendOTPEmail } = require('../services/emailService');
 const { logSecurityEvent, trackFailedLogin, clearFailedAttempts } = require('../middleware/security');
 
-const signToken = (userId) => jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+const signToken = (user) => jwt.sign({ userId: user.id, tokenVersion: Number(user.token_version || 0) }, process.env.JWT_SECRET, { expiresIn: '7d' });
 const generateOTP = () => crypto.randomInt(100000, 1000000).toString();
 
 // REGISTER
@@ -53,7 +53,7 @@ const verifyOTP = async (req, res) => {
     }
     await query('UPDATE users SET email_verified=true,otp_code=NULL,otp_expires_at=NULL,otp_attempts=0,updated_at=NOW() WHERE id=$1', [userId]);
     await sendWelcomeEmail(user.email, user.name);
-    const token = signToken(user.id);
+    const token = signToken(user);
     res.json({ message: 'Email verified! Welcome to RankPilot.', token, user: { id:user.id, email:user.email, name:user.name, plan:user.plan, subscription_status:user.subscription_status, trial_ends_at:user.trial_ends_at, email_verified:true, role:user.role||'user' } });
   } catch (err) {
     console.error('Verify OTP error:', err);
@@ -126,7 +126,7 @@ const verifyLoginOTP = async (req, res) => {
       return res.status(400).json({ error: 'Invalid code.' });
     }
     await query('UPDATE users SET otp_code=NULL,otp_expires_at=NULL,otp_attempts=0 WHERE id=$1', [userId]);
-    const token = signToken(user.id);
+    const token = signToken(user);
     res.json({ token, user: { id:user.id, email:user.email, name:user.name, plan:user.plan, subscription_status:user.subscription_status, trial_ends_at:user.trial_ends_at, email_verified:user.email_verified, role:user.role||'user' } });
   } catch (err) {
     console.error('Verify login OTP error:', err);
@@ -172,7 +172,7 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ error: 'Invalid or expired code.' });
     }
     const passwordHash = await bcrypt.hash(password, 12);
-    await query('UPDATE users SET password_hash=$1,otp_code=NULL,otp_expires_at=NULL,otp_attempts=0,updated_at=NOW() WHERE id=$2', [passwordHash, userId]);
+    await query('UPDATE users SET password_hash=$1,otp_code=NULL,otp_expires_at=NULL,otp_attempts=0,token_version=token_version+1,updated_at=NOW() WHERE id=$2', [passwordHash, userId]);
     res.json({ message: 'Password reset successfully. Please sign in.' });
   } catch (err) { res.status(500).json({ error: 'Reset failed.' }); }
 };
@@ -227,14 +227,22 @@ const googleCallback = async (req, res) => {
       );
     }
 
-    const token = signToken(user.id);
-    res.redirect(process.env.FRONTEND_URL + '/auth/callback?token=' + token);
+    const token = signToken(user);
+    res.redirect(process.env.FRONTEND_URL + '/auth/callback#token=' + encodeURIComponent(token));
   } catch (err) {
     console.error('Google OAuth error:', err.message);
     res.redirect(process.env.FRONTEND_URL + '/auth/login?error=google_failed');
   }
 };
 
-const logout = (req, res) => res.json({ message: 'Logged out.' });
+const logout = async (req, res) => {
+  try {
+    await query('UPDATE users SET token_version=token_version+1,updated_at=NOW() WHERE id=$1', [req.user.id]);
+    res.json({ message: 'Logged out.' });
+  } catch (err) {
+    console.error('Logout error:', err.message);
+    res.status(500).json({ error: 'Could not end the session. Please try again.' });
+  }
+};
 
 module.exports = { register, verifyOTP, resendOTP, login, verifyLoginOTP, getMe, forgotPassword, resetPassword, googleAuthUrl, googleCallback, logout };

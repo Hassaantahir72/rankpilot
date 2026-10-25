@@ -7,42 +7,38 @@ import ScrollReveal from '@/components/ui/ScrollReveal';
 
 const PLANS = [
   {
-    name:'Starter', monthly:99, annual:79, desc:'Perfect for a single local business', color:'#6366f1', popular:false,
-    features:['1 website','10 SEO audits/month','AI keyword research (up to 100 keywords/audit)','20 AI content generations/month','Monthly rank tracking','Basic competitor snapshot','Audit history & recommendations','Email support (48hr)'],
-    not:['Google Ads automation','Meta Ads automation','Social media posts','White-label dashboard'],
+    id:'starter', name:'Starter', monthly:15, annual:12, desc:'Essential SEO for one website', color:'#6366f1', popular:false,
+    features:['1 website','5 SEO audits/month','10 AI content generations/month','Monthly rank tracking','Competitor analysis','Audit history & recommendations','Email support'],
+    not:['Google Ads tools','Meta Ads tools','Social media posts'],
   },
   {
-    name:'Growth', monthly:299, annual:239, desc:'For businesses serious about growth', color:'#8b5cf6', popular:true,
-    features:['3 websites','Everything in Starter','30 SEO audits/month','60 AI content generations/month','Google Ads AI automation','Weekly rank tracking','Full competitor analysis','Social media posts (20/mo)','Weekly email reports','Priority support (12hr)'],
-    not:['Meta Ads automation','White-label dashboard'],
+    id:'growth', name:'Growth', monthly:29, annual:23, desc:'More capacity for growing businesses', color:'#8b5cf6', popular:true,
+    features:['3 websites','15 SEO audits/month','30 AI content generations/month','Weekly rank tracking','Competitor analysis','Google Ads AI tools','10 social posts/month','Weekly reports'],
+    not:['Meta Ads tools'],
   },
   {
-    name:'Pro', monthly:499, annual:399, desc:'For power users and marketing teams', color:'#ec4899', popular:false,
-    features:['10 websites','Everything in Growth','100 SEO audits/month','200 AI content generations/month','Meta Ads AI automation','Auto A/B ad testing','Advanced analytics dashboard','Branded PDF reports','100 social posts/mo','Dedicated support (4hr)'],
-    not:['White-label dashboard'],
+    id:'pro', name:'Pro', monthly:59, annual:47, desc:'Advanced marketing for active teams', color:'#ec4899', popular:false,
+    features:['5 websites','40 SEO audits/month','80 AI content generations/month','Weekly rank tracking','Google + Meta Ads AI tools','30 social posts/month','Branded PDF reports'],
+    not:[],
   },
   {
-    name:'Agency', monthly:999, annual:799, desc:'For agencies managing client accounts', color:'#f59e0b', popular:false,
-    features:['Unlimited websites','Everything in Pro','Unlimited SEO audits & AI content','White-label dashboard','Client management portal','Full REST API access','Custom integrations','Unlimited social posts','Custom onboarding call'],
+    id:'agency', name:'Agency', monthly:99, annual:79, desc:'Higher limits for agency workflows', color:'#f59e0b', popular:false,
+    features:['10 websites','100 SEO audits/month','200 AI content generations/month','Weekly rank tracking','Google + Meta Ads AI tools','100 social posts/month','Branded PDF reports','Agency-level usage limits'],
     not:[],
   },
 ];
 
 const TABLE = [
-  {f:'Websites',s:'1',g:'3',p:'10',a:'Unlimited'},
-  {f:'SEO Audits / month',s:'10',g:'30',p:'100',a:'Unlimited'},
-  {f:'Keywords per audit',s:'Up to 100',g:'Up to 100',p:'Up to 100',a:'Up to 100'},
-  {f:'AI Content / month',s:'20',g:'60',p:'200',a:'Unlimited'},
+  {f:'Websites',s:'1',g:'3',p:'5',a:'10'},
+  {f:'SEO Audits / month',s:'5',g:'15',p:'40',a:'100'},
+  {f:'AI Content / month',s:'10',g:'30',p:'80',a:'200'},
   {f:'Rank Tracking',s:'Monthly',g:'Weekly',p:'Weekly',a:'Weekly'},
-  {f:'Competitor Analysis',s:'Basic',g:'Full',p:'Full',a:'Full'},
+  {f:'Competitor Analysis',s:'✓',g:'✓',p:'✓',a:'✓'},
   {f:'Google Ads AI',s:'—',g:'✓',p:'✓',a:'✓'},
   {f:'Meta Ads AI',s:'—',g:'—',p:'✓',a:'✓'},
-  {f:'A/B Ad Testing',s:'—',g:'—',p:'✓',a:'✓'},
-  {f:'Social Media Posts',s:'—',g:'20/mo',p:'100/mo',a:'Unlimited'},
-  {f:'White-label',s:'—',g:'—',p:'—',a:'✓'},
-  {f:'API Access',s:'—',g:'—',p:'—',a:'✓'},
-  {f:'Reports',s:'—',g:'Weekly',p:'Branded PDF',a:'Custom'},
-  {f:'Support',s:'48hr email',g:'12hr priority',p:'4hr dedicated',a:'Custom'},
+  {f:'Social Media Posts',s:'—',g:'10/mo',p:'30/mo',a:'100/mo'},
+  {f:'Weekly Reports',s:'—',g:'✓',p:'✓',a:'✓'},
+  {f:'Branded PDF Reports',s:'—',g:'—',p:'✓',a:'✓'},
 ];
 
 function PricingFAQ({q,a}:{q:string;a:string}) {
@@ -75,7 +71,7 @@ export default function PricingPage() {
               Way cheaper than any agency.<br/><span className="gradient-text">Way more powerful.</span>
             </h1>
             <p className="animate-fade-up delay-2" style={{fontSize:18,color:'rgba(255,255,255,0.45)',maxWidth:520,margin:'0 auto 40px',lineHeight:1.7}}>
-              Agencies charge $2,000–$8,000/month and deliver PDFs. RankPilot delivers rankings.
+              SEO tools that scale with your business, starting at $15/month.
             </p>
             <div className="animate-fade-up delay-3" style={{display:'inline-flex',alignItems:'center',gap:14,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:100,padding:'6px 8px 6px 16px'}}>
               <span style={{fontSize:14,fontWeight:500,color:!annual?'#fff':'rgba(255,255,255,0.4)'}}>Monthly</span>
@@ -83,7 +79,7 @@ export default function PricingPage() {
                 <div style={{width:18,height:18,borderRadius:'50%',background:'#fff',position:'absolute',top:3,left:annual?23:3,transition:'left 0.3s',boxShadow:'0 1px 4px rgba(0,0,0,0.3)'}}/>
               </button>
               <span style={{fontSize:14,fontWeight:500,color:annual?'#fff':'rgba(255,255,255,0.4)'}}>Annual</span>
-              {annual&&<span style={{fontSize:11,fontWeight:700,color:'#4ade80',background:'rgba(74,222,128,0.12)',border:'1px solid rgba(74,222,128,0.25)',borderRadius:100,padding:'3px 10px'}}>Save 20%</span>}
+              {annual&&<span style={{fontSize:11,fontWeight:700,color:'#4ade80',background:'rgba(74,222,128,0.12)',border:'1px solid rgba(74,222,128,0.25)',borderRadius:100,padding:'3px 10px'}}>Save up to 20%</span>}
             </div>
           </div>
         </section>
@@ -119,14 +115,14 @@ export default function PricingPage() {
                       ))}
                     </ul>
                     <Link href={`/auth/signup?plan=${plan.name.toLowerCase()}&interval=${annual ? 'annual' : 'monthly'}`} className="btn-primary" style={{width:'100%',justifyContent:'center',background:plan.popular?'linear-gradient(135deg,#6366f1,#7c3aed)':'rgba(255,255,255,0.05)',boxShadow:plan.popular?undefined:'none',border:plan.popular?'none':'1px solid rgba(255,255,255,0.1)'}}>
-                      Start free trial
+                      Choose plan
                     </Link>
                   </div>
                 </ScrollReveal>
               ))}
             </div>
             <ScrollReveal className="text-center" style={{marginTop:36}}>
-              <p style={{fontSize:13,color:'rgba(255,255,255,0.25)'}}>All plans · 14-day free trial · No credit card · Cancel any time · Secure payments via Stripe</p>
+              <p style={{fontSize:13,color:'rgba(255,255,255,0.25)'}}>Free plan available · Paid plans from $15/month · Cancel any time · Secure payments via Stripe</p>
             </ScrollReveal>
           </div>
         </section>

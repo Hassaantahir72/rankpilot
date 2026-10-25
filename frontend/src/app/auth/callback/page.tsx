@@ -1,16 +1,16 @@
 'use client';
 import { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth, AuthProvider } from '@/lib/auth';
 
 function CallbackInner() {
   const { login } = useAuth();
   const router = useRouter();
-  const params = useSearchParams();
-
   useEffect(() => {
-    const token = params.get('token');
-    const error = params.get('error');
+    const error = new URLSearchParams(window.location.search).get('error');
+    const token = new URLSearchParams(window.location.hash.slice(1)).get('token');
+    // Remove the token from browser history as soon as it is read.
+    if (token) window.history.replaceState(null, '', window.location.pathname + window.location.search);
     if (error) { router.push(`/auth/login?error=${error}`); return; }
     if (!token) { router.push('/auth/login'); return; }
     // Store token, fetch user profile

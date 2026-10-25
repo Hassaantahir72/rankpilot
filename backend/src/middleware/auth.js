@@ -9,17 +9,18 @@ const authMiddleware = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await queryOne(
-      'SELECT id,email,name,plan,subscription_status,trial_ends_at,email_verified,role,is_banned FROM users WHERE id=$1',
+      'SELECT id,email,name,plan,subscription_status,trial_ends_at,email_verified,role,is_banned,token_version FROM users WHERE id=$1',
       [decoded.userId]
     );
     if (!user) return res.status(401).json({ error: 'User not found.' });
+    if (Number(decoded.tokenVersion || 0) !== Number(user.token_version || 0)) return res.status(401).json({ error: 'Session revoked. Please sign in again.' });
     if (user.is_banned) return res.status(403).json({ error: 'Account suspended.' });
 
     // Trial entitlements must expire even if the user's stored plan has not yet been changed.
     if (user.plan === 'trial' && user.trial_ends_at && new Date(user.trial_ends_at) <= new Date()) {
-      await query("UPDATE users SET plan='free',subscription_status='expired',updated_at=NOW() WHERE id=$1 AND plan='trial' AND trial_ends_at <= NOW()", [user.id]);
+      await query("UPDATE users SET plan='free',subscription_status='free',updated_at=NOW() WHERE id=$1 AND plan='trial' AND trial_ends_at <= NOW()", [user.id]);
       user.plan = 'free';
-      user.subscription_status = 'expired';
+      user.subscription_status = 'free';
     }
 
     req.user = user;

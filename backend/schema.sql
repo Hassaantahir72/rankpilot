@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
   password_hash TEXT,
+  token_version INTEGER NOT NULL DEFAULT 0,
   google_id TEXT,
   role TEXT DEFAULT 'user' CHECK (role IN ('user','admin','superadmin')),
   plan TEXT DEFAULT 'free' CHECK (plan IN ('free','trial','starter','growth','pro','agency')),
@@ -55,19 +56,30 @@ CREATE TABLE IF NOT EXISTS plan_limits (
   rank_tracking_frequency TEXT DEFAULT 'monthly'
 );
 
-INSERT INTO plan_limits VALUES
-  ('free',    1,  20,  1,   2,    0,    false,false,false,false,false,false,false,false,'monthly'),
-  ('trial',   1,  100, 5,   10,   5,    false,false,false,false,false,true, false,false,'weekly'),
-  ('starter', 1,  150, 10,  20,   0,    false,false,false,false,false,true, false,false,'weekly'),
-  ('growth',  3,  300, 30,  60,   20,   true, false,false,false,false,true, true, true, 'weekly'),
-  ('pro',     10, 500, 100, 200,  100,  true, true, true, false,false,true, true, true, 'weekly'),
-  ('agency',  9999,9999,9999,9999,9999, true, true, true, true, true, true, true, true, 'weekly')
+INSERT INTO plan_limits
+  (plan,max_websites,max_keywords,max_audits_per_month,max_content_per_month,max_social_posts_per_month,google_ads,meta_ads,ab_testing,white_label,api_access,competitor_analysis,weekly_reports,priority_support,rank_tracking_frequency)
+VALUES
+  ('free',    1,   20,   1,   2,   0,    false,false,false,false,false,false,false,false,'monthly'),
+  ('trial',   1,  100,   5,  10,   5,    false,false,false,false,false,true, false,false,'weekly'),
+  ('starter', 1,  150,   5,  10,   0,    false,false,false,false,false,true, false,false,'monthly'),
+  ('growth',  3,  300,  15,  30,  10,    true, false,false,false,false,true, true, true, 'weekly'),
+  ('pro',     5,  500,  40,  80,  30,    true, true, false, false, false, true, true, true, 'weekly'),
+  ('agency', 10, 1000, 100, 200, 100,    true, true, false, false, false, true, true, true, 'weekly')
 ON CONFLICT (plan) DO UPDATE SET
   max_websites=EXCLUDED.max_websites,
+  max_keywords=EXCLUDED.max_keywords,
   max_audits_per_month=EXCLUDED.max_audits_per_month,
   max_content_per_month=EXCLUDED.max_content_per_month,
+  max_social_posts_per_month=EXCLUDED.max_social_posts_per_month,
   google_ads=EXCLUDED.google_ads,
-  meta_ads=EXCLUDED.meta_ads;
+  meta_ads=EXCLUDED.meta_ads,
+  ab_testing=EXCLUDED.ab_testing,
+  white_label=EXCLUDED.white_label,
+  api_access=EXCLUDED.api_access,
+  competitor_analysis=EXCLUDED.competitor_analysis,
+  weekly_reports=EXCLUDED.weekly_reports,
+  priority_support=EXCLUDED.priority_support,
+  rank_tracking_frequency=EXCLUDED.rank_tracking_frequency;
 
 -- ── WEBSITES ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS websites (
@@ -285,6 +297,13 @@ CREATE TABLE IF NOT EXISTS billing_history (
   period_start TIMESTAMPTZ,
   period_end TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ── STRIPE WEBHOOK IDEMPOTENCY ────────────────────────────────────
+CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+  id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ── SUPPORT TICKETS ───────────────────────────────────────────────

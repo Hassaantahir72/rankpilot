@@ -20,10 +20,10 @@ const FEATURE_PLAN: Record<string, string> = {
 const PLAN_LABELS: Record<string, string> = {
   free:    'Free',
   trial:   'Trial',
-  starter: 'Starter ($99/mo)',
-  growth:  'Growth ($299/mo)',
-  pro:     'Pro ($499/mo)',
-  agency:  'Agency ($999/mo)',
+  starter: 'Starter ($15/mo)',
+  growth:  'Growth ($29/mo)',
+  pro:     'Pro ($59/mo)',
+  agency:  'Agency ($99/mo)',
 };
 
 interface PlanGateProps {

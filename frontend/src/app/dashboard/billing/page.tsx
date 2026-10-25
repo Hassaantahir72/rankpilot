@@ -6,24 +6,23 @@ import { billingApi, dashboardApi } from '@/lib/api';
 import { UsageBar } from '@/components/dashboard/PlanGate';
 
 const PLANS = [
-  { id:'free',    name:'Free',    price:0,   desc:'Get started',              color:'#6b7280', priceId: '' },
-  { id:'starter', name:'Starter', price:99, annualPrice:79, desc:'For single businesses', color:'#6366f1', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_ANNUAL || '' },
-  { id:'growth',  name:'Growth',  price:299, annualPrice:239, desc:'For growing teams', color:'#8b5cf6', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH_ANNUAL || '' },
-  { id:'pro',     name:'Pro',     price:499, annualPrice:399, desc:'For power marketers', color:'#ec4899', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL || '' },
-  { id:'agency',  name:'Agency',  price:999, annualPrice:799, desc:'For agencies', color:'#f59e0b', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY_ANNUAL || '' },
+  { id:'free',    name:'Free',    price:0,   desc:'Get started', color:'#6b7280', priceId: '' },
+  { id:'starter', name:'Starter', price:15, annualPrice:12, desc:'Essential SEO for one website', color:'#6366f1', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_ANNUAL || '' },
+  { id:'growth',  name:'Growth',  price:29, annualPrice:23, desc:'More capacity for growing businesses', color:'#8b5cf6', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH_ANNUAL || '' },
+  { id:'pro',     name:'Pro',     price:59, annualPrice:47, desc:'Advanced marketing for active teams', color:'#ec4899', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL || '' },
+  { id:'agency',  name:'Agency',  price:99, annualPrice:79, desc:'Higher limits for agency workflows', color:'#f59e0b', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY_ANNUAL || '' },
 ];
 
 const FEATURES: Record<string, { free: string; starter: string; growth: string; pro: string; agency: string }> = {
-  'Websites':         { free:'1', starter:'1', growth:'3', pro:'10', agency:'Unlimited' },
-  'Audits / month':   { free:'1', starter:'10', growth:'30', pro:'100', agency:'Unlimited' },
-  'AI content / mo':  { free:'2', starter:'20', growth:'60', pro:'200', agency:'Unlimited' },
-  'Google Ads':       { free:'—', starter:'—', growth:'✓', pro:'✓', agency:'✓' },
-  'Meta Ads':         { free:'—', starter:'—', growth:'—', pro:'✓', agency:'✓' },
-  'Social posts/mo':  { free:'—', starter:'—', growth:'20', pro:'100', agency:'Unlimited' },
+  'Websites':            { free:'1', starter:'1', growth:'3', pro:'5', agency:'10' },
+  'Audits / month':      { free:'1', starter:'5', growth:'15', pro:'40', agency:'100' },
+  'AI content / month':  { free:'2', starter:'10', growth:'30', pro:'80', agency:'200' },
+  'Google Ads AI tools': { free:'—', starter:'—', growth:'✓', pro:'✓', agency:'✓' },
+  'Meta Ads AI tools':   { free:'—', starter:'—', growth:'—', pro:'✓', agency:'✓' },
+  'Social posts/month':  { free:'—', starter:'—', growth:'10', pro:'30', agency:'100' },
   'Competitor analysis': { free:'—', starter:'✓', growth:'✓', pro:'✓', agency:'✓' },
-  'Weekly reports':   { free:'—', starter:'—', growth:'✓', pro:'✓', agency:'✓' },
-  'White-label':      { free:'—', starter:'—', growth:'—', pro:'—', agency:'✓' },
-  'API access':       { free:'—', starter:'—', growth:'—', pro:'—', agency:'✓' },
+  'Weekly reports':      { free:'—', starter:'—', growth:'✓', pro:'✓', agency:'✓' },
+  'Branded PDF reports': { free:'—', starter:'—', growth:'—', pro:'✓', agency:'✓' },
 };
 
 export default function BillingPage() {
@@ -45,23 +44,27 @@ export default function BillingPage() {
   }, []);
 
   const upgrade = async (priceId: string) => {
-    // Existing subscriptions must be changed in the billing portal, not by creating a second subscription.
-    if (hasPaidPlan) {
-      await openPortal();
-      return;
-    }
     if (!priceId) {
-      setMsg('⚠️ Stripe not configured yet. Add your Stripe price IDs to .env.local and restart.');
+      setMsg('Stripe checkout is not configured yet. Please contact support.');
       return;
     }
     setLoading(priceId);
     try {
       const { data } = await billingApi.createCheckout(priceId);
-      window.location.href = data.url;
+      if (!data.url || !data.url.startsWith('https://checkout.stripe.com/')) {
+        throw new Error('Stripe returned an invalid checkout URL.');
+      }
+      window.location.assign(data.url);
     } catch (err: any) {
-      setMsg(err.response?.data?.error || 'Failed to open checkout.');
+      // The backend, not frontend plan labels, decides whether a Stripe subscription already exists.
+      if (err.response?.data?.code === 'SUBSCRIPTION_EXISTS') {
+        await openPortal();
+      } else {
+        setMsg(err.response?.data?.error || err.message || 'Failed to open checkout.');
+      }
+    } finally {
+      setLoading('');
     }
-    setLoading('');
   };
 
   const openPortal = async () => {
@@ -118,12 +121,14 @@ export default function BillingPage() {
         </div>
       </div>
 
+      <p style={{ fontSize:12,color:'rgba(255,255,255,0.38)',marginBottom:18 }}>Secure checkout is hosted by Stripe. Available cards, wallets, and other payment methods are shown at checkout based on your region and the payment methods enabled for this Stripe account.</p>
+
       {/* Plans grid */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
         <h2 style={{ fontSize: 17, fontWeight: 700 }}>Available plans</h2>
         <div style={{ display: 'inline-flex', gap: 4, padding: 4, borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
           <button type="button" onClick={() => setBillingInterval('monthly')} aria-pressed={billingInterval === 'monthly'} style={{ padding: '7px 12px', border: 0, borderRadius: 7, background: billingInterval === 'monthly' ? 'rgba(99,102,241,0.25)' : 'transparent', color: billingInterval === 'monthly' ? '#fff' : 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 12 }}>Monthly</button>
-          <button type="button" onClick={() => setBillingInterval('annual')} aria-pressed={billingInterval === 'annual'} style={{ padding: '7px 12px', border: 0, borderRadius: 7, background: billingInterval === 'annual' ? 'rgba(99,102,241,0.25)' : 'transparent', color: billingInterval === 'annual' ? '#fff' : 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 12 }}>Annual · Save 20%</button>
+          <button type="button" onClick={() => setBillingInterval('annual')} aria-pressed={billingInterval === 'annual'} style={{ padding: '7px 12px', border: 0, borderRadius: 7, background: billingInterval === 'annual' ? 'rgba(99,102,241,0.25)' : 'transparent', color: billingInterval === 'annual' ? '#fff' : 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 12 }}>Annual · Save up to 20%</button>
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 14, marginBottom: 36 }}>

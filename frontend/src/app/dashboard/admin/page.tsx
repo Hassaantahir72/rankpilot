@@ -58,7 +58,8 @@ export default function AdminPage() {
     if (tab === 'contacts') loadContacts();
     if (tab === 'billing')  loadBilling();
     if (tab === 'log')      loadAuditLog();
-    if (tab === 'security') { loadSecEvents(); if (user?.role === 'superadmin') { loadSettings(); loadBlockedIPs(); } }
+    if (tab === 'settings' && user?.role === 'superadmin') loadSettings();
+    if (tab === 'security') { loadSecEvents(); if (user?.role === 'superadmin') loadBlockedIPs(); }
   }, [tab]);
 
   const showMsg = (text: string, type: 'ok'|'err' = 'ok') => { setMsg(text); setMsgType(type); setTimeout(() => setMsg(''), 6000); };
@@ -90,8 +91,8 @@ export default function AdminPage() {
   const doUpdatePlan = async () => {
     if (!selectedUser || !newPlan) return;
     try {
-      await adminApi.updatePlan(selectedUser.id, { plan: newPlan, subscription_status: newPlan === 'free' ? 'free' : 'active' });
-      showMsg(`Plan updated to ${newPlan}`);
+      const { data } = await adminApi.updatePlan(selectedUser.id, { plan: newPlan, subscription_status: newPlan === 'free' ? 'free' : newPlan === 'trial' ? 'trial' : 'active' });
+      showMsg(data.message || `Plan updated to ${newPlan}`);
       setNewPlan(''); loadUsers(); loadUserDetail(selectedUser);
     } catch (e: any) { showMsg(e.response?.data?.error || 'Failed', 'err'); }
   };
@@ -104,6 +105,20 @@ export default function AdminPage() {
       showMsg(ban ? 'User banned' : 'User unbanned');
       setBanReason(''); loadUsers(); loadUserDetail(selectedUser);
     } catch (e: any) { showMsg(e.response?.data?.error || 'Failed', 'err'); }
+  };
+
+  const doManageBilling = async () => {
+    if (!selectedUser) return;
+    try {
+      const { data } = await adminApi.createUserBillingPortal(selectedUser.id);
+      if (!data.url || !data.url.startsWith('https://billing.stripe.com/')) {
+        showMsg('Stripe returned an invalid billing portal URL.', 'err');
+        return;
+      }
+      window.location.assign(data.url);
+    } catch (e: any) {
+      showMsg(e.response?.data?.error || 'Could not open Stripe billing management.', 'err');
+    }
   };
 
   const doVerifyEmail = async () => {
@@ -187,7 +202,7 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div style={{ display:'flex',gap:4,background:'rgba(255,255,255,0.04)',padding:4,borderRadius:12,marginBottom:24,flexWrap:'wrap',width:'fit-content' }}>
-        {TABS.map(t => (
+        {TABS.filter(t => t.id !== 'settings' || user?.role === 'superadmin').map(t => (
           <button key={t.id} onClick={() => setTab(t.id as Tab)}
             style={{ display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:9,border:'none',background:tab===t.id?'rgba(255,255,255,0.1)':'transparent',color:tab===t.id?'#fff':'rgba(255,255,255,0.45)',fontSize:13,fontWeight:tab===t.id?600:400,cursor:'pointer',fontFamily:'inherit',transition:'all 0.2s' }}>
             {t.i} {t.l}
@@ -335,12 +350,14 @@ export default function AdminPage() {
                     <option value="">Select plan...</option>
                     {['free','trial','starter','growth','pro','agency'].map(p => <option key={p}>{p}</option>)}
                   </select>
-                  <button onClick={doUpdatePlan} disabled={!newPlan} style={{ padding:'8px 14px',background:'rgba(99,102,241,0.15)',border:'1px solid rgba(99,102,241,0.3)',borderRadius:8,color:'#818cf8',cursor:'pointer',fontSize:12,fontFamily:'inherit',opacity:newPlan?1:0.4 }}>Apply</button>
+                  <button onClick={doUpdatePlan} disabled={!newPlan || !!selectedUser.has_stripe_subscription} style={{ padding:'8px 14px',background:'rgba(99,102,241,0.15)',border:'1px solid rgba(99,102,241,0.3)',borderRadius:8,color:'#818cf8',cursor:'pointer',fontSize:12,fontFamily:'inherit',opacity:newPlan?1:0.4 }}>Apply</button>
                 </div>
+                {selectedUser.has_stripe_subscription && <p style={{ fontSize:11,color:'#fbbf24',marginTop:8 }}>Stripe manages this subscription. Use the billing portal below to change the plan or cancel; direct database overrides are disabled.</p>}
               </div>
 
               {/* Quick actions */}
               <div style={{ display:'flex',flexDirection:'column',gap:8,marginBottom:16 }}>
+                {selectedUser.has_stripe_customer && <button onClick={doManageBilling} style={{ padding:'9px',background:'rgba(99,102,241,0.10)',border:'1px solid rgba(99,102,241,0.25)',borderRadius:9,color:'#a5b4fc',cursor:'pointer',fontSize:12,fontFamily:'inherit',fontWeight:600 }}>Manage Stripe billing & payment methods →</button>}
                 {!selectedUser.email_verified && (
                   <button onClick={doVerifyEmail} style={{ padding:'9px',background:'rgba(74,222,128,0.08)',border:'1px solid rgba(74,222,128,0.2)',borderRadius:9,color:'#4ade80',cursor:'pointer',fontSize:12,fontFamily:'inherit',fontWeight:600 }}>
                     ✓ Force verify email
