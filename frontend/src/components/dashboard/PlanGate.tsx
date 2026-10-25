@@ -13,6 +13,7 @@ const FEATURE_PLAN: Record<string, string> = {
   social_posts:        'growth',
   ads:                 'growth',
   email_marketing:     'starter',
+  pdf_reports:         'pro',
 };
 
 const PLAN_LABELS: Record<string, string> = {
