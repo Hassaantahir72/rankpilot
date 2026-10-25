@@ -298,6 +298,13 @@ CREATE TABLE IF NOT EXISTS billing_history (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ── STRIPE WEBHOOK IDEMPOTENCY ────────────────────────────────────
+CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+  id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ── SUPPORT TICKETS ───────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS support_tickets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
