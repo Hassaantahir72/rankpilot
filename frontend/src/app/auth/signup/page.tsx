@@ -17,7 +17,10 @@ function SignupForm() {
     setError(''); setLoading(true);
     try {
       const { data } = await authApi.register(form);
-      router.push(`/auth/verify-email?userId=${data.userId}&type=verify`);
+      const requestedPlan = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('plan') : null;
+      const allowedPlans = ['starter', 'growth', 'pro', 'agency'];
+      const planParam = requestedPlan && allowedPlans.includes(requestedPlan) ? `&plan=${encodeURIComponent(requestedPlan)}` : '';
+      router.push(`/auth/verify-email?userId=${encodeURIComponent(data.userId)}&type=verify${planParam}`);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
     }
