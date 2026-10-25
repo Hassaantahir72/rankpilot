@@ -9,22 +9,18 @@ const PLANS = [
   {
     id:'starter', name:'Starter', price:15, color:'#6366f1',
     features:['1 website','5 SEO audits/month','10 AI content generations/month','Monthly rank tracking','Competitor analysis','Email support'],
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || '',
   },
   {
     id:'growth', name:'Growth', price:29, color:'#8b5cf6', popular:true,
     features:['3 websites','15 SEO audits/month','30 AI content generations/month','Weekly rank tracking','Google Ads AI tools','10 social posts/month','Weekly reports'],
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH || '',
   },
   {
     id:'pro', name:'Pro', price:59, color:'#ec4899',
     features:['5 websites','40 SEO audits/month','80 AI content generations/month','Google + Meta Ads AI tools','30 social posts/month','Branded PDF reports'],
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || '',
   },
   {
     id:'agency', name:'Agency', price:99, color:'#f59e0b',
     features:['10 websites','100 SEO audits/month','200 AI content generations/month','Google + Meta Ads AI tools','100 social posts/month','Branded PDF reports'],
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || '',
   },
 ];
 
