@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS users (
   plan TEXT DEFAULT 'free' CHECK (plan IN ('free','trial','starter','growth','pro','agency')),
   subscription_status TEXT DEFAULT 'free' CHECK (subscription_status IN ('free','trial','active','past_due','cancelled','paused')),
   trial_ends_at TIMESTAMPTZ,
+  signup_plan TEXT CHECK (signup_plan IS NULL OR signup_plan IN ('starter','growth','pro','agency')),
+  signup_interval TEXT CHECK (signup_interval IS NULL OR signup_interval IN ('monthly','annual')),
   email_verified BOOLEAN DEFAULT FALSE,
   otp_code TEXT,
   otp_expires_at TIMESTAMPTZ,
