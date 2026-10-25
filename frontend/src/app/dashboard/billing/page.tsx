@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
-import { billingApi, dashboardApi, paymentMethodsApi } from '@/lib/api';
+import { useRouter } from 'next/navigation';
+import { authApi, billingApi, dashboardApi, paymentMethodsApi } from '@/lib/api';
 import { UsageBar } from '@/components/dashboard/PlanGate';
 import AvailablePaymentMethods from '@/components/billing/AvailablePaymentMethods';
 
@@ -27,6 +28,7 @@ const FEATURES: Record<string, { free: string; starter: string; growth: string; 
 };
 
 export default function BillingPage() {
+  const router = useRouter();
   const { user, limits, refreshUser, trialDaysLeft, isPaid, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState('');
   const [msg, setMsg] = useState('');
@@ -74,6 +76,20 @@ export default function BillingPage() {
     // Continue straight to hosted checkout for a plan selected before signup.
     upgrade(requestedPlan);
   }, [requestedPlan, availableProviders, authLoading, user?.id, user?.plan]);
+
+  const continueOnFree = async () => {
+    setLoading('free');
+    setMsg('');
+    try {
+      await authApi.clearSignupPlan();
+      await refreshUser();
+      router.push('/onboarding');
+    } catch (err: any) {
+      setMsg(err.response?.data?.error || 'Could not switch to the Free plan.');
+    } finally {
+      setLoading('');
+    }
+  };
 
   const openPortal = async () => {
     setLoading('portal');
@@ -171,6 +187,18 @@ export default function BillingPage() {
           );
         })}
       </div>
+
+      {requestedPlan && user?.plan === 'free' && (
+        <div style={{ marginBottom: 28, padding: 18, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <strong style={{ fontSize: 13 }}>Not ready to subscribe?</strong>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.42)', marginTop: 5 }}>You can use the Free plan instead. No payment will be taken unless you finish the provider’s checkout.</p>
+          </div>
+          <button type="button" onClick={continueOnFree} disabled={!!loading} style={{ padding: '9px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.04)', color: '#fff', cursor: 'pointer' }}>
+            {loading === 'free' ? 'Switching…' : 'Continue with Free'}
+          </button>
+        </div>
+      )}
 
       {/* Feature comparison */}
       <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 16 }}>Feature comparison</h2>
