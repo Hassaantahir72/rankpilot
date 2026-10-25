@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware, requirePlanFeature } = require('../middleware/auth');
+const { authMiddleware, requireSubscription, requirePlanFeature } = require('../middleware/auth');
 const { queryOne, queryAll, query } = require('../config/db');
 const aiService = require('../services/aiService');
 const { sendWeeklyReport } = require('../services/emailService');
 const { v4: uuidv4 } = require('uuid');
-router.use(authMiddleware);
+router.use(authMiddleware, requireSubscription);
 
 router.get('/', async (req, res) => {
   const reports = await queryAll('SELECT r.id,r.website_id,r.type,r.period,r.overall_trend,r.created_at,w.name as site_name FROM reports r LEFT JOIN websites w ON r.website_id=w.id WHERE r.user_id=$1 ORDER BY r.created_at DESC LIMIT 50', [req.user.id]);
