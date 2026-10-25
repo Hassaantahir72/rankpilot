@@ -62,4 +62,30 @@ router.post('/checkout', authMiddleware, requireVerified, async (req, res) => {
     return res.status(500).json({ error: 'Could not start checkout.' });
   }
 });
+
+router.post('/portal', authMiddleware, requireVerified, async (req, res) => {
+  try {
+    const user = await queryOne('SELECT provider_subscription_id,payment_provider FROM users WHERE id=$1', [req.user.id]);
+    if (!user?.provider_subscription_id || user.payment_provider !== 'lemon_squeezy') {
+      return res.status(409).json({ error: 'No Lemon Squeezy subscription is linked to this account.', code: 'LEGACY_BILLING' });
+    }
+    if (!process.env.LEMONSQUEEZY_API_KEY) return res.status(503).json({ error: 'Provider billing management is not configured.' });
+    const response = await fetch('https://api.lemonsqueezy.com/v1/subscriptions/' + encodeURIComponent(user.provider_subscription_id), {
+      headers: { 'Authorization': 'Bearer ' + process.env.LEMONSQUEEZY_API_KEY, 'Accept': 'application/vnd.api+json' },
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) return res.status(502).json({ error: 'Could not retrieve the provider billing portal.' });
+    const portalUrl = payload?.data?.attributes?.urls?.customer_portal || payload?.data?.attributes?.urls?.update_payment_method;
+    let parsed;
+    try { parsed = new URL(portalUrl); } catch {}
+    if (!parsed || parsed.protocol !== 'https:' || !(parsed.hostname === 'lemonsqueezy.com' || parsed.hostname.endsWith('.lemonsqueezy.com'))) {
+      return res.status(502).json({ error: 'Payment provider returned an invalid billing portal URL.' });
+    }
+    return res.json({ url: parsed.toString(), provider: 'lemon_squeezy' });
+  } catch (err) {
+    console.error('Lemon Squeezy billing portal failed:', err.message);
+    return res.status(500).json({ error: 'Could not open provider billing management.' });
+  }
+});
+
 module.exports = router;
