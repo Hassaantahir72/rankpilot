@@ -28,7 +28,7 @@ export default function OnboardingPage() {
       router.replace('/auth/login?next=%2Fonboarding');
       return;
     }
-    if (user.onboarding_completed) {
+    if (user.onboarding_completed && !checkoutComplete) {
       router.replace('/dashboard');
       return;
     }
