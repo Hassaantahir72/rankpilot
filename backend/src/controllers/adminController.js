@@ -265,7 +265,7 @@ const updateSiteSetting = async (req, res) => {
   const existing = await queryOne('SELECT key FROM site_settings WHERE key=$1', [key]);
   if (!existing) return res.status(404).json({ error: 'Setting not found.' });
   await query('UPDATE site_settings SET value=$1,updated_by=$2,updated_at=NOW() WHERE key=$3', [value, req.user.id, key]);
-  await logAction(req.user.id, 'update_site_setting', null, { key, value, adminEmail: req.user.email });
+  await logAction(req.user.id, 'update_site_setting', null, { key, value: '[redacted]', adminEmail: req.user.email });
   res.json({ message: `Setting "${key}" updated.` });
 };
 
