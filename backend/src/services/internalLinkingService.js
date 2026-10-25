@@ -3,16 +3,18 @@
  * Finds opportunities to link between your pages using target keywords as anchor text
  */
 
-const axios = require('axios');
 const cheerio = require('cheerio');
+const safeHttp = require('./safeHttpService');
 const { groq, parseJSON } = require('./aiHelpers');
 
 const HEADERS = { 'User-Agent': 'Mozilla/5.0 (compatible; RankPilotBot/1.0)' };
 
 // ── CRAWL ALL PAGES ───────────────────────────────────────────────
 const crawlAllPages = async (baseUrl, maxPages = 20) => {
+  const safeBaseUrl = await safeHttp.validatePublicUrl(baseUrl);
+  const origin = new URL(safeBaseUrl).origin;
   const visited = new Set();
-  const queue = [baseUrl];
+  const queue = [safeBaseUrl];
   const pages = [];
 
   while (queue.length > 0 && pages.length < maxPages) {
@@ -21,7 +23,7 @@ const crawlAllPages = async (baseUrl, maxPages = 20) => {
     visited.add(url);
 
     try {
-      const { data } = await axios.get(url, { headers: HEADERS, timeout: 10000 });
+      const { data } = await safeHttp.fetchPublicUrl(url, { userAgent: HEADERS['User-Agent'], timeout: 10000, maxBytes: 2 * 1024 * 1024 });
       const $ = cheerio.load(data);
 
       const title = $('title').text().trim();
@@ -36,7 +38,7 @@ const crawlAllPages = async (baseUrl, maxPages = 20) => {
         const href = $(el).attr('href');
         const text = $(el).text().trim();
         if (href && (href.startsWith('/') || href.startsWith(baseUrl)) && text) {
-          const fullUrl = href.startsWith('/') ? baseUrl + href : href;
+          const fullUrl = new URL(href, url).toString();
           existingLinks.push({ url: fullUrl, anchorText: text });
         }
       });
@@ -54,9 +56,9 @@ const crawlAllPages = async (baseUrl, maxPages = 20) => {
         const href = $(el).attr('href');
         if (!href) return;
         try {
-          const full = href.startsWith('/') ? baseUrl + href : href;
+          const full = new URL(href, url).toString();
           const parsed = new URL(full);
-          if (parsed.origin === new URL(baseUrl).origin && !visited.has(full) && !queue.includes(full)) {
+          if (parsed.origin === origin && !visited.has(full) && !queue.includes(full)) {
             if (!full.match(/\.(pdf|jpg|png|gif|zip|css|js)$/i)) queue.push(full);
           }
         } catch {}
