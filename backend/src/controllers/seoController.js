@@ -68,6 +68,7 @@ const runAudit = async (req, res) => {
     [auditId, websiteId, auditUserId, jobId]
   );
   if (!queued) return res.status(500).json({ error: 'Could not queue audit. Please try again.' });
+  await incrementUsage(auditUserId, 'audit');
 
   res.status(202).json({ message: 'Audit queued. Results will appear when processing completes.', auditId });
 };
