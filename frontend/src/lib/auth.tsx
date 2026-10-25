@@ -34,6 +34,8 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  trialDaysLeft: number | null;
+  isPaid: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
   canUse: (feature: string) => boolean;
@@ -46,6 +48,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   isAdmin: false,
   isSuperAdmin: false,
+  trialDaysLeft: null,
+  isPaid: false,
   login: () => {},
   logout: () => {},
   canUse: () => false,
@@ -141,11 +145,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return true; // default allow
   };
 
-  const isAdmin      = user?.role === 'admin' || user?.role === 'superadmin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
   const isSuperAdmin = user?.role === 'superadmin';
+  const trialEnd = user?.trial_ends_at ? new Date(user.trial_ends_at).getTime() : NaN;
+  const trialDaysLeft = Number.isFinite(trialEnd)
+    ? Math.max(0, Math.ceil((trialEnd - Date.now()) / (24 * 60 * 60 * 1000)))
+    : null;
+  const isPaid = !!user && !['free', 'trial'].includes(user.plan) && user.subscription_status === 'active';
 
   return (
-    <AuthContext.Provider value={{ user, limits, loading, isAdmin, isSuperAdmin, login, logout, canUse, refreshUser }}>
+    <AuthContext.Provider value={{ user, limits, loading, isAdmin, isSuperAdmin, trialDaysLeft, isPaid, login, logout, canUse, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
