@@ -3,11 +3,11 @@
  */
 const express = require('express');
 const router = express.Router();
-const { authMiddleware, requireMinimumPlan, requirePlanFeature, incrementUsage } = require('../middleware/auth');
+const { authMiddleware, requireSubscription, requireMinimumPlan, requirePlanFeature, incrementUsage } = require('../middleware/auth');
 const { queryOne, queryAll, query } = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
 
-router.use(authMiddleware, requireMinimumPlan('trial'));
+router.use(authMiddleware, requireSubscription, requireMinimumPlan('trial'));
 
 // ── FEATURE 1: BACKLINK ANALYZER ─────────────────────────────────
 router.post('/backlinks/analyze', async (req, res) => {
