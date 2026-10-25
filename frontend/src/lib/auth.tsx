@@ -132,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ads:          'growth',
       email_marketing: 'starter',
       reports:      'trial',
-      advanced_seo: 'starter',
+      advanced_seo: 'trial',
     };
 
     const minPlan = planGates[feature];
