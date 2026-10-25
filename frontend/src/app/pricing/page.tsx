@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import ScrollReveal from '@/components/ui/ScrollReveal';
+import AvailablePaymentMethods from '@/components/billing/AvailablePaymentMethods';
 
 const PLANS = [
   {
@@ -121,8 +122,9 @@ export default function PricingPage() {
                 </ScrollReveal>
               ))}
             </div>
+            <AvailablePaymentMethods />
             <ScrollReveal className="text-center" style={{marginTop:36}}>
-              <p style={{fontSize:13,color:'rgba(255,255,255,0.25)'}}>Free plan available · Paid plans from $15/month · Cancel any time · Secure payments via Stripe</p>
+              <p style={{fontSize:13,color:'rgba(255,255,255,0.25)'}}>Free plan available · Paid plans from $15/month · Payment methods are shown when configured</p>
             </ScrollReveal>
           </div>
         </section>
@@ -167,8 +169,8 @@ export default function PricingPage() {
             <PricingFAQ q="Is there a free trial?" a="Yes — every plan includes a full 14-day free trial with access to all features. No credit card required to start." />
             <PricingFAQ q="Can I change plans?" a="Yes, upgrade or downgrade any time from your account settings. Changes take effect immediately. Downgrades apply at the next billing cycle." />
             <PricingFAQ q="Do you offer refunds?" a="If you are not happy within the first 30 days, we will refund you in full — no questions asked. We want you to succeed." />
-            <PricingFAQ q="What payment methods do you accept?" a="All major credit and debit cards via Stripe. Annual plans can also be paid by bank transfer — contact us." />
-            <PricingFAQ q="Can I cancel any time?" a="Yes. Cancel from your account settings any time. You keep full access until the end of your billing period. No cancellation fees ever." />
+            <PricingFAQ q="What payment methods do you accept?" a="Available payment methods appear here when a provider is configured and has passed checkout and webhook verification. If no method is shown, please contact support while payments are being set up." />
+            <PricingFAQ q="Can I cancel any time?" a="For active subscriptions, contact support if self-service cancellation is not available for your payment provider." />
           </div>
         </section>
 
