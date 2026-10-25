@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
-import { billingApi } from '@/lib/api';
+import { billingApi, dashboardApi } from '@/lib/api';
 import { UsageBar } from '@/components/dashboard/PlanGate';
 
 const PLANS = [
@@ -35,14 +35,13 @@ export default function BillingPage() {
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
 
   useEffect(() => {
-    // Usage is currently cached client-side; backend usage reporting should replace this.
-    const stored = localStorage.getItem('rp_usage');
-    if (stored) {
-      try { setUsage(JSON.parse(stored)); } catch { localStorage.removeItem('rp_usage'); }
-    }
-    const selected = new URLSearchParams(window.location.search).get('plan') || '';
+    dashboardApi.getStats().then(({ data }) => {
+      setUsage({ ...(data.usage || {}), websites: data.websiteCount || 0 });
+    }).catch(() => setMsg('Could not load usage totals. Please refresh the page.'));
+    const params = new URLSearchParams(window.location.search);
+    const selected = params.get('plan') || '';
     if (['starter', 'growth', 'pro', 'agency'].includes(selected)) setRequestedPlan(selected);
-    setBillingInterval(new URLSearchParams(window.location.search).get('interval') === 'annual' ? 'annual' : 'monthly');
+    setBillingInterval(params.get('interval') === 'annual' ? 'annual' : 'monthly');
   }, []);
 
   const upgrade = async (priceId: string) => {
@@ -104,10 +103,11 @@ export default function BillingPage() {
 
         <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 24 }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>This month's usage</p>
-          {limits && <>
-            <UsageBar label="Audits" used={usage?.audit || 0} max={limits.max_audits_per_month === 999 ? 9999 : limits.max_audits_per_month} />
-            <UsageBar label="AI Content" used={usage?.content || 0} max={limits.max_content_per_month === 9999 ? 9999 : limits.max_content_per_month} color="#8b5cf6" />
-            <UsageBar label="Websites" used={usage?.websites || 0} max={limits.max_websites === 9999 ? 9999 : limits.max_websites} color="#ec4899" />
+          {limits && usage && <>
+            <UsageBar label="Audits" used={usage.audit || 0} max={limits.max_audits_per_month === 9999 ? 9999 : limits.max_audits_per_month} />
+            <UsageBar label="AI Content" used={usage.content || 0} max={limits.max_content_per_month === 9999 ? 9999 : limits.max_content_per_month} color="#8b5cf6" />
+            <UsageBar label="Social posts" used={usage.social || 0} max={limits.max_social_posts_per_month === 9999 ? 9999 : limits.max_social_posts_per_month} color="#f59e0b" />
+            <UsageBar label="Websites" used={usage.websites || 0} max={limits.max_websites === 9999 ? 9999 : limits.max_websites} color="#ec4899" />
           </>}
         </div>
       </div>
