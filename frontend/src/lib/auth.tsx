@@ -131,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const planGates: Record<string, string> = {
       ads:          'growth',
       email_marketing: 'starter',
+      pdf_reports: 'pro',
       reports:      'growth',
       advanced_seo: 'trial',
     };
