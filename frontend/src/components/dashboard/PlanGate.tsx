@@ -8,11 +8,12 @@ const FEATURE_PLAN: Record<string, string> = {
   ab_testing:          'pro',
   white_label:         'agency',
   api_access:          'agency',
-  competitor_analysis: 'growth',
+  competitor_analysis: 'starter',
   weekly_reports:      'growth',
   social_posts:        'growth',
   ads:                 'growth',
   email_marketing:     'starter',
+  advanced_seo:        'trial',
   pdf_reports:         'pro',
 };
 
