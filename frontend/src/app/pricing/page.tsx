@@ -9,21 +9,21 @@ const PLANS = [
   {
     id:'starter', name:'Starter', monthly:15, annual:12, desc:'Essential SEO for one website', color:'#6366f1', popular:false,
     features:['1 website','5 SEO audits/month','10 AI content generations/month','Monthly rank tracking','Basic competitor analysis','Audit history & recommendations','Email support'],
-    not:['Google Ads tools','Meta Ads tools','Social media posts','White-label dashboard','API access'],
+    not:['Google Ads tools','Meta Ads tools','Social media posts'],
   },
   {
     id:'growth', name:'Growth', monthly:29, annual:23, desc:'More capacity for growing businesses', color:'#8b5cf6', popular:true,
     features:['3 websites','15 SEO audits/month','30 AI content generations/month','Weekly rank tracking','Full competitor analysis','Google Ads AI tools','10 social posts/month','Weekly reports','Priority support'],
-    not:['Meta Ads tools','White-label dashboard','API access'],
+    not:['Meta Ads tools'],
   },
   {
     id:'pro', name:'Pro', monthly:59, annual:47, desc:'Advanced marketing for active teams', color:'#ec4899', popular:false,
     features:['5 websites','40 SEO audits/month','80 AI content generations/month','Weekly rank tracking','Google + Meta Ads AI tools','A/B ad testing','30 social posts/month','Branded PDF reports','Priority support'],
-    not:['White-label dashboard','API access'],
+    not:[],
   },
   {
     id:'agency', name:'Agency', monthly:99, annual:79, desc:'Client workspaces and agency controls', color:'#f59e0b', popular:false,
-    features:['10 websites','100 SEO audits/month','200 AI content generations/month','Weekly rank tracking','Google + Meta Ads AI tools','A/B ad testing','100 social posts/month','White-label dashboard','Client management','API access'],
+    features:['10 websites','100 SEO audits/month','200 AI content generations/month','Weekly rank tracking','Google + Meta Ads AI tools','A/B ad testing','100 social posts/month','Branded PDF reports','Agency-level usage limits'],
     not:[],
   },
 ];
@@ -40,8 +40,7 @@ const TABLE = [
   {f:'Social Media Posts',s:'—',g:'10/mo',p:'30/mo',a:'100/mo'},
   {f:'Weekly Reports',s:'—',g:'✓',p:'✓',a:'✓'},
   {f:'Branded PDF Reports',s:'—',g:'—',p:'✓',a:'✓'},
-  {f:'White-label',s:'—',g:'—',p:'—',a:'✓'},
-  {f:'API Access',s:'—',g:'—',p:'—',a:'✓'},
+  {f:'Branded PDF Reports',s:'—',g:'—',p:'✓',a:'✓'},
   {f:'Support',s:'Email',g:'Priority',p:'Priority',a:'Agency support'},
 ];
 
