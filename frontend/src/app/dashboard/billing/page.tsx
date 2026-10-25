@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { billingApi, dashboardApi } from '@/lib/api';
 import { UsageBar } from '@/components/dashboard/PlanGate';
+import AvailablePaymentMethods from '@/components/billing/AvailablePaymentMethods';
 
 const PLANS = [
   { id:'free',    name:'Free',    price:0,   desc:'Get started', color:'#6b7280', priceId: '' },
@@ -43,28 +44,8 @@ export default function BillingPage() {
     setBillingInterval(params.get('interval') === 'annual' ? 'annual' : 'monthly');
   }, []);
 
-  const upgrade = async (priceId: string) => {
-    if (!priceId) {
-      setMsg('Stripe checkout is not configured yet. Please contact support.');
-      return;
-    }
-    setLoading(priceId);
-    try {
-      const { data } = await billingApi.createCheckout(priceId);
-      if (!data.url || !data.url.startsWith('https://checkout.stripe.com/')) {
-        throw new Error('Stripe returned an invalid checkout URL.');
-      }
-      window.location.assign(data.url);
-    } catch (err: any) {
-      // The backend, not frontend plan labels, decides whether a Stripe subscription already exists.
-      if (err.response?.data?.code === 'SUBSCRIPTION_EXISTS') {
-        await openPortal();
-      } else {
-        setMsg(err.response?.data?.error || err.message || 'Failed to open checkout.');
-      }
-    } finally {
-      setLoading('');
-    }
+  const upgrade = async (_priceId: string) => {
+    setMsg('New subscription checkout is unavailable until a payment provider is configured and its checkout/webhook integration passes sandbox tests. Please contact support.');
   };
 
   const openPortal = async () => {
@@ -121,7 +102,9 @@ export default function BillingPage() {
         </div>
       </div>
 
-      <p style={{ fontSize:12,color:'rgba(255,255,255,0.38)',marginBottom:18 }}>Secure checkout is hosted by Stripe. Available cards, wallets, and other payment methods are shown at checkout based on your region and the payment methods enabled for this Stripe account.</p>
+      <p style={{ fontSize:12,color:'rgba(255,255,255,0.38)',marginBottom:18 }}>New checkout providers are enabled only after server-side configuration and verified sandbox tests.</p>
+
+      <AvailablePaymentMethods compact />
 
       {/* Plans grid */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
@@ -182,7 +165,7 @@ export default function BillingPage() {
       </div>
 
       <div style={{ marginTop: 24, textAlign: 'center' }}>
-        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>Secure payments via Stripe · Cancel any time</p>
+        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>Payment options appear here when a verified provider is enabled · Contact support for billing help</p>
       </div>
     </div>
   );
