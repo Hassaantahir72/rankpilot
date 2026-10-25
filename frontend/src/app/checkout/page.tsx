@@ -27,6 +27,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [details, setDetails] = useState<BillingDetails>({ name: '', email: '', country: '', state: '', zip: '', taxNumber: '' });
+  const [otherCountryCode, setOtherCountryCode] = useState('');
 
   useEffect(() => {
     if (!plan) { router.replace('/pricing'); return; }
@@ -66,7 +67,7 @@ export default function CheckoutPage() {
       setError('Secure checkout is not available yet. No payment method is currently enabled for customers.');
       return;
     }
-    if (!details.name.trim() || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(details.email.trim()) || !/^[A-Za-z]{2}$/.test(details.country)) {
+    if (!details.name.trim() || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(details.email.trim()) || !/^[A-Za-z]{2}$/.test(details.country === 'OTHER' ? otherCountryCode : details.country)) {
       setError('Enter your billing name, a valid billing email, and select your billing country.');
       return;
     }
@@ -75,7 +76,7 @@ export default function CheckoutPage() {
       const { data } = await billingApi.createProviderCheckout(provider, planId, interval, {
         name: details.name.trim(),
         email: details.email.trim(),
-        country: details.country.toUpperCase(),
+        country: (details.country === 'OTHER' ? otherCountryCode : details.country).toUpperCase(),
         state: details.state.trim(),
         zip: details.zip.trim(),
         taxNumber: details.taxNumber.trim(),
@@ -121,9 +122,12 @@ export default function CheckoutPage() {
               <label style={styles.label}>Country / region
                 <select style={styles.input} autoComplete="country" value={details.country} onChange={update('country')} required>
                   <option value="">Select country</option>
-                  <option value="PK">Pakistan</option><option value="US">United States</option><option value="GB">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option><option value="AE">United Arab Emirates</option><option value="IN">India</option><option value="SA">Saudi Arabia</option><option value="DE">Germany</option><option value="FR">France</option><option value="NL">Netherlands</option><option value="SG">Singapore</option><option value="OTHER">Other</option>
+                  <option value="PK">Pakistan</option><option value="US">United States</option><option value="GB">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option><option value="AE">United Arab Emirates</option><option value="IN">India</option><option value="SA">Saudi Arabia</option><option value="DE">Germany</option><option value="FR">France</option><option value="NL">Netherlands</option><option value="SG">Singapore</option><option value="NZ">New Zealand</option><option value="JP">Japan</option><option value="IT">Italy</option><option value="ES">Spain</option><option value="CH">Switzerland</option><option value="BR">Brazil</option><option value="MX">Mexico</option><option value="ZA">South Africa</option><option value="MY">Malaysia</option><option value="ID">Indonesia</option><option value="TR">Türkiye</option><option value="NO">Norway</option><option value="SE">Sweden</option><option value="DK">Denmark</option><option value="IE">Ireland</option><option value="PL">Poland</option><option value="OTHER">Other (enter country code)</option>
                 </select>
               </label>
+              {details.country === 'OTHER' && <label style={styles.label}>Two-letter country code
+                <input style={styles.input} value={otherCountryCode} onChange={e => setOtherCountryCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2))} minLength={2} maxLength={2} required placeholder="e.g. BR" />
+              </label>}
               <div style={styles.twoCols}>
                 <label style={styles.label}>State / province <span style={styles.optional}>Optional</span>
                   <input style={styles.input} autoComplete="address-level1" value={details.state} onChange={update('state')} maxLength={100} placeholder="State or province" />
