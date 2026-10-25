@@ -26,7 +26,7 @@ const PLANS = [
     features:['10 websites','100 SEO audits/month','200 AI content generations/month','Weekly rank tracking','Google + Meta Ads AI tools','A/B ad testing','100 social posts/month','White-label dashboard','Client management','API access'],
     not:[],
   },
-];;
+];
 
 const TABLE = [
   {f:'Websites',s:'1',g:'3',p:'5',a:'10'},
@@ -43,7 +43,7 @@ const TABLE = [
   {f:'White-label',s:'—',g:'—',p:'—',a:'✓'},
   {f:'API Access',s:'—',g:'—',p:'—',a:'✓'},
   {f:'Support',s:'Email',g:'Priority',p:'Priority',a:'Agency support'},
-];;
+];
 
 function PricingFAQ({q,a}:{q:string;a:string}) {
   const [open,setOpen]=useState(false);
