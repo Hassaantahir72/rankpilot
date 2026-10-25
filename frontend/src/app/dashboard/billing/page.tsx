@@ -27,7 +27,7 @@ const FEATURES: Record<string, { free: string; starter: string; growth: string; 
 };
 
 export default function BillingPage() {
-  const { user, limits, refreshUser, trialDaysLeft, isPaid } = useAuth();
+  const { user, limits, refreshUser, trialDaysLeft, isPaid, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState('');
   const [msg, setMsg] = useState('');
   const [usage, setUsage] = useState<any>(null);
@@ -68,11 +68,12 @@ export default function BillingPage() {
   };
 
   useEffect(() => {
-    if (!requestedPlan || !availableProviders.includes('lemon_squeezy') || hasPaidPlan || autoCheckoutStarted.current) return;
+    const alreadyPaid = !!user && !['free', 'trial'].includes(user.plan);
+    if (authLoading || !user || !requestedPlan || !availableProviders.includes('lemon_squeezy') || alreadyPaid || autoCheckoutStarted.current) return;
     autoCheckoutStarted.current = true;
     // Continue straight to hosted checkout for a plan selected before signup.
     upgrade(requestedPlan);
-  }, [requestedPlan, availableProviders, hasPaidPlan]);
+  }, [requestedPlan, availableProviders, authLoading, user?.id, user?.plan]);
 
   const openPortal = async () => {
     setLoading('portal');
