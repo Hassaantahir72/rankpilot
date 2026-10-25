@@ -2,6 +2,8 @@
 -- Existing rows receive TRUE when this column is first added; future signups default to FALSE.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE users ALTER COLUMN onboarding_completed SET DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS signup_plan TEXT CHECK (signup_plan IS NULL OR signup_plan IN ('starter','growth','pro','agency'));
+ALTER TABLE users ADD COLUMN IF NOT EXISTS signup_interval TEXT CHECK (signup_interval IS NULL OR signup_interval IN ('monthly','annual'));
 
 CREATE TABLE IF NOT EXISTS trial_device_claims (
   device_hash TEXT PRIMARY KEY,
