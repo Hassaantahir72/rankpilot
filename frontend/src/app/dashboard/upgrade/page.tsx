@@ -17,7 +17,7 @@ const PLANS = [
   },
   {
     id:'pro', name:'Pro', price:59, color:'#ec4899',
-    features:['5 websites','40 SEO audits/month','80 AI content generations/month','Google + Meta Ads AI tools','A/B testing','30 social posts/month','Branded PDF reports'],
+    features:['5 websites','40 SEO audits/month','80 AI content generations/month','Google + Meta Ads AI tools','30 social posts/month','Branded PDF reports'],
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || '',
   },
   {
