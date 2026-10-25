@@ -42,16 +42,6 @@ const processJob = async (job) => {
   });
   const score = calculateScore(technicalIssues, crawlData);
 
-  await query(
-    `UPDATE audits SET status='complete',overall_score=$1,pages_crawled=$2,issues_found=$3,
-     keywords_found_count=$4,crawl_data=$5,technical_issues=$6,keywords_found=$7,
-     ai_analysis=$8,page_recommendations=$9,completed_at=NOW(),error=NULL WHERE id=$10`,
-    [score, crawlData.pagesCount || crawlData.totalPages || 0, technicalIssues.length, keywords.length,
-      JSON.stringify(crawlData), JSON.stringify(technicalIssues), JSON.stringify(keywords),
-      JSON.stringify(aiAnalysis), JSON.stringify(pageRecs), job.audit_id]
-  );
-  await query('UPDATE websites SET last_audit_at=NOW(),last_score=$1 WHERE id=$2', [score, job.website_id]);
-
   for (const kw of keywords.slice(0, 100)) {
     await query(
       `INSERT INTO keywords (id,website_id,user_id,keyword,search_volume,difficulty,cpc,intent,priority,created_at)
@@ -63,6 +53,15 @@ const processJob = async (job) => {
         kw.difficulty || 50, kw.cpc || 0, kw.intent || 'informational', kw.priority || 0]
     );
   }
+  await query(
+    `UPDATE audits SET status='complete',overall_score=$1,pages_crawled=$2,issues_found=$3,
+     keywords_found_count=$4,crawl_data=$5,technical_issues=$6,keywords_found=$7,
+     ai_analysis=$8,page_recommendations=$9,completed_at=NOW(),error=NULL WHERE id=$10`,
+    [score, crawlData.pagesCount || crawlData.totalPages || 0, technicalIssues.length, keywords.length,
+      JSON.stringify(crawlData), JSON.stringify(technicalIssues), JSON.stringify(keywords),
+      JSON.stringify(aiAnalysis), JSON.stringify(pageRecs), job.audit_id]
+  );
+  await query('UPDATE websites SET last_audit_at=NOW(),last_score=$1 WHERE id=$2', [score, job.website_id]);
   await incrementUsage(job.user_id, 'audit');
 };
 
@@ -74,6 +73,16 @@ const processNextAudit = async () => {
     await query(
       `UPDATE audit_jobs SET status='pending',locked_at=NULL,locked_by=NULL,available_at=NOW(),updated_at=NOW()
        WHERE status='running' AND locked_at < NOW() - INTERVAL '20 minutes' AND attempts < 3`
+    );
+    await query(
+      `WITH expired AS (
+         UPDATE audit_jobs SET status='failed',locked_at=NULL,locked_by=NULL,
+           last_error=COALESCE(last_error,'Audit worker timed out after maximum attempts'),updated_at=NOW()
+         WHERE status='running' AND locked_at < NOW() - INTERVAL '20 minutes' AND attempts >= 3
+         RETURNING audit_id,last_error
+       )
+       UPDATE audits a SET status='failed',error=e.last_error
+       FROM expired e WHERE a.id=e.audit_id`
     );
     const job = await queryOne(
       `UPDATE audit_jobs
