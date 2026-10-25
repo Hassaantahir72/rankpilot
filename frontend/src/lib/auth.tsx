@@ -95,7 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser();
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try { await authApi.logout(); } catch { /* Clear local state even if the server cannot be reached. */ }
     localStorage.removeItem('rp_token');
     localStorage.removeItem('rp_user');
     setUser(null);
