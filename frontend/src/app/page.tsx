@@ -253,9 +253,9 @@ export default function HomePage() {
             </ScrollReveal>
             <ScrollReveal type="right">
               <span className="tag" style={{ marginBottom:20 }}>Marketing Autopilot</span>
-              <h2 style={{ fontSize:'clamp(1.8rem,3.5vw,2.6rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.12,marginBottom:18 }}>AI runs your ads like a <span className="gradient-text">senior media buyer</span></h2>
-              <p style={{ color:'rgba(255,255,255,0.45)',fontSize:15,lineHeight:1.8,marginBottom:32 }}>Connect your Google and Meta accounts. AI writes your ads, sets targeting, allocates budget, A/B tests automatically, kills underperformers — while you sleep.</p>
-              {['AI-written Google Ads and Meta Ads copy that converts','Smart budget allocation — spend where it performs best','Automatic A/B testing — winners scale, losers pause','Audience research and lookalike targeting recommendations','20 social media posts generated monthly per platform','Weekly plain-English performance report delivered by email'].map(f => (
+              <h2 style={{ fontSize:'clamp(1.8rem,3.5vw,2.6rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.12,marginBottom:18 }}>AI helps prepare campaigns like a <span className="gradient-text">marketing assistant</span></h2>
+              <p style={{ color:'rgba(255,255,255,0.45)',fontSize:15,lineHeight:1.8,marginBottom:32 }}>Use AI tools to prepare Google and Meta campaign drafts and ad copy. Review campaign settings and approve changes before publishing.</p>
+              {['AI-written Google Ads and Meta Ads copy that converts','Campaign draft assistance using your goals and budget','Reviewable campaign drafts before publishing','Keyword and audience suggestions for campaign planning','Social post generation within your plan’s monthly allowance','Weekly plain-English performance report delivered by email'].map(f => (
                 <div key={f} style={{ display:'flex',alignItems:'flex-start',gap:12,marginBottom:12 }}>
                   <div style={{ width:20,height:20,borderRadius:'50%',background:'rgba(139,92,246,0.15)',border:'1px solid rgba(139,92,246,0.35)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:2 }}>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>
@@ -351,7 +351,7 @@ export default function HomePage() {
               { name:'Starter',price:15,desc:'Essential SEO for one website',features:['1 website','5 SEO audits/month','10 AI content generations/month','Monthly rank tracking','Competitor analysis','Email support'],col:'#6366f1',popular:false },
               { name:'Growth',price:29,desc:'More capacity for growing businesses',features:['3 websites','15 SEO audits/month','30 AI content generations/month','Weekly rank tracking','Google Ads AI tools','10 social posts/month','Weekly reports'],col:'#8b5cf6',popular:true },
               { name:'Pro',price:59,desc:'Advanced marketing for active teams',features:['5 websites','40 SEO audits/month','80 AI content generations/month','Google + Meta Ads AI tools','30 social posts/month','Branded PDF reports'],col:'#ec4899',popular:false },
-              { name:'Agency',price:99,desc:'Higher limits for agency workflows',features:['10 websites','100 SEO audits/month','200 AI content generations/month','Google + Meta Ads AI tools','A/B testing','100 social posts/month','Branded PDF reports'],col:'#f59e0b',popular:false },
+              { name:'Agency',price:99,desc:'Higher limits for agency workflows',features:['10 websites','100 SEO audits/month','200 AI content generations/month','Google + Meta Ads AI tools','100 social posts/month','Branded PDF reports'],col:'#f59e0b',popular:false },
             ].map((plan,i) => (
               <ScrollReveal key={plan.name} delay={i*80} type="up">
                 <div className={`pricing-card ${plan.popular?'popular':''}`} style={{ height:'100%',display:'flex',flexDirection:'column' }}>
