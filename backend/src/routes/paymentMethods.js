@@ -14,6 +14,16 @@ router.post('/checkout', authMiddleware, requireVerified, async (req, res) => {
   if (provider !== 'lemon_squeezy') return res.status(503).json({ error: 'This provider checkout integration is not available yet.' });
   if (!PLAN_IDS.includes(plan) || !INTERVALS.includes(interval)) return res.status(400).json({ error: 'Choose a valid plan and billing interval.' });
   const variantId = process.env[variantEnv(plan, interval)];
+  const details = req.body?.billingDetails || {};
+  const billingName = typeof details.name === 'string' ? details.name.trim().slice(0, 120) : '';
+  const billingEmail = typeof details.email === 'string' ? details.email.trim().toLowerCase().slice(0, 254) : '';
+  const billingCountry = typeof details.country === 'string' ? details.country.trim().toUpperCase() : '';
+  const billingState = typeof details.state === 'string' ? details.state.trim().slice(0, 100) : '';
+  const billingZip = typeof details.zip === 'string' ? details.zip.trim().slice(0, 24) : '';
+  const taxNumber = typeof details.taxNumber === 'string' ? details.taxNumber.trim().slice(0, 80) : '';
+  if (!billingName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billingEmail) || !/^[A-Z]{2}$/.test(billingCountry)) {
+    return res.status(400).json({ error: 'Enter a valid billing name, email, and two-letter billing country code.' });
+  }
   if (process.env.LEMONSQUEEZY_ADAPTER_READY !== 'true' || !process.env.LEMONSQUEEZY_API_KEY || !process.env.LEMONSQUEEZY_STORE_ID ||
       !process.env.LEMONSQUEEZY_WEBHOOK_SECRET || !variantId || !process.env.FRONTEND_URL) {
     return res.status(503).json({ error: 'Lemon Squeezy is not fully configured for checkout.' });
@@ -21,7 +31,10 @@ router.post('/checkout', authMiddleware, requireVerified, async (req, res) => {
   try {
     const method = await queryOne("SELECT id FROM payment_methods WHERE provider_key='lemon_squeezy' AND enabled=TRUE");
     if (!method) return res.status(503).json({ error: 'This payment method is not enabled by the administrator.' });
-    const existing = await queryOne('SELECT stripe_subscription_id,provider_subscription_id FROM users WHERE id=$1', [req.user.id]);
+    const existing = await queryOne('SELECT stripe_subscription_id,provider_subscription_id,signup_plan,signup_interval FROM users WHERE id=$1', [req.user.id]);
+    if (existing?.signup_plan && (existing.signup_plan !== plan || (existing.signup_interval || 'monthly') !== interval)) {
+      return res.status(409).json({ error: 'This account has a different pending plan selection. Return to plan selection to change it safely.' });
+    }
     if (existing?.stripe_subscription_id || existing?.provider_subscription_id) {
       return res.status(409).json({ error: 'An existing subscription is linked to this account. Contact support to change providers.', code: 'SUBSCRIPTION_EXISTS' });
     }
@@ -34,7 +47,7 @@ router.post('/checkout', authMiddleware, requireVerified, async (req, res) => {
         data: {
           type: 'checkouts',
           attributes: {
-            checkout_data: { email: req.user.email, name: req.user.name || undefined, custom: { user_id: String(req.user.id), plan, interval } },
+            checkout_data: { email: billingEmail, name: billingName, billing_address: { country: billingCountry, ...(billingState ? { state: billingState } : {}), ...(billingZip ? { zip: billingZip } : {}) }, ...(taxNumber ? { tax_number: taxNumber } : {}), custom: { user_id: String(req.user.id), plan, interval } },
             product_options: { redirect_url: frontend.origin + '/onboarding?checkout=complete&plan=' + encodeURIComponent(plan) + '&interval=' + encodeURIComponent(interval) },
             test_mode: process.env.LEMONSQUEEZY_TEST_MODE === 'true',
           },
