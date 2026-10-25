@@ -274,7 +274,7 @@ export default function ChatWidget() {
                     </button>
                   </div>
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:8 }}>
-                    <p style={{ fontSize:10, color:'rgba(255,255,255,0.2)' }}>Powered by Groq AI · <Link href="/dashboard/support" style={{ color:'rgba(99,102,241,0.6)', textDecoration:'none' }}>Open tickets</Link></p>
+                    <p style={{ fontSize:10, color:'rgba(255,255,255,0.2)' }}>Powered by RankPilot AI · <Link href="/dashboard/support" style={{ color:'rgba(99,102,241,0.6)', textDecoration:'none' }}>Open tickets</Link></p>
                     {messages.length > 3 && <button onClick={endChat} style={{ fontSize:10, color:'rgba(255,255,255,0.25)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit' }}>End chat</button>}
                   </div>
                 </div>
