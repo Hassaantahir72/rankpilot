@@ -56,7 +56,8 @@ export default function VerifyEmailPage() {
         const selectedPlan = params.get('plan');
         const allowedPlans = ['starter', 'growth', 'pro', 'agency'];
         if (type !== 'login' && selectedPlan && allowedPlans.includes(selectedPlan)) {
-          router.push(`/dashboard/billing?plan=${encodeURIComponent(selectedPlan)}`);
+          const selectedInterval = params.get('interval') === 'annual' ? '&interval=annual' : '';
+          router.push(`/dashboard/billing?plan=${encodeURIComponent(selectedPlan)}${selectedInterval}`);
         } else {
           router.push('/dashboard');
         }
