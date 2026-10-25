@@ -23,8 +23,8 @@ const FEATURES: Record<string, { free: string; starter: string; growth: string; 
   'Competitor analysis': { free:'—', starter:'✓', growth:'✓', pro:'✓', agency:'✓' },
   'Weekly reports':      { free:'—', starter:'—', growth:'✓', pro:'✓', agency:'✓' },
   'Branded PDF reports': { free:'—', starter:'—', growth:'—', pro:'✓', agency:'✓' },
-  'White-label':         { free:'—', starter:'—', growth:'—', pro:'—', agency:'✓' },
-  'API access':          { free:'—', starter:'—', growth:'—', pro:'—', agency:'✓' },
+  'A/B testing':         { free:'—', starter:'—', growth:'—', pro:'✓', agency:'✓' },
+  'Branded PDF reports': { free:'—', starter:'—', growth:'—', pro:'✓', agency:'✓' },
 };
 
 export default function BillingPage() {
