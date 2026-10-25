@@ -41,11 +41,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="foot">© ${new Date().getFullYear()} RankPilot · <a href="${process.env.FRONTEND_URL}" style="color:#818cf8;text-decoration:none">rankpilot.ai</a></div>
 </div></body></html>`;
 
-const sendOTPEmail = async (email, name, otp, type) => {
+const sendOTPEmail = async (email, name, otp, type, plan = 'trial') => {
   const subjects = { verify: 'Verify your email — RankPilot', login: 'Your login code — RankPilot', reset: 'Password reset code — RankPilot' };
   const titles = { verify: 'Verify your email address', login: 'Your sign-in code', reset: 'Reset your password' };
   const descs = {
-    verify: `Welcome to RankPilot, ${escapeHtml(name)}! Enter the code below to verify your email and activate your 14-day free trial.`,
+    verify: plan === 'trial' ? `Welcome to RankPilot, ${escapeHtml(name)}! Enter the code below to verify your email and activate your 14-day Free Trial.` : `Welcome to RankPilot, ${escapeHtml(name)}! Verify your email to continue setting up your selected plan.`,
     login: `Hi ${escapeHtml(name)}, here is your sign-in verification code.`,
     reset: `Hi ${escapeHtml(name)}, use the code below to reset your password. It expires in 15 minutes.`,
   };
