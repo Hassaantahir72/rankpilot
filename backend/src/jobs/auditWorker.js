@@ -5,7 +5,6 @@
 const os = require('node:os');
 const { v4: uuidv4 } = require('uuid');
 const { queryOne, queryAll, query } = require('../config/db');
-const { incrementUsage } = require('../middleware/auth');
 const crawlerService = require('../services/crawlerService');
 const keywordService = require('../services/keywordService');
 const aiService = require('../services/aiService');
@@ -62,7 +61,6 @@ const processJob = async (job) => {
       JSON.stringify(aiAnalysis), JSON.stringify(pageRecs), job.audit_id]
   );
   await query('UPDATE websites SET last_audit_at=NOW(),last_score=$1 WHERE id=$2', [score, job.website_id]);
-  await incrementUsage(job.user_id, 'audit');
 };
 
 const processNextAudit = async () => {
