@@ -236,8 +236,13 @@ const googleCallback = async (req, res) => {
 };
 
 const logout = async (req, res) => {
-  await query('UPDATE users SET token_version=token_version+1,updated_at=NOW() WHERE id=$1', [req.user.id]);
-  res.json({ message: 'Logged out.' });
+  try {
+    await query('UPDATE users SET token_version=token_version+1,updated_at=NOW() WHERE id=$1', [req.user.id]);
+    res.json({ message: 'Logged out.' });
+  } catch (err) {
+    console.error('Logout error:', err.message);
+    res.status(500).json({ error: 'Could not end the session. Please try again.' });
+  }
 };
 
 module.exports = { register, verifyOTP, resendOTP, login, verifyLoginOTP, getMe, forgotPassword, resetPassword, googleAuthUrl, googleCallback, logout };
