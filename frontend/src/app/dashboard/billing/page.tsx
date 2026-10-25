@@ -11,7 +11,7 @@ const PLANS = [
   { id:'growth',  name:'Growth',  price:29, annualPrice:23, desc:'More capacity for growing businesses', color:'#8b5cf6', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_GROWTH_ANNUAL || '' },
   { id:'pro',     name:'Pro',     price:59, annualPrice:47, desc:'Advanced marketing for active teams', color:'#ec4899', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL || '' },
   { id:'agency',  name:'Agency',  price:99, annualPrice:79, desc:'Client workspaces and agency controls', color:'#f59e0b', priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || '', annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY_ANNUAL || '' },
-];;
+];
 
 const FEATURES: Record<string, { free: string; starter: string; growth: string; pro: string; agency: string }> = {
   'Websites':            { free:'1', starter:'1', growth:'3', pro:'5', agency:'10' },
@@ -25,7 +25,7 @@ const FEATURES: Record<string, { free: string; starter: string; growth: string; 
   'Branded PDF reports': { free:'—', starter:'—', growth:'—', pro:'✓', agency:'✓' },
   'White-label':         { free:'—', starter:'—', growth:'—', pro:'—', agency:'✓' },
   'API access':          { free:'—', starter:'—', growth:'—', pro:'—', agency:'✓' },
-};;
+};
 
 export default function BillingPage() {
   const { user, limits, refreshUser, trialDaysLeft, isPaid } = useAuth();
