@@ -67,8 +67,8 @@ router.post('/lemon-squeezy', async (req, res) => {
         const conflict = await queryOne('SELECT id FROM users WHERE provider_subscription_id=$1 AND id<>$2 LIMIT 1', [subscriptionId,user.id]);
         if (conflict) throw new Error('Provider subscription is already linked to another account.');
         const updated = await query(
-          "UPDATE users SET plan=$1,subscription_status='active',payment_provider='lemon_squeezy',provider_subscription_id=$2,provider_customer_id=$3,provider_variant_id=$4,updated_at=NOW() WHERE id=$5 AND stripe_subscription_id IS NULL AND (payment_provider IS NULL OR payment_provider='lemon_squeezy') AND (provider_subscription_id IS NULL OR provider_subscription_id=$2)",
-          [plan,subscriptionId,String(attrs.customer_id || ''),String(attrs.variant_id),user.id]
+          "UPDATE users SET plan=$1,subscription_status='active',payment_provider='lemon_squeezy',provider_subscription_id=$2,provider_customer_id=$3,provider_variant_id=$4,provider_subscription_updated_at=COALESCE($6,NOW()),updated_at=NOW() WHERE id=$5 AND stripe_subscription_id IS NULL AND (payment_provider IS NULL OR payment_provider='lemon_squeezy') AND (provider_subscription_id IS NULL OR provider_subscription_id=$2)",
+          [plan,subscriptionId,String(attrs.customer_id || ''),String(attrs.variant_id),user.id,eventUpdatedAt]
         );
         if (updated.rowCount !== 1) throw new Error('Subscription could not be safely linked to this account.');
       } else if (attrs.status && attrs.status !== 'active' && subscriptionId) {
@@ -79,7 +79,7 @@ router.post('/lemon-squeezy', async (req, res) => {
     } else if (eventName === 'subscription_paused') {
       if (subscriptionId) await query("UPDATE users SET subscription_status='paused',provider_subscription_updated_at=COALESCE($3,NOW()),updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId,eventUpdatedAt]);
     } else if (eventName === 'subscription_payment_failed') {
-      if (subscriptionId) await query("UPDATE users SET subscription_status='past_due',updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId]);
+      if (subscriptionId) await query("UPDATE users SET subscription_status='past_due',provider_subscription_updated_at=COALESCE($3,NOW()),updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId,eventUpdatedAt]);
     } else if (eventName === 'subscription_payment_success') {
       if (attrs.status === 'active' && plan && subscriptionId) {
         await query("UPDATE users SET plan=$1,subscription_status='active',provider_variant_id=$2,provider_subscription_updated_at=COALESCE($5,NOW()),updated_at=NOW() WHERE id=$3 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$4", [plan,String(attrs.variant_id),user.id,subscriptionId,eventUpdatedAt]);
