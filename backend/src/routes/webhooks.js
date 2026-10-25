@@ -107,10 +107,7 @@ router.post('/stripe', async (req, res) => {
         );
         if (updated.rowCount !== 1) throw new Error('Unable to safely associate Stripe subscription with account.');
 
-        await recordBillingHistory({
-          userId, externalId: session.id, amount: session.amount_total,
-          currency: session.currency, plan,
-        });
+        // Invoice webhooks are the source of truth for payment history; do not double-count checkout sessions.
         break;
       }
 
