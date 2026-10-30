@@ -236,9 +236,12 @@ const toggleBan = async (req, res) => {
 const updateRole = async (req, res) => {
   const { userId } = req.params;
   const { role } = req.body;
-  if (!['user','admin'].includes(role)) return res.status(400).json({ error: 'Invalid role. Use user or admin.' });
+  // RankPilot has one owner, not a multi-admin organization. Never grant the database admin role to another account.
+  if (role !== 'user') return res.status(400).json({ error: 'Only the owner account can hold administrative access.' });
   if (userId === req.user.id) return res.status(400).json({ error: 'You cannot change your own role.' });
-  await query('UPDATE users SET role=$1,updated_at=NOW() WHERE id=$2', [role, userId]);
+  const target = await queryOne('SELECT id,role FROM users WHERE id=$1', [userId]);
+  if (!target) return res.status(404).json({ error: 'User not found.' });
+  await query('UPDATE users SET role=$1,updated_at=NOW(),token_version=token_version+1 WHERE id=$2', [role, userId]);
   await logAction(req.user.id, 'update_role', userId, { role, adminEmail: req.user.email });
   res.json({ message: `Role updated to ${role}.` });
 };
@@ -313,12 +316,16 @@ const getBlockedIPs = async (req, res) => {
 };
 
 const blockIP = async (req, res) => {
-  const { ipAddress, reason, expiresIn } = req.body;
-  if (!ipAddress) return res.status(400).json({ error: 'IP address required.' });
-  const expiresAt = expiresIn ? new Date(Date.now() + expiresIn * 3600000) : null;
+  const { ipAddress, reason, expiresIn } = req.body || {};
+  const net = require('net');
+  if (typeof ipAddress !== 'string' || !net.isIP(ipAddress.trim())) return res.status(400).json({ error: 'A valid IPv4 or IPv6 address is required.' });
+  if (reason !== undefined && (typeof reason !== 'string' || reason.length > 500)) return res.status(400).json({ error: 'Reason must be 500 characters or fewer.' });
+  if (expiresIn !== undefined && (!Number.isInteger(Number(expiresIn)) || Number(expiresIn) < 1 || Number(expiresIn) > 8760)) return res.status(400).json({ error: 'Expiry must be between 1 and 8760 hours.' });
+  const normalizedIP = ipAddress.trim();
+  const expiresAt = expiresIn ? new Date(Date.now() + Number(expiresIn) * 3600000) : null;
   await query(
     'INSERT INTO blocked_ips (id,ip_address,reason,blocked_by,created_at,expires_at) VALUES ($1,$2,$3,$4,NOW(),$5) ON CONFLICT (ip_address) DO UPDATE SET reason=$3,expires_at=$5',
-    [uuidv4(), ipAddress, reason || 'Manually blocked', req.user.id, expiresAt]
+    [uuidv4(), normalizedIP, reason || 'Manually blocked', req.user.id, expiresAt]
   );
   await logAction(req.user.id, 'block_ip', null, { ipAddress, reason });
   await logSecurityEvent('ip_blocked_admin', req.adminIp, req.user.id, { blockedIP: ipAddress, reason });
@@ -334,12 +341,14 @@ const unblockIP = async (req, res) => {
 
 // ── SECURITY EVENTS ───────────────────────────────────────────────
 const getSecurityEvents = async (req, res) => {
-  const { event, ip, userId, limit = 100 } = req.query;
+  const { event, ip, userId } = req.query;
+  const requestedLimit = req.query.limit === undefined ? 100 : Number(req.query.limit);
+  if (!Number.isInteger(requestedLimit) || requestedLimit < 1 || requestedLimit > 500) return res.status(400).json({ error: 'Limit must be an integer between 1 and 500.' });
   const conds = ['1=1'], params = [];
   if (event)  { params.push(event); conds.push(`s.event=$${params.length}`); }
   if (ip)     { params.push(ip);    conds.push(`s.ip_address=$${params.length}`); }
   if (userId) { params.push(userId);conds.push(`s.user_id=$${params.length}`); }
-  params.push(parseInt(limit));
+  params.push(requestedLimit);
   const events = await queryAll(
     `SELECT s.*,u.email,u.name FROM security_events s LEFT JOIN users u ON s.user_id=u.id WHERE ${conds.join(' AND ')} ORDER BY s.created_at DESC LIMIT $${params.length}`,
     params
