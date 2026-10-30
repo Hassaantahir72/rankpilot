@@ -88,6 +88,16 @@ router.post('/stripe', async (req, res) => {
     );
     if (!claimed) return res.status(200).json({ received: true, duplicate: true });
 
+    // Keep a durable, inspectable record of every claimed Stripe event.
+    await query(
+      `INSERT INTO provider_event_inbox
+         (id,provider,provider_event_id,event_type,status,payload,received_at)
+       VALUES ($1,'stripe',$2,$3,'received',$4,NOW())
+       ON CONFLICT (provider,provider_event_id) DO UPDATE
+         SET status='received',payload=EXCLUDED.payload,error=NULL,processed_at=NULL,received_at=NOW()`,
+      [uuidv4(), event.id, event.type, JSON.stringify(event)]
+    );
+
     const planMap = getPlanMap();
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -257,9 +267,20 @@ router.post('/stripe', async (req, res) => {
         break;
       }
     }
+    await query(
+      `UPDATE provider_event_inbox SET status='processed',processed_at=NOW(),error=NULL
+       WHERE provider='stripe' AND provider_event_id=$1`, [event.id]
+    );
     res.status(200).json({ received: true });
   } catch (err) {
-    // Release the idempotency claim so Stripe can retry failed processing.
+    // Retain the failed inbox row for admin visibility, but release the claim so Stripe can retry.
+    try {
+      await query(
+        `UPDATE provider_event_inbox SET status='failed',error=$2
+         WHERE provider='stripe' AND provider_event_id=$1`,
+        [event.id, String(err.message || 'Processing failed').slice(0, 1000)]
+      );
+    } catch {}
     try { await query('DELETE FROM stripe_webhook_events WHERE id=$1', [event.id]); } catch {}
     console.error('Stripe webhook processing failed:', err.message);
     return res.status(500).json({ error: 'Webhook processing failed. Stripe may retry this event.' });
