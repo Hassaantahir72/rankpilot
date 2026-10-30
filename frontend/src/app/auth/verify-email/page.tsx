@@ -77,7 +77,7 @@ export default function VerifyEmailPage() {
     if (countdown > 0) return;
     setResending(true); setError('');
     try {
-      await api.post('/auth/resend-otp', { userId });
+      await api.post('/auth/resend-otp', { userId, type: isLogin ? 'login' : 'verify' });
       setSuccess('New code sent!');
       setCountdown(60);
       setTimeout(() => setSuccess(''), 3000);

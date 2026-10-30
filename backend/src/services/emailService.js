@@ -6,13 +6,16 @@ const escapeHtml = (value) => String(value ?? '').replace(/[&<>\"']/g, (char) =>
 }[char]));
 
 const transporter = () => nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT) || 587,
-  secure: false,
+  host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
+  port: parseInt(process.env.SMTP_PORT, 10) || 587,
+  secure: Number(process.env.SMTP_PORT) === 465,
   auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
 });
 
 const send = async (to, subject, html) => {
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS || !process.env.EMAIL_FROM) {
+    throw new Error('Email is not configured. Set SMTP_USER, SMTP_PASS, and EMAIL_FROM in the backend environment.');
+  }
   try {
     await transporter().sendMail({ from: process.env.EMAIL_FROM || 'RankPilot <noreply@rankpilot.ai>', to, subject, html });
   } catch (err) {
