@@ -72,10 +72,31 @@ const getProviderEvents = async (req, res) => {
 // Each event is an authoritative snapshot cursor; clients reconnect with Last-Event-ID.
 // Fetch-based SSE supports Authorization headers (unlike native EventSource).
 // Cursor is advanced monotonically; proper newline delimiters are required by SSE.
+const encodeCommerceCursor = ({ occurred_at, kind, id }) =>
+  Buffer.from(JSON.stringify({ at: new Date(occurred_at).toISOString(), kind, id })).toString('base64url');
+
+const decodeCommerceCursor = (value) => {
+  if (!value) return { at: new Date(0), kind: '', id: '' };
+  // Accept legacy timestamp cursors during rolling deploys.
+  const legacyDate = new Date(value);
+  if (!Number.isNaN(legacyDate.getTime())) return { at: legacyDate, kind: '', id: '' };
+  try {
+    const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'));
+    const at = new Date(parsed.at);
+    if (Number.isNaN(at.getTime()) || typeof parsed.kind !== 'string' ||
+        typeof parsed.id !== 'string' || !['order', 'transaction'].includes(parsed.kind)) return null;
+    return { at, kind: parsed.kind, id: parsed.id };
+  } catch {
+    return null;
+  }
+};
+
+// Fetch-based SSE supports Authorization headers (unlike native EventSource).
+// Composite cursors prevent records sharing a timestamp from being skipped between batches.
 const streamCommerce = (req, res) => {
-  const lastId = req.get('Last-Event-ID') || req.query.after || '1970-01-01T00:00:00.000Z';
-  const since = new Date(lastId);
-  if (Number.isNaN(since.getTime())) return res.status(400).end();
+  const cursorValue = req.get('Last-Event-ID') || req.query.after || '';
+  const initialCursor = decodeCommerceCursor(cursorValue);
+  if (!initialCursor) return res.status(400).json({ error: 'Invalid commerce stream cursor.' });
 
   res.status(200);
   res.set({
@@ -85,36 +106,40 @@ const streamCommerce = (req, res) => {
     'X-Accel-Buffering': 'no',
   });
   res.flushHeaders?.();
-  res.write('retry: 3000\n\n');
+  res.write('retry: 3000\\n\\n');
 
   let closed = false;
   let running = false;
-  let cursor = since;
+  let cursor = initialCursor;
   const send = async () => {
     if (closed || running) return;
     running = true;
     try {
       const rows = await queryAll(
         `SELECT kind,id,occurred_at,status,provider FROM (
-           SELECT 'order' AS kind,id,updated_at AS occurred_at,status,provider FROM orders WHERE updated_at > $1
+           SELECT 'order' AS kind,id,updated_at AS occurred_at,status,provider FROM orders
            UNION ALL
-           SELECT 'transaction' AS kind,id,occurred_at,status,provider FROM payment_transactions WHERE occurred_at > $1
+           SELECT 'transaction' AS kind,id,occurred_at,status,provider FROM payment_transactions
          ) commerce_changes
-         ORDER BY occurred_at ASC,id ASC LIMIT 100`, [cursor]);
+         WHERE (occurred_at,kind,id) > ($1,$2,$3)
+         ORDER BY occurred_at ASC,kind ASC,id ASC LIMIT 100`,
+        [cursor.at, cursor.kind, cursor.id]
+      );
       for (const row of rows) {
-        const at = new Date(row.occurred_at);
-        if (at > cursor) cursor = at;
-        res.write('id: ' + cursor.toISOString() + '\n');
-        res.write('event: commerce\n');
-        res.write('data: ' + JSON.stringify(row) + '\n\n');
+        if (closed) break;
+        const eventId = encodeCommerceCursor(row);
+        res.write('id: ' + eventId + '\\n');
+        res.write('event: commerce\\n');
+        res.write('data: ' + JSON.stringify(row) + '\\n\\n');
+        cursor = { at: new Date(row.occurred_at), kind: row.kind, id: row.id };
       }
-      if (!rows.length) res.write(': keepalive\n\n');
+      if (!rows.length) res.write(': keepalive\\n\\n');
     } catch (error) {
       if (error.code === '42P01') {
-        res.write('event: unavailable\ndata: {"code":"LEDGER_MIGRATION_REQUIRED"}\n\n');
+        res.write('event: unavailable\\ndata: {"code":"LEDGER_MIGRATION_REQUIRED"}\\n\\n');
       } else {
         console.error('Admin commerce stream failed:', error.message);
-        res.write('event: stream-error\ndata: {"message":"Commerce stream temporarily unavailable"}\n\n');
+        res.write('event: stream-error\\ndata: {"message":"Commerce stream temporarily unavailable"}\\n\\n');
       }
     } finally {
       running = false;
