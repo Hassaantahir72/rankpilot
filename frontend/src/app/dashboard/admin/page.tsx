@@ -253,6 +253,9 @@ export default function AdminPage() {
         <Link href="/dashboard/admin/support" style={{ display:'flex',alignItems:'center',gap:8,padding:'9px 18px',background:'rgba(99,102,241,0.1)',border:'1px solid rgba(99,102,241,0.25)',borderRadius:10,color:'#818cf8',textDecoration:'none',fontSize:13,fontWeight:600 }}>
           🛟 Support Panel →
         </Link>
+        <Link href="/dashboard/admin/commerce" style={{ display:'flex',alignItems:'center',gap:8,padding:'9px 18px',background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.25)',borderRadius:10,color:'#fbbf24',textDecoration:'none',fontSize:13,fontWeight:600 }}>
+          💳 Commerce →
+        </Link>
       </div>
 
       <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:12,marginBottom:16}}><span style={{fontSize:11,color:'rgba(255,255,255,0.35)'}}>{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Live data'}</span><button onClick={refreshCurrentTab} disabled={refreshing} className="btn-primary" style={{fontSize:12,padding:'7px 14px',opacity:refreshing?0.6:1}}>{refreshing?'Refreshing…':'↻ Refresh'}</button></div>
