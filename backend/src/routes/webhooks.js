@@ -88,6 +88,16 @@ router.post('/stripe', async (req, res) => {
     );
     if (!claimed) return res.status(200).json({ received: true, duplicate: true });
 
+    // Keep a durable, inspectable record of every claimed Stripe event.
+    await query(
+      `INSERT INTO provider_event_inbox
+         (id,provider,provider_event_id,event_type,status,payload,received_at)
+       VALUES ($1,'stripe',$2,$3,'received',$4,NOW())
+       ON CONFLICT (provider,provider_event_id) DO UPDATE
+         SET status='received',payload=EXCLUDED.payload,error=NULL,processed_at=NULL,received_at=NOW()`,
+      [uuidv4(), event.id, event.type, JSON.stringify(event)]
+    );
+
     const planMap = getPlanMap();
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -151,6 +161,22 @@ router.post('/stripe', async (req, res) => {
             currency: invoice.currency, plan,
             periodStart: invoice.period_start, periodEnd: invoice.period_end,
           });
+
+          // Durable order + transaction ledger. Amounts remain in minor units and original currency.
+          const orderId = uuidv4();
+          await query(
+            `INSERT INTO orders (id,user_id,provider,provider_order_id,subscription_id,status,currency,subtotal_minor,total_minor,plan,description,metadata,created_at,updated_at)
+             VALUES ($1,$2,'stripe',$3,$4,'paid',$5,$6,$6,$7,'Subscription invoice',$8,NOW(),NOW())
+             ON CONFLICT (provider,provider_order_id) DO UPDATE SET status='paid',updated_at=NOW()`,
+            [orderId,user.id,invoice.id,subscriptionId || null,(invoice.currency || 'usd').toUpperCase(),invoice.amount_paid || 0,plan,JSON.stringify({ invoiceNumber: invoice.number || null })]
+          );
+          const order = await queryOne('SELECT id FROM orders WHERE provider=$1 AND provider_order_id=$2', ['stripe',invoice.id]);
+          await query(
+            `INSERT INTO payment_transactions (id,order_id,user_id,provider,provider_transaction_id,provider_event_id,type,status,amount_minor,currency,description,occurred_at,metadata)
+             VALUES ($1,$2,$3,'stripe',$4,$5,'payment','succeeded',$6,$7,'Stripe invoice payment',NOW(),$8)
+             ON CONFLICT (provider,provider_transaction_id,type) DO UPDATE SET status='succeeded',amount_minor=EXCLUDED.amount_minor,metadata=EXCLUDED.metadata`,
+            [uuidv4(),order.id,user.id,invoice.payment_intent || invoice.id,event.id,invoice.amount_paid || 0,(invoice.currency || 'usd').toUpperCase(),JSON.stringify({ invoiceId: invoice.id, subscriptionId: subscriptionId || null })]
+          );
         }
         break;
       }
@@ -158,6 +184,23 @@ router.post('/stripe', async (req, res) => {
       case 'invoice.payment_failed': {
         const invoice = event.data.object;
         await query("UPDATE users SET subscription_status='past_due',updated_at=NOW() WHERE stripe_customer_id=$1", [invoice.customer]);
+        const failedUser = await queryOne('SELECT id FROM users WHERE stripe_customer_id=$1', [invoice.customer]);
+        if (failedUser) {
+          const failedOrderId = uuidv4();
+          await query(
+            `INSERT INTO orders (id,user_id,provider,provider_order_id,subscription_id,status,currency,subtotal_minor,total_minor,description,metadata,created_at,updated_at)
+             VALUES ($1,$2,'stripe',$3,$4,'failed',$5,$6,$6,'Failed subscription invoice',$7,NOW(),NOW())
+             ON CONFLICT (provider,provider_order_id) DO UPDATE SET status='failed',updated_at=NOW()`,
+            [failedOrderId,failedUser.id,invoice.id,invoice.subscription || null,(invoice.currency || 'usd').toUpperCase(),invoice.amount_due || 0,JSON.stringify({ invoiceNumber: invoice.number || null })]
+          );
+          const failedOrder = await queryOne('SELECT id FROM orders WHERE provider=$1 AND provider_order_id=$2', ['stripe',invoice.id]);
+          await query(
+            `INSERT INTO payment_transactions (id,order_id,user_id,provider,provider_transaction_id,provider_event_id,type,status,amount_minor,currency,description,occurred_at,metadata)
+             VALUES ($1,$2,$3,'stripe',$4,$5,'payment','failed',$6,$7,'Failed Stripe invoice payment',NOW(),$8)
+             ON CONFLICT (provider,provider_transaction_id,type) DO UPDATE SET status='failed',amount_minor=EXCLUDED.amount_minor,metadata=EXCLUDED.metadata`,
+            [uuidv4(),failedOrder.id,failedUser.id,invoice.payment_intent || invoice.id,event.id,invoice.amount_due || 0,(invoice.currency || 'usd').toUpperCase(),JSON.stringify({ invoiceId: invoice.id })]
+          );
+        }
         break;
       }
 
@@ -224,9 +267,20 @@ router.post('/stripe', async (req, res) => {
         break;
       }
     }
+    await query(
+      `UPDATE provider_event_inbox SET status='processed',processed_at=NOW(),error=NULL
+       WHERE provider='stripe' AND provider_event_id=$1`, [event.id]
+    );
     res.status(200).json({ received: true });
   } catch (err) {
-    // Release the idempotency claim so Stripe can retry failed processing.
+    // Retain the failed inbox row for admin visibility, but release the claim so Stripe can retry.
+    try {
+      await query(
+        `UPDATE provider_event_inbox SET status='failed',error=$2
+         WHERE provider='stripe' AND provider_event_id=$1`,
+        [event.id, String(err.message || 'Processing failed').slice(0, 1000)]
+      );
+    } catch {}
     try { await query('DELETE FROM stripe_webhook_events WHERE id=$1', [event.id]); } catch {}
     console.error('Stripe webhook processing failed:', err.message);
     return res.status(500).json({ error: 'Webhook processing failed. Stripe may retry this event.' });
