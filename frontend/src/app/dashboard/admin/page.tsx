@@ -52,25 +52,56 @@ export default function AdminPage() {
   const [newProvider, setNewProvider] = useState('safepay');
   const [newMethodName, setNewMethodName] = useState('Safepay');
   const [newMethodDescription, setNewMethodDescription] = useState('Pakistan-focused payments');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     if (!loading && !isAdmin) { router.push('/dashboard'); return; }
-    if (isAdmin) { loadStats(); }
+    if (isAdmin) { loadStats().catch((e:any) => setLoadError(e.response?.data?.error || 'Could not load admin overview.')); }
   }, [isAdmin, loading]);
 
   useEffect(() => {
-    if (tab === 'users')    loadUsers();
-    if (tab === 'contacts') loadContacts();
-    if (tab === 'billing')  loadBilling();
-    if (tab === 'payment-methods' && user?.role === 'superadmin') loadPaymentMethods();
-    if (tab === 'log')      loadAuditLog();
-    if (tab === 'settings' && user?.role === 'superadmin') loadSettings();
-    if (tab === 'security') { loadSecEvents(); if (user?.role === 'superadmin') loadBlockedIPs(); }
+    if (!isAdmin || loading) return;
+    const timer = window.setInterval(() => { refreshCurrentTab(); }, 30000);
+    return () => window.clearInterval(timer);
+  }, [tab, isAdmin, loading, search, planFilter, statusFilter, bannedFilter]);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoadError('');
+      try {
+        if (tab === 'users') await loadUsers();
+        if (tab === 'contacts') await loadContacts();
+        if (tab === 'billing') await loadBilling();
+        if (tab === 'payment-methods' && isAdmin) await loadPaymentMethods();
+        if (tab === 'log') await loadAuditLog();
+        if (tab === 'settings' && isAdmin) await loadSettings();
+        if (tab === 'security') { await loadSecEvents(); if (isAdmin) await loadBlockedIPs(); }
+      } catch (e:any) { setLoadError(e.response?.data?.error || 'Could not load this admin section.'); }
+    };
+    load();
   }, [tab]);
+
+  const refreshCurrentTab = async () => {
+    setRefreshing(true); setLoadError('');
+    try {
+      if (tab === 'overview') await loadStats();
+      else if (tab === 'users') await loadUsers();
+      else if (tab === 'contacts') await loadContacts();
+      else if (tab === 'billing') await loadBilling();
+      else if (tab === 'payment-methods') await loadPaymentMethods();
+      else if (tab === 'log') await loadAuditLog();
+      else if (tab === 'settings') await loadSettings();
+      else if (tab === 'security') { await loadSecEvents(); await loadBlockedIPs(); }
+      setLastUpdated(new Date());
+    } catch (e:any) { setLoadError(e.response?.data?.error || 'Could not refresh this section.'); }
+    finally { setRefreshing(false); }
+  };
 
   const showMsg = (text: string, type: 'ok'|'err' = 'ok') => { setMsg(text); setMsgType(type); setTimeout(() => setMsg(''), 6000); };
 
-  const loadStats  = async () => { try { const [s,g] = await Promise.all([adminApi.getStats(), adminApi.getGrowth()]); setStats(s.data); setGrowth(g.data); } catch {} };
+  const loadStats  = async () => { const [s,g] = await Promise.all([adminApi.getStats(), adminApi.getGrowth()]); setStats(s.data); setGrowth(g.data); setLastUpdated(new Date()); };
   const loadUsers  = async () => {
     try {
       const p: any = {};
@@ -80,13 +111,13 @@ export default function AdminPage() {
       if (bannedFilter) p.banned = bannedFilter;
       const { data } = await adminApi.getUsers(p);
       setUsers(data.users || []); setUserTotal(data.total || 0);
-    } catch {}
+    } catch (e:any) { setLoadError(e.response?.data?.error || 'Could not load users.'); throw e; }
   };
-  const loadContacts  = async () => { try { const { data } = await adminApi.getContacts(); setContacts(data.messages || []); } catch {} };
-  const loadBilling   = async () => { try { const { data } = await adminApi.getBilling(); setBilling(data.billing || []); } catch {} };
-  const loadAuditLog  = async () => { try { const { data } = await adminApi.getAuditLog(); setAuditLog(data.log || []); } catch {} };
-  const loadSecEvents = async () => { try { const { data } = await adminApi.getSecurityEvents(); setSecEvents(data.events || []); } catch {} };
-  const loadSettings  = async () => { try { const { data } = await adminApi.getSiteSettings(); setSettings(data.settings || []); } catch {} };
+  const loadContacts  = async () => { const { data } = await adminApi.getContacts(); setContacts(data.messages || []); setLastUpdated(new Date()); };
+  const loadBilling   = async () => { const { data } = await adminApi.getBilling(); setBilling(data.billing || []); setLastUpdated(new Date()); };
+  const loadAuditLog  = async () => { const { data } = await adminApi.getAuditLog(); setAuditLog(data.log || []); setLastUpdated(new Date()); };
+  const loadSecEvents = async () => { const { data } = await adminApi.getSecurityEvents(); setSecEvents(data.events || []); setLastUpdated(new Date()); };
+  const loadSettings  = async () => { const { data } = await adminApi.getSiteSettings(); setSettings(data.settings || []); setLastUpdated(new Date()); };
   const loadPaymentMethods = async () => { try { const { data } = await adminApi.getPaymentMethods(); setPaymentMethods(data.methods || []); } catch (e:any) { showMsg(e.response?.data?.error || 'Could not load payment methods.', 'err'); } };
   const doCreatePaymentMethod = async () => {
     try {
@@ -107,7 +138,7 @@ export default function AdminPage() {
     try { await adminApi.deletePaymentMethod(method.id); showMsg('Payment method removed.'); loadPaymentMethods(); }
     catch (e:any) { showMsg(e.response?.data?.error || 'Could not remove payment method.', 'err'); }
   };
-  const loadBlockedIPs= async () => { try { const { data } = await adminApi.getBlockedIPs(); setBlockedIPs(data.blockedIPs || []); } catch {} };
+  const loadBlockedIPs= async () => { const { data } = await adminApi.getBlockedIPs(); setBlockedIPs(data.blockedIPs || []); setLastUpdated(new Date()); };
 
   const loadUserDetail = async (u: any) => {
     setSelectedUser(u);
@@ -206,7 +237,7 @@ export default function AdminPage() {
   if (loading) return <div style={{ color:'rgba(255,255,255,0.3)', padding:40 }}>Loading...</div>;
   if (!isAdmin) return null;
 
-  const isSuperAdmin = user?.role === 'superadmin';
+  const isSuperAdmin = isAdmin;
 
   return (
     <div>
@@ -224,6 +255,8 @@ export default function AdminPage() {
         </Link>
       </div>
 
+      <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:12,marginBottom:16}}><span style={{fontSize:11,color:'rgba(255,255,255,0.35)'}}>{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Live data'}</span><button onClick={refreshCurrentTab} disabled={refreshing} className="btn-primary" style={{fontSize:12,padding:'7px 14px',opacity:refreshing?0.6:1}}>{refreshing?'Refreshing…':'↻ Refresh'}</button></div>
+      {loadError && <div role="alert" style={{marginBottom:14,padding:12,border:'1px solid rgba(239,68,68,.3)',borderRadius:9,color:'#fca5a5',fontSize:12}}>{loadError}</div>}
       {msg && (
         <div style={{ marginBottom:18,padding:'12px 16px',background:msgType==='err'?'rgba(239,68,68,0.08)':'rgba(74,222,128,0.08)',border:`1px solid ${msgType==='err'?'rgba(239,68,68,0.25)':'rgba(74,222,128,0.25)'}`,borderRadius:10,fontSize:13,color:msgType==='err'?'#fca5a5':'#4ade80',display:'flex',justifyContent:'space-between' }}>
           <span>{msg}</span><button onClick={() => setMsg('')} style={{ background:'none',border:'none',color:'inherit',cursor:'pointer' }}>✕</button>
@@ -232,7 +265,7 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div style={{ display:'flex',gap:4,background:'rgba(255,255,255,0.04)',padding:4,borderRadius:12,marginBottom:24,flexWrap:'wrap',width:'fit-content' }}>
-        {TABS.filter(t => (t.id !== 'settings' && t.id !== 'payment-methods') || user?.role === 'superadmin').map(t => (
+        {TABS.filter(t => (t.id !== 'settings' && t.id !== 'payment-methods') || isAdmin).map(t => (
           <button key={t.id} onClick={() => setTab(t.id as Tab)}
             style={{ display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:9,border:'none',background:tab===t.id?'rgba(255,255,255,0.1)':'transparent',color:tab===t.id?'#fff':'rgba(255,255,255,0.45)',fontSize:13,fontWeight:tab===t.id?600:400,cursor:'pointer',fontFamily:'inherit',transition:'all 0.2s' }}>
             {t.i} {t.l}

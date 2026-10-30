@@ -51,8 +51,9 @@ const adminSecurityCheck = async (req, res, next) => {
   // Must be authenticated
   if (!req.user) return res.status(401).json({ error: 'Authentication required.' });
 
-  // Must be admin or superadmin
-  if (!['admin', 'superadmin'].includes(req.user.role)) {
+  // The admin panel is single-owner: a database role alone must never grant access.
+  const ownerEmail = String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase();
+  if (!ownerEmail || String(req.user.email || '').trim().toLowerCase() !== ownerEmail || req.user.email_verified !== true) {
     await logSecurityEvent('unauthorized_admin_access', ip, req.user.id, { path: req.path, method: req.method });
     return res.status(403).json({ error: 'Admin access required.' });
   }
@@ -64,21 +65,23 @@ const adminSecurityCheck = async (req, res, next) => {
   }
 
   // Check session is still valid (re-verify from DB every request)
-  const freshUser = await queryOne('SELECT id,role,is_banned,email_verified FROM users WHERE id=$1', [req.user.id]);
-  if (!freshUser || !['admin','superadmin'].includes(freshUser.role) || freshUser.is_banned) {
+  const freshUser = await queryOne('SELECT id,email,role,is_banned,email_verified,token_version FROM users WHERE id=$1', [req.user.id]);
+  if (!freshUser || String(freshUser.email || '').trim().toLowerCase() !== ownerEmail || freshUser.email_verified !== true || freshUser.is_banned || Number(freshUser.token_version || 0) !== Number(req.user.token_version || 0)) {
     await logSecurityEvent('stale_admin_session', ip, req.user.id, {});
     return res.status(403).json({ error: 'Session invalid. Please sign in again.' });
   }
 
-  // Attach real-time role (in case it changed)
+  // Attach authoritative owner identity and current role from the database.
   req.user.role = freshUser.role;
+  req.user.email = freshUser.email;
   req.adminIp = ip;
   next();
 };
 
 // ── SUPERADMIN ONLY ───────────────────────────────────────────────
 const requireSuperAdmin = async (req, res, next) => {
-  if (req.user.role !== 'superadmin') {
+  const ownerEmail = String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase();
+  if (!ownerEmail || String(req.user.email || '').trim().toLowerCase() !== ownerEmail || req.user.email_verified !== true) {
     await logSecurityEvent('superadmin_access_denied', req.adminIp || req.ip, req.user.id, { path: req.path });
     return res.status(403).json({ error: 'Superadmin access required.' });
   }
@@ -98,7 +101,8 @@ const logSecurityEvent = async (event, ip, userId, details) => {
 // ── REQUEST LOGGER (all admin actions) ───────────────────────────
 const logAdminRequest = async (req, res, next) => {
   res.on('finish', () => {
-    if (req.user && ['admin','superadmin'].includes(req.user.role)) {
+    const ownerEmail = String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase();
+    if (req.user && ownerEmail && String(req.user.email || '').trim().toLowerCase() === ownerEmail && req.user.email_verified === true) {
       logSecurityEvent('admin_request', req.adminIp || req.ip, req.user.id, {
         method: req.method,
         path: req.path,
