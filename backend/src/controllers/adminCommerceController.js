@@ -106,7 +106,7 @@ const streamCommerce = (req, res) => {
     'X-Accel-Buffering': 'no',
   });
   res.flushHeaders?.();
-  res.write('retry: 3000\\n\\n');
+  res.write('retry: 3000\n\n');
 
   let closed = false;
   let running = false;
@@ -128,18 +128,18 @@ const streamCommerce = (req, res) => {
       for (const row of rows) {
         if (closed) break;
         const eventId = encodeCommerceCursor(row);
-        res.write('id: ' + eventId + '\\n');
-        res.write('event: commerce\\n');
-        res.write('data: ' + JSON.stringify(row) + '\\n\\n');
+        res.write('id: ' + eventId + '\n');
+        res.write('event: commerce\n');
+        res.write('data: ' + JSON.stringify(row) + '\n\n');
         cursor = { at: new Date(row.occurred_at), kind: row.kind, id: row.id };
       }
-      if (!rows.length) res.write(': keepalive\\n\\n');
+      if (!rows.length) res.write(': keepalive\n\n');
     } catch (error) {
       if (error.code === '42P01') {
-        res.write('event: unavailable\\ndata: {"code":"LEDGER_MIGRATION_REQUIRED"}\\n\\n');
+        res.write('event: unavailable\ndata: {"code":"LEDGER_MIGRATION_REQUIRED"}\n\n');
       } else {
         console.error('Admin commerce stream failed:', error.message);
-        res.write('event: stream-error\\ndata: {"message":"Commerce stream temporarily unavailable"}\\n\\n');
+        res.write('event: stream-error\ndata: {"message":"Commerce stream temporarily unavailable"}\n\n');
       }
     } finally {
       running = false;
