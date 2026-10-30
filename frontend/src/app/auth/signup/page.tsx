@@ -35,6 +35,10 @@ function SignupForm() {
       const planParam = requestedPlan && allowedPlans.includes(requestedPlan) ? `&plan=${encodeURIComponent(requestedPlan)}` : '';
       router.push(`/auth/verify-email?userId=${encodeURIComponent(data.userId)}&type=verify${planParam}${intervalParam}${!selectedPlan ? '&flow=trial' : ''}`);
     } catch (err: any) {
+      if (err.response?.data?.userId) {
+        router.push(`/auth/verify-email?userId=${encodeURIComponent(err.response.data.userId)}&type=verify${requestedPlan && allowedPlans.includes(requestedPlan) ? `&plan=${encodeURIComponent(requestedPlan)}` : '&flow=trial'}${selectedInterval === 'annual' ? '&interval=annual' : ''}`);
+        return;
+      }
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
     }
     setLoading(false);
