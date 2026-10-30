@@ -101,7 +101,8 @@ const logSecurityEvent = async (event, ip, userId, details) => {
 // ── REQUEST LOGGER (all admin actions) ───────────────────────────
 const logAdminRequest = async (req, res, next) => {
   res.on('finish', () => {
-    if (req.user && ['admin','superadmin'].includes(req.user.role)) {
+    const ownerEmail = String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase();
+    if (req.user && ownerEmail && String(req.user.email || '').trim().toLowerCase() === ownerEmail && req.user.email_verified === true) {
       logSecurityEvent('admin_request', req.adminIp || req.ip, req.user.id, {
         method: req.method,
         path: req.path,
