@@ -58,7 +58,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!loading && !isAdmin) { router.push('/dashboard'); return; }
-    if (isAdmin) { loadStats(); }
+    if (isAdmin) { loadStats().catch((e:any) => setLoadError(e.response?.data?.error || 'Could not load admin overview.')); }
   }, [isAdmin, loading]);
 
   useEffect(() => {
@@ -68,13 +68,19 @@ export default function AdminPage() {
   }, [tab, isAdmin, loading, search, planFilter, statusFilter, bannedFilter]);
 
   useEffect(() => {
-    if (tab === 'users')    loadUsers();
-    if (tab === 'contacts') loadContacts();
-    if (tab === 'billing')  loadBilling();
-    if (tab === 'payment-methods' && isAdmin) loadPaymentMethods();
-    if (tab === 'log')      loadAuditLog();
-    if (tab === 'settings' && isAdmin) loadSettings();
-    if (tab === 'security') { loadSecEvents(); if (isAdmin) loadBlockedIPs(); }
+    const load = async () => {
+      setLoadError('');
+      try {
+        if (tab === 'users') await loadUsers();
+        if (tab === 'contacts') await loadContacts();
+        if (tab === 'billing') await loadBilling();
+        if (tab === 'payment-methods' && isAdmin) await loadPaymentMethods();
+        if (tab === 'log') await loadAuditLog();
+        if (tab === 'settings' && isAdmin) await loadSettings();
+        if (tab === 'security') { await loadSecEvents(); if (isAdmin) await loadBlockedIPs(); }
+      } catch (e:any) { setLoadError(e.response?.data?.error || 'Could not load this admin section.'); }
+    };
+    load();
   }, [tab]);
 
   const refreshCurrentTab = async () => {
@@ -259,7 +265,7 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div style={{ display:'flex',gap:4,background:'rgba(255,255,255,0.04)',padding:4,borderRadius:12,marginBottom:24,flexWrap:'wrap',width:'fit-content' }}>
-        {TABS.filter(t => (t.id !== 'settings' && t.id !== 'payment-methods') || user?.role === 'superadmin').map(t => (
+        {TABS.filter(t => (t.id !== 'settings' && t.id !== 'payment-methods') || isAdmin).map(t => (
           <button key={t.id} onClick={() => setTab(t.id as Tab)}
             style={{ display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:9,border:'none',background:tab===t.id?'rgba(255,255,255,0.1)':'transparent',color:tab===t.id?'#fff':'rgba(255,255,255,0.45)',fontSize:13,fontWeight:tab===t.id?600:400,cursor:'pointer',fontFamily:'inherit',transition:'all 0.2s' }}>
             {t.i} {t.l}
