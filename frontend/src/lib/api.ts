@@ -146,6 +146,11 @@ export const adminApi = {
   updateContact:     (id:string,d:any) => api.patch(`/admin/contacts/${id}`, d),
   getAuditLog:       (p?:any)    => api.get('/admin/audit-log', { params: p }),
   getBilling:        ()          => api.get('/admin/billing'),
+  // Commerce ledger (requires the backend ledger migration)
+  getCommerceSummary:()          => api.get('/admin/commerce/summary'),
+  getOrders:         (p?:any)     => api.get('/admin/commerce/orders', { params: p }),
+  getTransactions:   (p?:any)     => api.get('/admin/commerce/transactions', { params: p }),
+  getProviderEvents: (p?:any)     => api.get('/admin/commerce/provider-events', { params: p }),
 };
 
 // ── CONTACT ───────────────────────────────────────────────────────
