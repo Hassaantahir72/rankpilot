@@ -76,10 +76,10 @@ const encodeCommerceCursor = ({ occurred_at, kind, id }) =>
   Buffer.from(JSON.stringify({ at: new Date(occurred_at).toISOString(), kind, id })).toString('base64url');
 
 const decodeCommerceCursor = (value) => {
-  if (!value) return { at: new Date(0), kind: '', id: '' };
+  if (!value) return { at: new Date(0), kind: '', id: '00000000-0000-0000-0000-000000000000' };
   // Accept legacy timestamp cursors during rolling deploys.
   const legacyDate = new Date(value);
-  if (!Number.isNaN(legacyDate.getTime())) return { at: legacyDate, kind: '', id: '' };
+  if (!Number.isNaN(legacyDate.getTime())) return { at: legacyDate, kind: '', id: '00000000-0000-0000-0000-000000000000' };
   try {
     const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'));
     const at = new Date(parsed.at);
