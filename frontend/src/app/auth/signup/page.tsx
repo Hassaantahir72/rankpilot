@@ -36,7 +36,11 @@ function SignupForm() {
       router.push(`/auth/verify-email?userId=${encodeURIComponent(data.userId)}&type=verify${planParam}${intervalParam}${!selectedPlan ? '&flow=trial' : ''}`);
     } catch (err: any) {
       if (err.response?.data?.userId) {
-        router.push(`/auth/verify-email?userId=${encodeURIComponent(err.response.data.userId)}&type=verify${requestedPlan && allowedPlans.includes(requestedPlan) ? `&plan=${encodeURIComponent(requestedPlan)}` : '&flow=trial'}${selectedInterval === 'annual' ? '&interval=annual' : ''}`);
+        const retryParams = new URLSearchParams(window.location.search);
+        const retryPlan = retryParams.get('plan') || '';
+        const retryInterval = retryParams.get('interval') === 'annual' ? '&interval=annual' : '';
+        const retryPlanParam = ['starter', 'growth', 'pro', 'agency'].includes(retryPlan) ? `&plan=${encodeURIComponent(retryPlan)}` : '&flow=trial';
+        router.push(`/auth/verify-email?userId=${encodeURIComponent(err.response.data.userId)}&type=verify${retryPlanParam}${retryInterval}`);
         return;
       }
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
