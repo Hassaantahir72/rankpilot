@@ -151,8 +151,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return false; // Fail closed: unknown feature keys must not silently unlock gated UI.
   };
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
-  const isSuperAdmin = user?.role === 'superadmin';
+  // UI visibility only; the backend independently enforces OWNER_ADMIN_EMAIL.
+  const isAdmin = user?.email?.trim().toLowerCase() === 'hassaantahir991@gmail.com' && user?.email_verified === true;
+  const isSuperAdmin = isAdmin;
   const trialEnd = user?.trial_ends_at ? new Date(user.trial_ends_at).getTime() : NaN;
   const trialDaysLeft = Number.isFinite(trialEnd)
     ? Math.max(0, Math.ceil((trialEnd - Date.now()) / (24 * 60 * 60 * 1000)))
