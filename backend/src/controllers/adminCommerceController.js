@@ -70,40 +70,63 @@ const getProviderEvents = async (req, res) => {
 
 // Fetch-based SSE supports Authorization headers (unlike native EventSource).
 // Each event is an authoritative snapshot cursor; clients reconnect with Last-Event-ID.
-const streamCommerce = async (req, res) => {
+// Fetch-based SSE supports Authorization headers (unlike native EventSource).
+// Cursor is advanced monotonically; proper newline delimiters are required by SSE.
+const streamCommerce = (req, res) => {
   const lastId = req.get('Last-Event-ID') || req.query.after || '1970-01-01T00:00:00.000Z';
   const since = new Date(lastId);
   if (Number.isNaN(since.getTime())) return res.status(400).end();
+
   res.status(200);
-  res.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
+  res.set({
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
   res.flushHeaders?.();
   res.write('retry: 3000\n\n');
+
   let closed = false;
+  let running = false;
   let cursor = since;
   const send = async () => {
-    if (closed) return;
+    if (closed || running) return;
+    running = true;
     try {
       const rows = await queryAll(
-        `SELECT 'order' AS kind,id,updated_at AS occurred_at,status,provider FROM orders WHERE updated_at > $1
-         UNION ALL
-         SELECT 'transaction' AS kind,id,occurred_at,status,provider FROM payment_transactions WHERE occurred_at > $1
-         ORDER BY occurred_at ASC LIMIT 100`, [cursor]);
+        `SELECT kind,id,occurred_at,status,provider FROM (
+           SELECT 'order' AS kind,id,updated_at AS occurred_at,status,provider FROM orders WHERE updated_at > $1
+           UNION ALL
+           SELECT 'transaction' AS kind,id,occurred_at,status,provider FROM payment_transactions WHERE occurred_at > $1
+         ) commerce_changes
+         ORDER BY occurred_at ASC,id ASC LIMIT 100`, [cursor]);
       for (const row of rows) {
         const at = new Date(row.occurred_at);
-        cursor = at > cursor ? at : new Date(cursor.getTime() + 1);
-        res.write('id: ' + cursor.toISOString() + '\\n');
-        res.write('event: commerce\\n');
-        res.write('data: ' + JSON.stringify(row) + '\\n\\n');
+        if (at > cursor) cursor = at;
+        res.write('id: ' + cursor.toISOString() + '\n');
+        res.write('event: commerce\n');
+        res.write('data: ' + JSON.stringify(row) + '\n\n');
       }
-      if (!rows.length) res.write(': keepalive\\n\\n');
+      if (!rows.length) res.write(': keepalive\n\n');
     } catch (error) {
-      if (error.code === '42P01') res.write('event: unavailable\\ndata: {"code":"LEDGER_MIGRATION_REQUIRED"}\\n\\n');
-      else res.write('event: stream-error\\ndata: {"message":"Commerce stream temporarily unavailable"}\\n\\n');
+      if (error.code === '42P01') {
+        res.write('event: unavailable\ndata: {"code":"LEDGER_MIGRATION_REQUIRED"}\n\n');
+      } else {
+        console.error('Admin commerce stream failed:', error.message);
+        res.write('event: stream-error\ndata: {"message":"Commerce stream temporarily unavailable"}\n\n');
+      }
+    } finally {
+      running = false;
     }
   };
+
   const timer = setInterval(send, 3000);
   send();
-  req.on('close', () => { closed = true; clearInterval(timer); });
+  req.on('close', () => {
+    closed = true;
+    clearInterval(timer);
+  });
 };
 
 module.exports = { getCommerceSummary, getOrders, getTransactions, getProviderEvents, streamCommerce };
