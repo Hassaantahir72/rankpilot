@@ -58,7 +58,12 @@ const register = async (req, res) => {
         [userId, email.toLowerCase(), name, passwordHash, userPlan, userPlan, null, paidPlanIntent ? requestedPlan : null, paidPlanIntent ? requestedInterval : null, otp, otpExpires]
       );
       if (claim) await query('UPDATE trial_device_claims SET user_id=$1 WHERE device_hash=$2', [user.id, deviceHash]);
-      await sendOTPEmail(user.email, user.name, otp, 'verify', user.plan);
+      try {
+        await sendOTPEmail(user.email, user.name, otp, 'verify', user.plan);
+      } catch (emailErr) {
+        console.error('Verification email delivery failed after account creation:', emailErr.message);
+        return res.status(503).json({ error: 'Your account was created, but the verification email could not be sent. You can request a new code from the verification screen.', userId: user.id, requiresVerification: true });
+      }
       res.status(201).json({ message: 'Account created! Check your email for the 6-digit verification code.', userId: user.id, requiresVerification: true });
     } catch (err) {
       // Keep the device claim if account creation succeeded; only release an unassigned claim on a failed registration.
@@ -100,16 +105,22 @@ const verifyOTP = async (req, res) => {
 
 // RESEND OTP
 const resendOTP = async (req, res) => {
-  const { userId } = req.body;
+  const { userId, type = 'verify' } = req.body;
+  if (!['verify', 'login'].includes(type)) return res.status(400).json({ error: 'Invalid verification request.' });
   try {
     const user = await queryOne('SELECT email,name,email_verified,plan FROM users WHERE id=$1', [userId]);
-    if (!user || user.email_verified) return res.status(400).json({ error: 'If verification is still required, a new code can be requested.' });
+    if (!user || (type === 'verify' && user.email_verified) || (type === 'login' && !user.email_verified)) {
+      return res.status(400).json({ error: 'A new code cannot be sent for this request. Please start again.' });
+    }
     const otp = generateOTP();
     const expires = new Date(Date.now() + 10 * 60 * 1000);
-    await query("UPDATE users SET otp_code=$1,otp_purpose='verify',otp_expires_at=$2,otp_attempts=0 WHERE id=$3", [otp, expires, userId]);
-    await sendOTPEmail(user.email, user.name, otp, 'verify', user.plan);
+    await query('UPDATE users SET otp_code=$1,otp_purpose=$2,otp_expires_at=$3,otp_attempts=0 WHERE id=$4', [otp, type, expires, userId]);
+    await sendOTPEmail(user.email, user.name, otp, type, user.plan);
     res.json({ message: 'New code sent to your email.' });
-  } catch (err) { res.status(500).json({ error: 'Could not resend code.' }); }
+  } catch (err) {
+    console.error('Resend OTP error:', err.message);
+    res.status(503).json({ error: 'Could not send a new code. Please try again shortly.' });
+  }
 };
 
 // LOGIN
