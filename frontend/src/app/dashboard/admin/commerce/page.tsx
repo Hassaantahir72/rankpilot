@@ -93,11 +93,11 @@ export default function AdminCommercePage() {
           ['Orders', summary.orders?.total ?? '—'], ['Paid orders', summary.orders?.paid ?? '—'],
           ['Pending orders', summary.orders?.pending ?? '—'], ['Failed orders', summary.orders?.failed ?? '—'],
           ['Transactions', summary.transactions?.total ?? '—'], ['Failed transactions', summary.failedTransactions ?? '—'],
-          ['Payment volume', money(summary.revenueMinor, 'USD')], ['Refund volume', money(summary.refundsMinor, 'USD')],
+          ['Payment volume (minor units)', summary.revenueMinor ?? '—'], ['Refund volume (minor units)', summary.refundsMinor ?? '—'],
           ['Webhook events (24h)', summary.providerEvents24h ?? '—'],
         ].map(([label, value]) => <div key={String(label)} style={panel}><div style={{ fontSize: 23, fontWeight: 800 }}>{value}</div><div style={muted}>{label}</div></div>)}
       </div>
-      <div style={{ ...panel, ...muted, marginBottom: 18 }}>{summary.currencyNote || 'Amounts are stored in original transaction currencies. Do not aggregate different currencies without conversion. Payment volume and refund volume above are displayed as raw minor units interpreted as USD until provider currency aggregation is added.'}</div>
+      <div style={{ ...panel, ...muted, marginBottom: 18 }}>{summary.currencyNote || 'Amounts are stored in each transaction’s original currency. Payment and refund totals are raw minor units across all currencies and are not a meaningful converted total; use the transaction list to inspect each amount and currency.'}</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 14 }}>
         <div style={panel}><h2 style={{ fontWeight: 700, marginBottom: 12 }}>Latest orders</h2><Rows rows={orders.slice(0, 8)} kind="orders" /></div>
         <div style={panel}><h2 style={{ fontWeight: 700, marginBottom: 12 }}>Latest transactions</h2><Rows rows={transactions.slice(0, 8)} kind="transactions" /></div>
