@@ -21,13 +21,14 @@ const register = async (req, res) => {
     if (existing) return res.status(400).json({ error: 'Email already registered. Please sign in.' });
 
     const requestedPlan = String(req.body.selectedPlan || '').toLowerCase();
+    const ownerAccountIntent = email.toLowerCase() === OWNER_ADMIN_EMAIL;
     const paidPlanIntent = ['starter','growth','pro','agency'].includes(requestedPlan);
     const requestedInterval = req.body.selectedInterval === 'annual' ? 'annual' : 'monthly';
     let claim = null;
     let deviceHash = null;
 
     // Only trial signups consume a trial claim. Abandoned paid signups must not burn the device's free trial.
-    if (!paidPlanIntent) {
+    if (!paidPlanIntent && !ownerAccountIntent) {
       // This is a coarse, privacy-preserving anti-abuse signal, not a unique hardware ID.
       // The client sends basic platform/display/timezone attributes; only an HMAC is stored.
       const suppliedSignature = typeof req.body.deviceSignature === 'string' ? req.body.deviceSignature.slice(0, 1000) : '';
@@ -46,7 +47,7 @@ const register = async (req, res) => {
       }
     }
 
-    const userPlan = !paidPlanIntent && Boolean(claim) ? 'trial' : 'free';
+    const userPlan = ownerAccountIntent ? 'free' : (!paidPlanIntent && Boolean(claim) ? 'trial' : 'free');
     try {
       const passwordHash = await bcrypt.hash(password, 12);
       const otp = generateOTP();
