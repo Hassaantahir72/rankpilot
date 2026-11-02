@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const c = require('../controllers/adminController');
+const commerce = require('../controllers/adminCommerceController');
 const paymentMethods = require('../controllers/paymentMethodsController');
 const { authMiddleware } = require('../middleware/auth');
 const { adminSecurityCheck, adminRateLimit, requireSuperAdmin, logAdminRequest } = require('../middleware/security');
@@ -51,5 +52,12 @@ router.patch('/contacts/:id',        c.updateContactStatus);
 // Audit log & billing
 router.get('/audit-log',             c.getAuditLog);
 router.get('/billing',               c.getBillingHistory);
+
+// Owner-only commerce operations and transaction history.
+router.get('/commerce/summary', commerce.getCommerceSummary);
+router.get('/commerce/orders', commerce.getOrders);
+router.get('/commerce/transactions', commerce.getTransactions);
+router.get('/commerce/provider-events', commerce.getProviderEvents);
+router.get('/commerce/stream', commerce.streamCommerce);
 
 module.exports = router;
