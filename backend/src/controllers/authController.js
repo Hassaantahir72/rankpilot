@@ -282,6 +282,13 @@ const googleCallback = async (req, res) => {
     });
     const { email, name, sub: googleId } = userRes.data;
 
+    // The owner account must complete the password + email-OTP sign-in flow.
+    // Google OAuth has no equivalent second-factor challenge, so fail closed.
+    const ownerAdminEmail = String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase();
+    if (ownerAdminEmail && String(email || '').trim().toLowerCase() === ownerAdminEmail) {
+      return res.redirect((process.env.FRONTEND_URL || '') + '/auth/login?error=owner_oauth_requires_password');
+    }
+
     let user = await queryOne('SELECT * FROM users WHERE email=$1', [email.toLowerCase()]);
     if (!user) {
       // OAuth-created accounts start on Free; the trial is granted only by the guarded signup flow.
