@@ -7,6 +7,7 @@ const authMiddleware = async (req, res, next) => {
     if (!header?.startsWith('Bearer ')) return res.status(401).json({ error: 'No token provided.' });
     const token = header.replace('Bearer ', '');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.auth = decoded;
 
     const user = await queryOne(
       'SELECT id,email,name,plan,subscription_status,trial_ends_at,signup_plan,signup_interval,email_verified,onboarding_completed,role,is_banned,token_version,payment_provider,provider_subscription_id,provider_subscription_ends_at FROM users WHERE id=$1',
