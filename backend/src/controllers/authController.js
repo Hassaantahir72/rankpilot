@@ -96,6 +96,9 @@ const verifyOTP = async (req, res) => {
       [userId]
     );
     await sendWelcomeEmail(verifiedUser.email, verifiedUser.name, verifiedUser.plan).catch(err => console.error('Welcome email delivery failed after verification:', err.message));
+    if (String(verifiedUser.email || '').trim().toLowerCase() === OWNER_ADMIN_EMAIL) {
+      return res.json({ message: 'Owner email verified. Continue with the separate secure admin sign-in.', requiresAdminLogin: true });
+    }
     const token = signToken(verifiedUser);
     res.json({ message: 'Email verified! Welcome to RankPilot.', token, user: { id:verifiedUser.id, email:verifiedUser.email, name:verifiedUser.name, plan:verifiedUser.plan, subscription_status:verifiedUser.subscription_status, trial_ends_at:verifiedUser.trial_ends_at, signup_plan:verifiedUser.signup_plan || null, signup_interval:verifiedUser.signup_interval || null, onboarding_completed:verifiedUser.onboarding_completed || false, email_verified:true, role:verifiedUser.role||'user' } });
   } catch (err) {
