@@ -8,15 +8,15 @@ const boundedLimit = (value, fallback = 50) => {
 
 const getCommerceSummary = async (_req, res) => {
   try {
-    const [orders, transactions, revenue, refunds, failed, events] = await Promise.all([
+    const [orders, transactions, revenueByCurrency, refundsByCurrency, failed, events] = await Promise.all([
       queryOne("SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status='paid') AS paid, COUNT(*) FILTER (WHERE status IN ('pending','processing')) AS pending, COUNT(*) FILTER (WHERE status='failed') AS failed FROM orders"),
       queryOne("SELECT COUNT(*) AS total FROM payment_transactions"),
-      queryOne("SELECT COALESCE(SUM(amount_minor),0) AS total FROM payment_transactions WHERE type='payment' AND status='succeeded'"),
-      queryOne("SELECT COALESCE(SUM(amount_minor),0) AS total FROM payment_transactions WHERE type='refund' AND status='succeeded'"),
+      queryAll("SELECT currency, COALESCE(SUM(amount_minor),0) AS total_minor FROM payment_transactions WHERE type='payment' AND status='succeeded' GROUP BY currency ORDER BY currency"),
+      queryAll("SELECT currency, COALESCE(SUM(amount_minor),0) AS total_minor FROM payment_transactions WHERE type='refund' AND status='succeeded' GROUP BY currency ORDER BY currency"),
       queryOne("SELECT COUNT(*) AS total FROM payment_transactions WHERE status='failed'"),
       queryOne("SELECT COUNT(*) AS total FROM provider_event_inbox WHERE received_at > NOW()-INTERVAL '24 hours'"),
     ]);
-    res.json({ orders, transactions, revenueMinor: revenue.total, refundsMinor: refunds.total, failedTransactions: failed.total, providerEvents24h: events.total, currencyNote: 'Amounts are stored in each transaction currency; do not sum across currencies without conversion.' });
+    res.json({ orders, transactions, revenueByCurrency, refundsByCurrency, failedTransactions: failed.total, providerEvents24h: events.total, currencyNote: 'Payment and refund totals are grouped by currency and remain in minor units.' });
   } catch (error) {
     if (error.code === '42P01') return res.status(503).json({ error: 'Commerce ledger migration is not installed yet.', code: 'LEDGER_MIGRATION_REQUIRED' });
     console.error('Admin commerce summary failed:', error.message);
