@@ -55,10 +55,17 @@ const getFrontendBaseUrl = () => {
 };
 
 const recordBillingHistory = async ({ userId, externalId, amount, currency, plan, periodStart = null, periodEnd = null }) => {
+  // Stripe can retry an event after a later ledger write fails. Avoid duplicating
+  // legacy billing history when that same invoice is replayed.
+  const existing = await queryOne(
+    'SELECT id FROM billing_history WHERE stripe_invoice_id=$1 LIMIT 1',
+    [externalId]
+  );
+  if (existing) return;
   await query(
     `INSERT INTO billing_history (id,user_id,stripe_invoice_id,amount,currency,status,plan,period_start,period_end,created_at)
-     VALUES ($1,$2,$3,$4,$5,'paid',$6,$7,$8,NOW())
-`,
+     SELECT $1,$2,$3,$4,$5,'paid',$6,$7,$8,NOW()
+     WHERE NOT EXISTS (SELECT 1 FROM billing_history WHERE stripe_invoice_id=$3)`,
     [uuidv4(), userId, externalId, (amount || 0) / 100, currency || 'usd', plan,
       periodStart ? new Date(periodStart * 1000) : null,
       periodEnd ? new Date(periodEnd * 1000) : null]
