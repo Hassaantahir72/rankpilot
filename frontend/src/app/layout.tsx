@@ -1,6 +1,7 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import ChatWidgetWrapper from '@/components/chat/ChatWidgetWrapper'
+import { AuthProvider } from '@/lib/auth'
 
 export const metadata: Metadata = {
   title: { default: 'RankPilot — AI SEO & Marketing Autopilot', template: '%s | RankPilot' },
@@ -23,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
       </head>
       <body>
-        {children}
+        <AuthProvider>{children}</AuthProvider>
         <ChatWidgetWrapper />
       </body>
     </html>
