@@ -20,24 +20,6 @@ export default function OwnerAdminLoginPage() {
   const [notice,setNotice] = useState('');
 
   const request = async (path:string, body:any) => (await api.post(path,body)).data;
-  const handleCredentials = async (e:React.FormEvent) => {
-    e.preventDefault(); setBusy(true); setError(''); setNotice('');
-    try {
-      await request('/auth/admin/login',{email,password});
-      setStep('email'); setNotice('A one-time code has been sent to the owner email address.');
-    } catch(err:any) { setError(err.response?.data?.error || 'Could not start owner sign-in.'); }
-    finally { setBusy(false); }
-  };
-  const handleEmailCode = async (e:React.FormEvent) => {
-    e.preventDefault(); setBusy(true); setError(''); setNotice('');
-    try {
-      const data = await request('/auth/admin/verify-email',{userId:undefined,otp:code});
-      setStageToken(data.stageToken);
-      if(data.requiresTotpSetup){ setSetup(true); setSecret(data.secret); setStep('totp'); setNotice('Add this setup key to your authenticator app, then enter the current 6-digit code.'); }
-      else { setSetup(false); setStep('totp'); setNotice('Enter the current 6-digit code from your authenticator app.'); }
-    } catch(err:any) { setError(err.response?.data?.error || 'Email code verification failed.'); }
-    finally { setBusy(false); }
-  };
   const [userId,setUserId] = useState('');
   const startLogin = async (e:React.FormEvent) => {
     e.preventDefault(); setBusy(true); setError(''); setNotice('');
@@ -71,7 +53,7 @@ export default function OwnerAdminLoginPage() {
   };
 
   const field = {width:'100%',padding:'13px 14px',borderRadius:10,border:'1px solid rgba(255,255,255,.12)',background:'rgba(255,255,255,.045)',color:'#fff',fontSize:15,outline:'none',boxSizing:'border-box' as const};
-  const button = {width:'100%',padding:14,border:0,borderRadius:10,background:'linear-gradient(135deg,#6366f1,#7c3aed)',color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer' as const,opacity:busy?.65:1};
+  const button = {width:'100%',padding:14,border:0,borderRadius:10,background:'linear-gradient(135deg,#6366f1,#7c3aed)',color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer' as const,opacity: busy ? 0.65 : 1};
   return <main style={{minHeight:'100vh',background:'#08080f',color:'#fff',display:'grid',placeItems:'center',padding:24,fontFamily:'Inter, sans-serif'}}>
     <section style={{width:'100%',maxWidth:440}}>
       <div style={{textAlign:'center',marginBottom:28}}>
