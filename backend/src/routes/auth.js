@@ -3,6 +3,12 @@ const router = express.Router();
 const { body } = require('express-validator');
 const c = require('../controllers/authController');
 const { authMiddleware } = require('../middleware/auth');
+const adminAuth = require('../controllers/adminAuthController');
+const adminAuthLimiter = require('express-rate-limit')({ windowMs: 15*60*1000, max: 8, standardHeaders: true, legacyHeaders: false });
+router.post('/admin/login', adminAuthLimiter, adminAuth.login);
+router.post('/admin/verify-email', adminAuthLimiter, adminAuth.verifyEmail);
+router.post('/admin/enroll-totp', adminAuthLimiter, adminAuth.enrollTotp);
+router.post('/admin/verify-totp', adminAuthLimiter, adminAuth.verifyTotpLogin);
 
 router.post('/register', [
   body('email').isEmail().normalizeEmail(),

@@ -53,7 +53,7 @@ const adminSecurityCheck = async (req, res, next) => {
 
   // The admin panel is single-owner: a database role alone must never grant access.
   const ownerEmail = String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase();
-  if (!ownerEmail || String(req.user.email || '').trim().toLowerCase() !== ownerEmail || req.user.email_verified !== true) {
+  if (!ownerEmail || String(req.user.email || '').trim().toLowerCase() !== ownerEmail || req.user.email_verified !== true || req.auth?.adminMfaAuthenticated !== true || req.auth?.purpose !== 'admin_session') {
     await logSecurityEvent('unauthorized_admin_access', ip, req.user.id, { path: req.path, method: req.method });
     return res.status(403).json({ error: 'Admin access required.' });
   }

@@ -52,7 +52,9 @@ export default function VerifyEmailPage() {
     try {
       const endpoint = type === 'login' ? '/auth/verify-login-otp' : '/auth/verify-otp';
       const { data } = await api.post(endpoint, { userId, otp: code });
-      if (data.token) {
+      if (data.requiresAdminLogin) {
+        router.replace('/admin/login');
+      } else if (data.token) {
         login(data.token, data.user);
         const selectedPlan = params.get('plan') || data.user?.signup_plan;
         const allowedPlans = ['starter', 'growth', 'pro', 'agency'];

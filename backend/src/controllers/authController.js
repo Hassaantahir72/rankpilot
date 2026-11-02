@@ -9,6 +9,7 @@ const { logSecurityEvent, trackFailedLogin, clearFailedAttempts } = require('../
 
 const signToken = (user) => jwt.sign({ userId: user.id, tokenVersion: Number(user.token_version || 0) }, process.env.JWT_SECRET, { expiresIn: '7d' });
 const generateOTP = () => crypto.randomInt(100000, 1000000).toString();
+const OWNER_ADMIN_EMAIL = 'hassaantahir991@gmail.com';
 
 // REGISTER
 const register = async (req, res) => {
@@ -95,6 +96,9 @@ const verifyOTP = async (req, res) => {
       [userId]
     );
     await sendWelcomeEmail(verifiedUser.email, verifiedUser.name, verifiedUser.plan).catch(err => console.error('Welcome email delivery failed after verification:', err.message));
+    if (String(verifiedUser.email || '').trim().toLowerCase() === OWNER_ADMIN_EMAIL) {
+      return res.json({ message: 'Owner email verified. Continue with the separate secure admin sign-in.', requiresAdminLogin: true });
+    }
     const token = signToken(verifiedUser);
     res.json({ message: 'Email verified! Welcome to RankPilot.', token, user: { id:verifiedUser.id, email:verifiedUser.email, name:verifiedUser.name, plan:verifiedUser.plan, subscription_status:verifiedUser.subscription_status, trial_ends_at:verifiedUser.trial_ends_at, signup_plan:verifiedUser.signup_plan || null, signup_interval:verifiedUser.signup_interval || null, onboarding_completed:verifiedUser.onboarding_completed || false, email_verified:true, role:verifiedUser.role||'user' } });
   } catch (err) {
@@ -132,6 +136,7 @@ const login = async (req, res) => {
   try {
     const user = await queryOne('SELECT * FROM users WHERE email=$1', [email.toLowerCase()]);
     if (!user) return res.status(401).json({ error: 'Invalid email or password.' });
+    if (String(user.email || '').trim().toLowerCase() === OWNER_ADMIN_EMAIL) return res.status(403).json({ error: 'Use the separate owner admin sign-in.' });
     if (user.is_banned) return res.status(403).json({ error: 'Account suspended: ' + (user.ban_reason || 'Contact support.') });
 
     const valid = await bcrypt.compare(password, user.password_hash);
@@ -166,6 +171,7 @@ const verifyLoginOTP = async (req, res) => {
   try {
     const user = await queryOne('SELECT * FROM users WHERE id=$1', [userId]);
     if (!user) return res.status(404).json({ error: 'User not found.' });
+    if (String(user.email || '').trim().toLowerCase() === OWNER_ADMIN_EMAIL) return res.status(403).json({ error: 'Use the separate owner admin sign-in.' });
     if (user.is_banned) return res.status(403).json({ error: 'Account suspended.' });
     if (user.otp_purpose !== 'login') return res.status(400).json({ error: 'Invalid or expired sign-in code. Please sign in again.' });
     if (user.otp_attempts >= 5) return res.status(429).json({ error: 'Too many attempts. Please log in again.' });
@@ -284,7 +290,7 @@ const googleCallback = async (req, res) => {
 
     // The owner account must complete the password + email-OTP sign-in flow.
     // Google OAuth has no equivalent second-factor challenge, so fail closed.
-    const ownerAdminEmail = String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase();
+    const ownerAdminEmail = OWNER_ADMIN_EMAIL;
     if (ownerAdminEmail && String(email || '').trim().toLowerCase() === ownerAdminEmail) {
       return res.redirect((process.env.FRONTEND_URL || '') + '/auth/login?error=owner_oauth_requires_password');
     }
