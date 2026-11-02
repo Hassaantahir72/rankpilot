@@ -115,13 +115,13 @@ const incrementUsage = async (userId, action) => {
 
 const requireAdmin = (req, res, next) => {
   const ownerEmail = String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase();
-  if (!ownerEmail || String(req.user?.email || '').trim().toLowerCase() !== ownerEmail || req.user?.email_verified !== true || !['admin','superadmin'].includes(req.user.role) || req.auth?.adminMfaAuthenticated !== true || req.auth?.purpose !== 'admin_session') return res.status(403).json({ error: 'Owner admin MFA verification required.' });
+  if (!ownerEmail || String(req.user?.email || '').trim().toLowerCase() !== ownerEmail || req.user?.email_verified !== true || req.auth?.adminMfaAuthenticated !== true || req.auth?.purpose !== 'admin_session') return res.status(403).json({ error: 'Owner admin MFA verification required.' });
   next();
 };
 
 const requireSuperAdmin = (req, res, next) => {
   const ownerEmail = String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase();
-  if (!ownerEmail || String(req.user?.email || '').trim().toLowerCase() !== ownerEmail || req.user?.email_verified !== true || req.user.role !== 'superadmin' || req.auth?.adminMfaAuthenticated !== true || req.auth?.purpose !== 'admin_session') return res.status(403).json({ error: 'Owner admin MFA verification required.' });
+  if (!ownerEmail || String(req.user?.email || '').trim().toLowerCase() !== ownerEmail || req.user?.email_verified !== true || req.auth?.adminMfaAuthenticated !== true || req.auth?.purpose !== 'admin_session') return res.status(403).json({ error: 'Owner admin MFA verification required.' });
   next();
 };
 
