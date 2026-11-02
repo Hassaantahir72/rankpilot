@@ -132,6 +132,7 @@ const login = async (req, res) => {
   try {
     const user = await queryOne('SELECT * FROM users WHERE email=$1', [email.toLowerCase()]);
     if (!user) return res.status(401).json({ error: 'Invalid email or password.' });
+    if (String(user.email || '').trim().toLowerCase() === String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase()) return res.status(403).json({ error: 'Use the separate owner admin sign-in.' });
     if (user.is_banned) return res.status(403).json({ error: 'Account suspended: ' + (user.ban_reason || 'Contact support.') });
 
     const valid = await bcrypt.compare(password, user.password_hash);
@@ -166,6 +167,7 @@ const verifyLoginOTP = async (req, res) => {
   try {
     const user = await queryOne('SELECT * FROM users WHERE id=$1', [userId]);
     if (!user) return res.status(404).json({ error: 'User not found.' });
+    if (String(user.email || '').trim().toLowerCase() === String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase()) return res.status(403).json({ error: 'Use the separate owner admin sign-in.' });
     if (user.is_banned) return res.status(403).json({ error: 'Account suspended.' });
     if (user.otp_purpose !== 'login') return res.status(400).json({ error: 'Invalid or expired sign-in code. Please sign in again.' });
     if (user.otp_attempts >= 5) return res.status(429).json({ error: 'Too many attempts. Please log in again.' });
