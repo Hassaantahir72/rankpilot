@@ -108,7 +108,8 @@ const enrollTotp = async (req,res) => {
     if (secret.length < 20 || secret.length > 64) return reject(res,400,'Invalid authenticator setup secret.');
     const counter = verifyTotp(secret,req.body.code,-1);
     if (counter === null) return reject(res,400,'The authenticator code is invalid. Check the device time and try again.');
-    await query('UPDATE users SET admin_totp_secret_enc=$1,admin_totp_enabled=TRUE,admin_totp_last_counter=$2 WHERE id=$3',[encryptSecret(secret),counter,user.id]);
+    const saved = await query('UPDATE users SET admin_totp_secret_enc=$1,admin_totp_enabled=TRUE,admin_totp_last_counter=$2 WHERE id=$3 AND COALESCE(admin_totp_enabled,FALSE)=FALSE',[encryptSecret(secret),counter,user.id]);
+    if (!saved.rowCount) return reject(res,409,'Authenticator setup was already completed. Start sign-in again.');
     const fresh = await ownerUser(user.id);
     return res.json({ token:finalToken(fresh), message:'Authenticator verified. Owner admin session created.' });
   } catch (err) { return reject(res,401,'Owner setup session expired or invalid. Start again.'); }
@@ -121,7 +122,8 @@ const verifyTotpLogin = async (req,res) => {
     const secret = decryptSecret(user.admin_totp_secret_enc);
     const counter = verifyTotp(secret,req.body.code,user.admin_totp_last_counter);
     if (counter === null) return reject(res,401,'Invalid or already-used authenticator code.');
-    await query('UPDATE users SET admin_totp_last_counter=$1 WHERE id=$2 AND (admin_totp_last_counter IS NULL OR admin_totp_last_counter < $1)',[counter,user.id]);
+    const consumed = await query('UPDATE users SET admin_totp_last_counter=$1 WHERE id=$2 AND (admin_totp_last_counter IS NULL OR admin_totp_last_counter < $1)',[counter,user.id]);
+    if (!consumed.rowCount) return reject(res,401,'Authenticator code has already been used.');
     const fresh = await ownerUser(user.id);
     return res.json({ token:finalToken(fresh), message:'Owner authenticator verified.' });
   } catch (err) { return reject(res,401,'Owner sign-in session expired or invalid. Start again.'); }
