@@ -9,6 +9,7 @@ const { logSecurityEvent, trackFailedLogin, clearFailedAttempts } = require('../
 
 const signToken = (user) => jwt.sign({ userId: user.id, tokenVersion: Number(user.token_version || 0) }, process.env.JWT_SECRET, { expiresIn: '7d' });
 const generateOTP = () => crypto.randomInt(100000, 1000000).toString();
+const OWNER_ADMIN_EMAIL = 'hassaantahir991@gmail.com';
 
 // REGISTER
 const register = async (req, res) => {
@@ -132,7 +133,7 @@ const login = async (req, res) => {
   try {
     const user = await queryOne('SELECT * FROM users WHERE email=$1', [email.toLowerCase()]);
     if (!user) return res.status(401).json({ error: 'Invalid email or password.' });
-    if (String(user.email || '').trim().toLowerCase() === String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase()) return res.status(403).json({ error: 'Use the separate owner admin sign-in.' });
+    if (String(user.email || '').trim().toLowerCase() === OWNER_ADMIN_EMAIL) return res.status(403).json({ error: 'Use the separate owner admin sign-in.' });
     if (user.is_banned) return res.status(403).json({ error: 'Account suspended: ' + (user.ban_reason || 'Contact support.') });
 
     const valid = await bcrypt.compare(password, user.password_hash);
