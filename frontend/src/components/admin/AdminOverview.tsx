@@ -57,6 +57,17 @@ export default function AdminPage() {
   const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
+    const applyHash = () => {
+      const requested = window.location.hash.replace(/^#/, '') as Tab;
+      const allowed: Tab[] = ['overview','users','settings','security','contacts','billing','payment-methods','log'];
+      if (allowed.includes(requested)) setTab(requested);
+    };
+    applyHash();
+    window.addEventListener('hashchange', applyHash);
+    return () => window.removeEventListener('hashchange', applyHash);
+  }, []);
+
+  useEffect(() => {
     if (!loading && !isAdmin) { router.replace('/admin/login'); return; }
     if (isAdmin) { loadStats().catch((e:any) => setLoadError(e.response?.data?.error || 'Could not load admin overview.')); }
   }, [isAdmin, loading]);
