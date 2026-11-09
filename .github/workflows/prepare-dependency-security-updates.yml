@@ -23,6 +23,7 @@ jobs:
       - name: Safely update backend dependencies
         working-directory: backend
         run: |
+          npm install --package-lock-only --ignore-scripts
           npm ci
           npm audit fix || true
           npm install --save-exact node-cron@4.6.0 nodemailer@10.4.0 uuid@11.1.1
@@ -30,12 +31,13 @@ jobs:
           npm ls axios body-parser brace-expansion follow-redirects minimatch node-cron nodemailer proxy-addr qs undici uuid || true
           npm test
           npm audit --json > ../backend-audit-final.json || true
-          node -e "const r=require('../backend-audit-final.json'); const v=r.metadata?.vulnerabilities||{}; console.log('Backend audit:',v); if ((v.high||0)+(v.critical||0)>0) process.exit(1)"
+          node -e "const r=require('../backend-audit-final.json'); const v=r.metadata?.vulnerabilities||{}; console.log('Backend audit:',v); if ((v.total||0)>0) process.exit(1)"
       - name: Safely update frontend dependencies
         working-directory: frontend
         env:
           NEXT_PUBLIC_API_URL: https://rankpilot-ixnc.onrender.com/api
         run: |
+          npm install --package-lock-only --ignore-scripts
           npm ci
           npm audit fix || true
           npm install --save-exact next@14.2.35
@@ -43,15 +45,15 @@ jobs:
           npm ls next axios postcss || true
           npm run build
           npm audit --json > ../frontend-audit-final.json || true
-          node -e "const r=require('../frontend-audit-final.json'); const v=r.metadata?.vulnerabilities||{}; console.log('Frontend audit:',v); if ((v.high||0)+(v.critical||0)>0) process.exit(1)"
+          node -e "const r=require('../frontend-audit-final.json'); const v=r.metadata?.vulnerabilities||{}; console.log('Frontend audit:',v); if ((v.total||0)>0) process.exit(1)"
       - name: Commit tested package and lockfile updates
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend/package.json backend/package-lock.json frontend/package.json frontend/package-lock.json
+          git add backend/package.json backend/package-lock.json frontend/package.json frontend/package-lock.json frontend/src/app/auth/reset-password/page.tsx frontend/src/app/auth/verify-email/page.tsx frontend/src/app/checkout/page.tsx frontend/src/app/onboarding/page.tsx
           if git diff --cached --quiet; then
-            echo "No dependency changes to commit."
+            echo "No dependency or page changes to commit."
             exit 0
           fi
-          git commit -m "Apply tested dependency security updates"
+          git commit -m "Apply tested dependency and prerender security fixes"
           git push origin HEAD:security/restrict-public-db-access
