@@ -56,7 +56,7 @@ export default function HomePage() {
   useEffect(() => {
     let active = true;
     const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-    fetch(base.replace(/\\/$/, '') + '/site-content', { cache: 'no-store' })
+    fetch((base.endsWith('/') ? base.slice(0, -1) : base) + '/site-content', { cache: 'no-store' })
       .then(response => response.ok ? response.json() : null)
       .then(data => { if (active && data?.content) setSiteContent(data.content); })
       .catch(() => {});
