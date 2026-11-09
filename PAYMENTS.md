@@ -4,7 +4,7 @@
 
 - Payment-method configuration is stored in PostgreSQL in `payment_methods`. The admin UI is available at Dashboard → Admin → Payment Methods and is superadmin-only.
 - Public pricing and billing pages load methods from `GET /api/payment-methods`. A method appears only when it is enabled, its server-side configuration is complete, and its adapter is marked ready.
-- Lemon Squeezy checkout is implemented using the server-side API. Subscription entitlements are changed only by signed webhook events that report an active subscription and a known, server-configured variant ID.
+- Lemon Squeezy checkout is implemented using the server-side API. Paid plan entitlements are granted only after a valid signed subscription-invoice success/recovery event and a known, server-configured variant ID. Subscription-created events link the provider subscription but do not grant paid access on their own. Orders, invoices, refunds and webhook inbox status are recorded in the commerce ledger.
 - Safepay is catalogued as a candidate but its checkout/subscription webhook adapter is **not implemented** in this branch. It remains impossible to enable, even if credentials exist.
 - Manual bank transfer is listed as a possible provider but automatic/manual payment review workflow is not implemented. It remains impossible to enable.
 - New Stripe checkout is disabled. Legacy Stripe webhooks and billing portal remain for existing subscriptions during migration.
@@ -44,7 +44,7 @@ In Lemon Squeezy, create a webhook pointing to:
 
 `https://rankpilot-ixnc.onrender.com/api/webhooks/lemon-squeezy`
 
-Set the exact signing secret in `LEMONSQUEEZY_WEBHOOK_SECRET`. Subscribe at minimum to subscription-created, subscription-updated, subscription-resumed, subscription-cancelled, subscription-expired, subscription-paused, subscription-payment-success, and subscription-payment-failed events. Confirm the event names against the current Lemon Squeezy dashboard/API docs before production.
+Set the exact signing secret in `LEMONSQUEEZY_WEBHOOK_SECRET`. Subscribe to at least: order-created, order-refunded, subscription-created, subscription-updated, subscription-resumed, subscription-unpaused, subscription-cancelled, subscription-expired, subscription-paused, subscription-payment-success, subscription-payment-recovered, subscription-payment-failed, and subscription-payment-refunded. Confirm the exact event names in the current Lemon Squeezy dashboard before production. The order and invoice events are required for the admin orders/transactions ledger.
 
 After configuring the variables, create the Lemon Squeezy entry in Admin → Payment Methods. It starts disabled. The backend checks all credentials and eight monthly/annual variant IDs plus the explicit `LEMONSQUEEZY_ADAPTER_READY=true` gate before allowing the superadmin to enable it. Leave that flag unset until sandbox tests have passed. The frontend does not receive the API key or webhook secret.
 
