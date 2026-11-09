@@ -227,7 +227,7 @@ router.post('/lemon-squeezy', async (req, res) => {
         const selectedPlan = variantPlan || (['starter','growth','pro','agency'].includes(customPlan) ? customPlan
           : (['starter','growth','pro','agency'].includes(invoiceUser.signup_plan) ? invoiceUser.signup_plan : invoiceUser.plan));
         await query(
-          "UPDATE users SET plan=COALESCE($1,plan),subscription_status='active',payment_provider='lemon_squeezy'," +
+          "UPDATE users SET plan=COALESCE($1,plan),subscription_status='active',payment_provider='lemon_squeezy',signup_plan=NULL,signup_interval=NULL," +
           "provider_subscription_id=$2,provider_customer_id=COALESCE(provider_customer_id,$3)," +
           "provider_subscription_updated_at=COALESCE($4,NOW()),updated_at=NOW() " +
           "WHERE id=$5 AND stripe_subscription_id IS NULL AND (payment_provider IS NULL OR payment_provider='lemon_squeezy') " +
