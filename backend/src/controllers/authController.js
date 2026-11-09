@@ -194,7 +194,9 @@ const verifyLoginOTP = async (req, res) => {
 // GET ME
 const getMe = async (req, res) => {
   const limits = await queryOne('SELECT * FROM plan_limits WHERE plan=$1', [req.user.plan]);
-  res.json({ user: req.user, limits });
+  const configuredOwner = String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase();
+  const adminAccess = Boolean(configuredOwner && String(req.user.email || '').trim().toLowerCase() === configuredOwner && req.user.email_verified === true && req.auth?.adminMfaAuthenticated === true && req.auth?.purpose === 'admin_session');
+  res.json({ user: req.user, limits, adminAccess });
 };
 
 // Mark onboarding complete only for the authenticated account.
