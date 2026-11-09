@@ -309,6 +309,35 @@ const updateSiteSetting = async (req, res) => {
   res.json({ message: `Setting "${key}" updated.` });
 };
 
+// ── PLAN LIMITS & FEATURE ENTITLEMENTS ───────────────────────────
+const getPlanLimits = async (_req, res) => {
+  const plans = await queryAll('SELECT * FROM plan_limits ORDER BY CASE plan WHEN \'free\' THEN 0 WHEN \'trial\' THEN 1 WHEN \'starter\' THEN 2 WHEN \'growth\' THEN 3 WHEN \'pro\' THEN 4 WHEN \'agency\' THEN 5 ELSE 6 END');
+  res.json({ plans });
+};
+
+const updatePlanLimits = async (req, res) => {
+  const { plan } = req.params;
+  const allowedPlans = ['free','trial','starter','growth','pro','agency'];
+  const numeric = ['max_websites','max_keywords','max_audits_per_month','max_content_per_month','max_social_posts_per_month'];
+  const boolean = ['google_ads','meta_ads','ab_testing','white_label','api_access','competitor_analysis','weekly_reports','priority_support'];
+  const allowed = new Set([...numeric,...boolean,'rank_tracking_frequency']);
+  if (!allowedPlans.includes(plan)) return res.status(400).json({ error: 'Unknown plan.' });
+  const input = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const entries = Object.entries(input);
+  if (!entries.length || entries.some(([key]) => !allowed.has(key))) return res.status(400).json({ error: 'Provide supported plan limit fields.' });
+  for (const [key,value] of entries) {
+    if (numeric.includes(key) && (!Number.isInteger(value) || value < 0 || value > 1000000)) return res.status(400).json({ error: key + ' must be a whole number between 0 and 1,000,000.' });
+    if (boolean.includes(key) && typeof value !== 'boolean') return res.status(400).json({ error: key + ' must be true or false.' });
+    if (key === 'rank_tracking_frequency' && !['monthly','weekly','daily'].includes(value)) return res.status(400).json({ error: 'Invalid rank tracking frequency.' });
+  }
+  const setSql = entries.map(([key], index) => key + '=$' + (index + 1)).join(',');
+  const values = entries.map(([,value]) => value);
+  const updated = await queryOne('UPDATE plan_limits SET ' + setSql + ' WHERE plan=$' + (values.length + 1) + ' RETURNING *', [...values,plan]);
+  if (!updated) return res.status(404).json({ error: 'Plan limits not found.' });
+  await logAction(req.user.id, 'update_plan_limits', null, { plan, fields: entries.map(([key]) => key) });
+  res.json({ plan: updated, message: 'Plan limits saved. New entitlement checks will use these values.' });
+};
+
 // ── IP MANAGEMENT ─────────────────────────────────────────────────
 const getBlockedIPs = async (req, res) => {
   const ips = await queryAll('SELECT b.*,u.email as blocked_by_email FROM blocked_ips b LEFT JOIN users u ON b.blocked_by=u.id ORDER BY b.created_at DESC');
@@ -403,7 +432,7 @@ const getGrowthStats = async (req, res) => {
 module.exports = {
   getDashboardStats, getUsers, getUser, createUserBillingPortal, updateUserPlan, toggleBan, updateRole,
   resetUserPassword, verifyUserEmail, impersonateUser, deleteUser,
-  getSiteSettings, updateSiteSetting,
+  getSiteSettings, updateSiteSetting, getPlanLimits, updatePlanLimits,
   getBlockedIPs, blockIP, unblockIP,
   getSecurityEvents, getContacts, updateContactStatus,
   getAuditLog, getBillingHistory, getGrowthStats,
