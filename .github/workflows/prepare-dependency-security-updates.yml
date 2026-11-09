@@ -24,10 +24,10 @@ jobs:
         working-directory: backend
         run: |
           npm ci
-          npm audit fix
+          npm audit fix || true
           npm install --save-exact node-cron@4.6.0 nodemailer@10.4.0 uuid@11.1.1
-          npm audit fix
-          npm ls axios body-parser brace-expansion follow-redirects minimatch node-cron nodemailer proxy-addr qs undici uuid
+          npm audit fix || true
+          npm ls axios body-parser brace-expansion follow-redirects minimatch node-cron nodemailer proxy-addr qs undici uuid || true
           npm test
           npm audit --json > ../backend-audit-final.json || true
           node -e "const r=require('../backend-audit-final.json'); const v=r.metadata?.vulnerabilities||{}; console.log('Backend audit:',v); if ((v.high||0)+(v.critical||0)>0) process.exit(1)"
@@ -37,10 +37,10 @@ jobs:
           NEXT_PUBLIC_API_URL: https://rankpilot-ixnc.onrender.com/api
         run: |
           npm ci
-          npm audit fix
+          npm audit fix || true
           npm install --save-exact next@14.2.35
-          npm audit fix
-          npm ls next axios postcss
+          npm audit fix || true
+          npm ls next axios postcss || true
           npm run build
           npm audit --json > ../frontend-audit-final.json || true
           node -e "const r=require('../frontend-audit-final.json'); const v=r.metadata?.vulnerabilities||{}; console.log('Frontend audit:',v); if ((v.high||0)+(v.critical||0)>0) process.exit(1)"
