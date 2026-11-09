@@ -40,7 +40,7 @@ jobs:
           npm install --package-lock-only --ignore-scripts
           npm ci
           npm audit fix || true
-          npm install --save-exact next@14.2.35
+          npm install --save-exact next@16.4.5 react@19.2.5 react-dom@19.2.5
           npm audit fix || true
           npm ls next axios postcss || true
           npm run build
