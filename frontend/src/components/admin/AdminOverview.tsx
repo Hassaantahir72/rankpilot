@@ -134,7 +134,7 @@ export default function AdminPage() {
   const loadSecEvents = async () => { const { data } = await adminApi.getSecurityEvents(); setSecEvents(data.events || []); setLastUpdated(new Date()); };
   const loadSettings  = async () => { const { data } = await adminApi.getSiteSettings(); setSettings(data.settings || []); setLastUpdated(new Date()); };
   const loadPlanLimits = async () => { const { data } = await adminApi.getPlanLimits(); const rows = data.plans || []; setPlanLimits(rows); setPlanEdits(Object.fromEntries(rows.map((row:any) => [row.plan, { ...row }]))); setLastUpdated(new Date()); };
-  const doSavePlanLimits = async (plan:string) => { try { const { data } = await adminApi.updatePlanLimits(plan, planEdits[plan]); showMsg(data.message || 'Plan limits saved.'); await loadPlanLimits(); } catch (e:any) { showMsg(e.response?.data?.error || 'Could not save plan limits.', 'err'); } };
+  const doSavePlanLimits = async (plan:string) => { try { const payload = { ...planEdits[plan] }; delete payload.plan; const { data } = await adminApi.updatePlanLimits(plan, payload); showMsg(data.message || 'Plan limits saved.'); await loadPlanLimits(); } catch (e:any) { showMsg(e.response?.data?.error || 'Could not save plan limits.', 'err'); } };
   const loadPaymentMethods = async () => { try { const { data } = await adminApi.getPaymentMethods(); setPaymentMethods(data.methods || []); } catch (e:any) { showMsg(e.response?.data?.error || 'Could not load payment methods.', 'err'); } };
   const doCreatePaymentMethod = async () => {
     try {
