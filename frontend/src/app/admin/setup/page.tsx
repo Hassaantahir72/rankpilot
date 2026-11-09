@@ -1,11 +1,11 @@
 'use client';
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import Link from 'next/link';
-import {useSearchParams} from 'next/navigation';
 import axios from 'axios';
 const api=axios.create({baseURL:process.env.NEXT_PUBLIC_API_URL||'http://localhost:5000/api'});
 export default function OwnerSetupPage(){
- const params=useSearchParams(); const token=params.get('token')||'';
+ const [token,setToken]=useState('');
+ useEffect(()=>{setToken(new URLSearchParams(window.location.search).get('token')||'')},[]);
  const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [confirm,setConfirm]=useState('');
  const [sent,setSent]=useState(false); const [busy,setBusy]=useState(false); const [error,setError]=useState(''); const [done,setDone]=useState(false);
  const submitRequest=async(e:React.FormEvent)=>{e.preventDefault();setBusy(true);setError('');try{await api.post('/auth/admin/request-setup',{email});setSent(true)}catch(x:any){setError(x.response?.data?.error||'Could not request setup.')}finally{setBusy(false)}};
