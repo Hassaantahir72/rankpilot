@@ -153,16 +153,15 @@ const completeOwnerSetup = async (req,res) => {
     const password = String(req.body.password || '');
     if (token.length < 32 || password.length < 12 || password.length > 128) return reject(res,400,'Use a valid setup link and a password of at least 12 characters.');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    const pending = await queryOne('SELECT email FROM owner_admin_setup_tokens WHERE token_hash=$1 AND used_at IS NULL AND expires_at>NOW()', [tokenHash]);
+    const pending = await queryOne('UPDATE owner_admin_setup_tokens SET used_at=NOW() WHERE token_hash=$1 AND used_at IS NULL AND expires_at>NOW() RETURNING email', [tokenHash]);
     if (!pending || pending.email !== ownerEmail()) return reject(res,400,'This setup link is invalid or expired. Request a new one.');
     const passwordHash = await bcrypt.hash(password,12);
     const existing = await queryOne('SELECT id FROM users WHERE lower(email)=lower($1)',[ownerEmail()]);
     if (existing) {
-      await query("UPDATE users SET name=COALESCE(NULLIF(name,''),'RankPilot Owner'),password_hash=$1,role='superadmin',email_verified=TRUE,is_banned=FALSE,admin_totp_secret_enc=NULL,admin_totp_enabled=FALSE,admin_totp_last_counter=NULL,token_version=COALESCE(token_version,0)+1,updated_at=NOW() WHERE id=$2",[passwordHash,existing.id]);
+      await query("UPDATE users SET name=COALESCE(NULLIF(name,''),'RankPilot Owner'),password_hash=$1,role='superadmin',email_verified=TRUE,is_banned=FALSE,token_version=COALESCE(token_version,0)+1,updated_at=NOW() WHERE id=$2",[passwordHash,existing.id]);
     } else {
       await query("INSERT INTO users (id,email,name,password_hash,role,plan,subscription_status,email_verified,created_at,updated_at) VALUES ($1,$2,'RankPilot Owner',$3,'superadmin','free','free',TRUE,NOW(),NOW())",[crypto.randomUUID(),ownerEmail(),passwordHash]);
     }
-    await query('UPDATE owner_admin_setup_tokens SET used_at=NOW() WHERE email=$1',[ownerEmail()]);
     return res.json({ message:'Owner password created. Continue to admin sign-in to enrol your authenticator.' });
   } catch (err) {
     console.error('Owner setup completion failed:',err.message);
