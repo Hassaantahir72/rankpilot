@@ -1,1 +1,2 @@
-export { default } from '../../dashboard/admin/commerce/page';
+'use client';
+export { default } from '@/components/admin/AdminCommerce';
