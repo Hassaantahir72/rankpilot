@@ -21,19 +21,19 @@ const findAccount = async (custom, attrs, subscriptionId) => {
   let user = null;
   if (subscriptionId) {
     user = await queryOne(
-      "SELECT id,email,plan,signup_plan,provider_subscription_id FROM users WHERE payment_provider='lemon_squeezy' AND provider_subscription_id=$1 LIMIT 1",
+      "SELECT id,email,plan,signup_plan,provider_subscription_id,provider_subscription_updated_at FROM users WHERE payment_provider='lemon_squeezy' AND provider_subscription_id=$1 LIMIT 1",
       [String(subscriptionId)]
     );
   }
   if (!user && custom?.user_id) {
     user = await queryOne(
-      'SELECT id,email,plan,signup_plan,provider_subscription_id FROM users WHERE id=$1 LIMIT 1',
+      'SELECT id,email,plan,signup_plan,provider_subscription_id,provider_subscription_updated_at FROM users WHERE id=$1 LIMIT 1',
       [String(custom.user_id)]
     );
   }
   if (!user && attrs?.user_email) {
     user = await queryOne(
-      'SELECT id,email,plan,signup_plan,provider_subscription_id FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1',
+      'SELECT id,email,plan,signup_plan,provider_subscription_id,provider_subscription_updated_at FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1',
       [String(attrs.user_email).trim()]
     );
   }
@@ -115,7 +115,7 @@ const recordLemonInvoice = async (user, resource, attrs, subscriptionId, eventNa
       "ON CONFLICT (provider,provider_order_id) DO UPDATE SET status=EXCLUDED.status,currency=EXCLUDED.currency,subtotal_minor=EXCLUDED.subtotal_minor,tax_minor=EXCLUDED.tax_minor,total_minor=EXCLUDED.total_minor,plan=COALESCE(EXCLUDED.plan,orders.plan),metadata=orders.metadata || EXCLUDED.metadata,updated_at=NOW()",
       [
         uuidv4(), user.id, orderKey, subscriptionId ? String(subscriptionId) : null, orderStatus,
-        currency, subtotal ?? total, tax ?? 0, total, user.plan || user.signup_plan || null,
+        currency, subtotal ?? total, tax ?? 0, total, (['starter','growth','pro','agency'].includes(user.plan) ? user.plan : user.signup_plan) || null,
         JSON.stringify({ eventName, invoiceId: String(resource.id), billingReason: attrs.billing_reason || null }),
       ]
     );
