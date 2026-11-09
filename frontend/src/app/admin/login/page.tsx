@@ -32,7 +32,7 @@ export default function OwnerAdminLoginPage() {
     try {
       const data = await request('/auth/admin/verify-email',{userId,otp:code});
       setStageToken(data.stageToken);
-      if(data.requiresTotpSetup){ setSetup(true); setSecret(data.secret); }
+      if(data.requiresTotpSetup){ setSetup(true); setSecret(data.manualKey || data.secret); }
       else setSetup(false);
       setCode(''); setStep('totp');
       setNotice(data.requiresTotpSetup ? 'Add the setup key to your authenticator app, then enter its current code.' : 'Enter the current code from your authenticator app.');
@@ -77,9 +77,9 @@ export default function OwnerAdminLoginPage() {
         </form>}
         {step==='totp'&&<form onSubmit={verifyAuthenticator} style={{display:'grid',gap:14}}>
           {setup&&<div style={{background:'#0b1020',border:'1px solid #303b69',borderRadius:10,padding:13}}>
-            <p style={{fontSize:12,color:'#c7d2fe',margin:'0 0 8px'}}>Authenticator setup key (add it manually in your authenticator app)</p>
-            <code style={{wordBreak:'break-all',fontSize:15,color:'#fff'}}>{secret}</code>
-            <button type="button" onClick={()=>navigator.clipboard?.writeText(secret)} style={{display:'block',marginTop:10,background:'transparent',border:'1px solid #4b5563',color:'#c7d2fe',borderRadius:7,padding:'7px 10px',cursor:'pointer'}}>Copy setup key</button>
+            <p style={{fontSize:12,color:'#c7d2fe',margin:'0 0 8px'}}>Google Authenticator setup key · Base32 · Time-based</p>
+            <code style={{wordBreak:'break-all',fontSize:15,color:'#fff',letterSpacing:1}}>{String(secret).toUpperCase().replace(/[^A-Z2-7]/g,'')}</code>
+            <button type="button" onClick={()=>navigator.clipboard?.writeText(String(secret).toUpperCase().replace(/[^A-Z2-7]/g,''))} style={{display:'block',marginTop:10,background:'transparent',border:'1px solid #4b5563',color:'#c7d2fe',borderRadius:7,padding:'7px 10px',cursor:'pointer'}}>Copy setup key</button>
           </div>}
           <label style={{fontSize:12,color:'#9ca3af'}}>6-digit authenticator code<input style={{...field,marginTop:7,textAlign:'center',letterSpacing:8,fontSize:22}} inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,'').slice(0,6))} required /></label>
           <button style={button} disabled={busy||code.length!==6}>{busy?'Verifying…':setup?'Enable authenticator and sign in':'Verify and open admin panel'}</button>
