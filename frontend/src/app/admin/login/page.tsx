@@ -85,7 +85,8 @@ export default function OwnerAdminLoginPage() {
           <button style={button} disabled={busy||code.length!==6}>{busy?'Verifying…':setup?'Enable authenticator and sign in':'Verify and open admin panel'}</button>
         </form>}
       </div>
-      <p style={{textAlign:'center',marginTop:18,fontSize:12,color:'#6b7280'}}>This is separate from customer sign-in. <Link href="/auth/login" style={{color:'#a5b4fc'}}>Customer login</Link></p>
+      <p style={{textAlign:'center',marginTop:18,fontSize:12,color:'#6b7280'}}><Link href="/admin/setup" style={{color:'#c4b5fd'}}>First-time owner setup / reset password</Link></p>
+      <p style={{textAlign:'center',marginTop:10,fontSize:12,color:'#6b7280'}}>Separate from customer sign-in. <Link href="/auth/login" style={{color:'#a5b4fc'}}>Customer login</Link></p>
     </section>
   </main>;
 }
