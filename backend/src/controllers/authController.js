@@ -9,7 +9,7 @@ const { logSecurityEvent, trackFailedLogin, clearFailedAttempts } = require('../
 
 const signToken = (user) => jwt.sign({ userId: user.id, tokenVersion: Number(user.token_version || 0) }, process.env.JWT_SECRET, { expiresIn: '7d' });
 const generateOTP = () => crypto.randomInt(100000, 1000000).toString();
-const ownerAdminEmail = () => String(process.env.ownerAdminEmail() || '').trim().toLowerCase();
+const ownerAdminEmail = () => String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase();
 
 // REGISTER
 const register = async (req, res) => {
