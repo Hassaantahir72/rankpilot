@@ -11,10 +11,13 @@ Updated: 2026-11-09
 - Upgraded the frontend to Next.js 16.4.5 and React 19.2.5, with patched PostCSS 8.5.32.
 - Wrapped search-parameter pages in Suspense and moved the Google Fonts CSS import before Tailwind directives to support the updated Next.js build.
 - Added a dependency audit workflow that fails if any npm vulnerability remains.
+- Added Lemon Squeezy order, invoice, refund and durable webhook-inbox ledger writes; plan access is granted only after a signed successful invoice event and a configured variant match.
+- Added Stripe charge-refund ledger handling for legacy subscriptions.
+- Made `/api/health` verify a live PostgreSQL query so Render can use it as a readiness check.
 
 ## Validation recorded
 
-- Backend test suite: 6 tests passed.
+- Backend test suite: 8 tests passed, including Lemon Squeezy signature and minor-unit validation.
 - Backend npm audit: 0 vulnerabilities.
 - Frontend Next.js production build: all 49 routes generated successfully on the final security-remediation run.
 - Frontend npm audit: 0 vulnerabilities on the final security-remediation run.
