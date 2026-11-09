@@ -5,6 +5,8 @@ const c = require('../controllers/authController');
 const { authMiddleware } = require('../middleware/auth');
 const adminAuth = require('../controllers/adminAuthController');
 const adminAuthLimiter = require('express-rate-limit')({ windowMs: 15*60*1000, max: 8, standardHeaders: true, legacyHeaders: false });
+router.post('/admin/request-setup', adminAuthLimiter, adminAuth.requestOwnerSetup);
+router.post('/admin/complete-setup', adminAuthLimiter, adminAuth.completeOwnerSetup);
 router.post('/admin/login', adminAuthLimiter, adminAuth.login);
 router.post('/admin/verify-email', adminAuthLimiter, adminAuth.verifyEmail);
 router.post('/admin/enroll-totp', adminAuthLimiter, adminAuth.enrollTotp);
