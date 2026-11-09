@@ -222,10 +222,8 @@ router.post('/lemon-squeezy', async (req, res) => {
       if (!invoiceUser) throw new Error('Subscription invoice could not be matched to a RankPilot account.');
       const invoiceResult = await recordLemonInvoice(invoiceUser, resource, attrs, subscriptionId, eventName, eventKey, ledgerAvailable);
       if (subscriptionId && invoiceResult.paymentStatus === 'succeeded') {
-        const customPlan = event?.meta?.custom_data?.plan;
-        const variantPlan = variantPlans()[String(invoiceUser.provider_variant_id || '')];
-        const selectedPlan = variantPlan || (['starter','growth','pro','agency'].includes(customPlan) ? customPlan
-          : (['starter','growth','pro','agency'].includes(invoiceUser.signup_plan) ? invoiceUser.signup_plan : invoiceUser.plan));
+        const selectedPlan = variantPlans()[String(invoiceUser.provider_variant_id || '')];
+        if (!selectedPlan) throw new Error('Payment succeeded for an unconfigured variant; refusing to grant paid access.');
         await query(
           "UPDATE users SET plan=COALESCE($1,plan),subscription_status='active',payment_provider='lemon_squeezy',signup_plan=NULL,signup_interval=NULL," +
           "provider_subscription_id=$2,provider_customer_id=COALESCE(provider_customer_id,$3)," +
