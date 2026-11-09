@@ -1,14 +1,12 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
 
 const api = axios.create({ baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api', headers: { 'Content-Type':'application/json' } });
 
 export default function OwnerAdminLoginPage() {
-  const router = useRouter();
-  const [email,setEmail] = useState('hassaantahir991@gmail.com');
+  const [email,setEmail] = useState('');
   const [password,setPassword] = useState('');
   const [code,setCode] = useState('');
   const [stageToken,setStageToken] = useState('');
@@ -69,7 +67,7 @@ export default function OwnerAdminLoginPage() {
         {error&&<p role="alert" style={{background:'#3b1119',color:'#fca5a5',padding:12,borderRadius:9,fontSize:13}}>{error}</p>}
         {notice&&<p style={{background:'#171b35',color:'#c7d2fe',padding:12,borderRadius:9,fontSize:13,lineHeight:1.5}}>{notice}</p>}
         {step==='credentials'&&<form onSubmit={startLogin} style={{display:'grid',gap:14}}>
-          <label style={{fontSize:12,color:'#9ca3af'}}>Owner email<input style={{...field,marginTop:7}} type="email" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="username" required /></label>
+          <label style={{fontSize:12,color:'#9ca3af'}}>Owner email<input style={{...field,marginTop:7}} type="email" placeholder="Owner email" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="username" required /></label>
           <label style={{fontSize:12,color:'#9ca3af'}}>Password<input style={{...field,marginTop:7}} type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" required /></label>
           <button style={button} disabled={busy}>{busy?'Checking…':'Continue securely'}</button>
         </form>}
