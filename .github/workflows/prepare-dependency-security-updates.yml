@@ -1,0 +1,51 @@
+name: Prepare tested dependency security updates
+
+on:
+  push:
+    branches:
+      - security/restrict-public-db-access
+
+permissions:
+  contents: write
+
+jobs:
+  remediate:
+    if: github.event.head_commit.message != 'Apply tested dependency security updates'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/restrict-public-db-access
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Safely update backend dependencies
+        working-directory: backend
+        run: |
+          npm ci
+          npm audit fix
+          npm install --save-exact node-cron@4.6.0 nodemailer@10.4.0 uuid@11.1.1
+          npm test
+          npm audit --audit-level=low
+      - name: Safely update frontend dependencies
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: https://rankpilot-ixnc.onrender.com/api
+        run: |
+          npm ci
+          npm audit fix
+          npm install --save-exact next@14.2.35
+          npm run build
+          npm audit --audit-level=low
+      - name: Commit tested package and lockfile updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/package.json backend/package-lock.json frontend/package.json frontend/package-lock.json
+          if git diff --cached --quiet; then
+            echo "No dependency changes to commit."
+            exit 0
+          fi
+          git commit -m "Apply tested dependency security updates"
+          git push origin HEAD:security/restrict-public-db-access
