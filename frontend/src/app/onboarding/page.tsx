@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { authApi, seoApi } from '@/lib/api';
@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/auth';
 
 const PAID_PLANS = ['starter', 'growth', 'pro', 'agency'];
 
-export default function OnboardingPage() {
+function OnboardingContent() {
   const router = useRouter();
   const params = useSearchParams();
   const { user, limits, loading: authLoading, refreshUser } = useAuth();
@@ -196,3 +196,8 @@ const styles: Record<string, React.CSSProperties> = {
   error: { color: '#fca5a5', background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', borderRadius: 10, padding: 12, fontSize: 13 },
   link: { display: 'inline-block', color: '#a5b4fc', marginTop: 16, fontSize: 13 },
 };
+
+
+export default function OnboardingPage() {
+  return <Suspense fallback={<main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#08080f', color: '#fff' }}>Loading onboarding…</main>}><OnboardingContent /></Suspense>;
+}
