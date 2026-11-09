@@ -22,6 +22,7 @@ const register = async (req, res) => {
 
     const requestedPlan = String(req.body.selectedPlan || '').toLowerCase();
     const ownerAccountIntent = email.toLowerCase() === ownerAdminEmail();
+    if (ownerAccountIntent) return res.status(403).json({ error: 'Owner accounts must be created through the separate owner setup process.' });
     const paidPlanIntent = ['starter','growth','pro','agency'].includes(requestedPlan);
     const requestedInterval = req.body.selectedInterval === 'annual' ? 'annual' : 'monthly';
     let claim = null;
