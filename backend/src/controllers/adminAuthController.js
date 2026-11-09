@@ -144,7 +144,7 @@ const requestOwnerSetup = async (req,res) => {
     return res.json({ message: generic });
   } catch (err) {
     console.error('Owner setup request failed:',err.message);
-    return res.json({ message: generic });
+    return reject(res,503,'RankPilot could not send the setup email. Email delivery is unavailable right now; please try again later.');
   }
 };
 const completeOwnerSetup = async (req,res) => {
