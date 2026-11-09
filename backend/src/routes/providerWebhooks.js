@@ -1,5 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
+const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
 const { query, queryOne } = require('../config/db');
 
@@ -177,6 +178,7 @@ router.post('/lemon-squeezy', async (req, res) => {
   const eventName = event?.meta?.event_name || req.headers['x-event-name'];
   const resource = event?.data;
   const attrs = resource?.attributes || {};
+  const resourceId = String(resource?.id || '');
   const subscriptionId = resource?.type === 'subscriptions' ? String(resource.id || '') : (attrs.subscription_id ? String(attrs.subscription_id) : '');
   if (!eventName || !resource?.id) return res.status(400).json({ error: 'Incomplete webhook payload.' });
 
@@ -258,12 +260,10 @@ router.post('/lemon-squeezy', async (req, res) => {
     const plan = variantPlans()[String(attrs.variant_id || '')];
     const custom = event?.meta?.custom_data || {};
     let user = await findAccount(custom, attrs, subscriptionId);
-    if (!user) {
-      await query('DELETE FROM payment_provider_events WHERE event_key=$1', [eventKey]);
-      return res.status(200).json({ received: true, pending: true });
-    }
+    if (!user) throw new Error('Subscription event could not be matched to a RankPilot account.');
     const eventUpdatedAt = attrs.updated_at && !Number.isNaN(Date.parse(attrs.updated_at)) ? new Date(attrs.updated_at) : null;
     if (eventUpdatedAt && user.provider_subscription_updated_at && eventUpdatedAt < new Date(user.provider_subscription_updated_at)) {
+      if (ledgerAvailable) await query("UPDATE provider_event_inbox SET status='ignored',processed_at=NOW() WHERE provider='lemon_squeezy' AND provider_event_id=$1", [eventKey]);
       return res.status(200).json({ received: true, stale: true });
     }
 
@@ -277,6 +277,9 @@ router.post('/lemon-squeezy', async (req, res) => {
           [plan,subscriptionId,String(attrs.customer_id || ''),String(attrs.variant_id),user.id,eventUpdatedAt,endsAt]
         );
         if (updated.rowCount !== 1) throw new Error('Subscription could not be safely linked to this account.');
+        if (attrs.order_id && ledgerAvailable) {
+          await query("UPDATE orders SET subscription_id=$1,updated_at=NOW() WHERE provider='lemon_squeezy' AND provider_order_id=$2 AND user_id=$3", [subscriptionId, String(attrs.order_id), user.id]);
+        }
       } else if (attrs.status && attrs.status !== 'active' && subscriptionId) {
         await query("UPDATE users SET subscription_status='past_due',provider_subscription_updated_at=COALESCE($3,NOW()),updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId,eventUpdatedAt]);
       }
