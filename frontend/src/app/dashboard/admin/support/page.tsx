@@ -31,7 +31,7 @@ export default function AdminSupportPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!loading && !isAdmin) { router.push('/dashboard'); return; }
+    if (!loading && !isAdmin) { router.push('/admin/login'); return; }
     if (isAdmin) { load(); }
   }, [isAdmin, loading]);
 
