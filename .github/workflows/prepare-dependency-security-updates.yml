@@ -45,7 +45,15 @@ jobs:
           npm ls next axios postcss || true
           npm run build
           npm audit --json > ../frontend-audit-final.json || true
-          node -e "const r=require('../frontend-audit-final.json'); const v=r.metadata?.vulnerabilities||{}; console.log('Frontend audit:',v); if ((v.total||0)>0) process.exit(1)"
+          node - <<'NODE'
+          const r = require('../frontend-audit-final.json');
+          const v = r.metadata?.vulnerabilities || {};
+          console.log('Frontend audit:', v);
+          for (const [name, item] of Object.entries(r.vulnerabilities || {})) {
+            console.log(JSON.stringify({ package: name, severity: item.severity, range: item.range, fixAvailable: item.fixAvailable, via: (item.via || []).map(x => typeof x === 'string' ? x : x.title) }));
+          }
+          if ((v.total || 0) > 0) process.exit(1);
+          NODE
       - name: Commit tested package and lockfile updates
         run: |
           git config user.name "github-actions[bot]"
