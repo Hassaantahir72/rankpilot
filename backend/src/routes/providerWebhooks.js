@@ -21,19 +21,19 @@ const findAccount = async (custom, attrs, subscriptionId) => {
   let user = null;
   if (subscriptionId) {
     user = await queryOne(
-      "SELECT id,email,plan,signup_plan,provider_subscription_id,provider_subscription_updated_at FROM users WHERE payment_provider='lemon_squeezy' AND provider_subscription_id=$1 LIMIT 1",
+      "SELECT id,email,plan,signup_plan,provider_subscription_id,provider_subscription_updated_at,provider_variant_id FROM users WHERE payment_provider='lemon_squeezy' AND provider_subscription_id=$1 LIMIT 1",
       [String(subscriptionId)]
     );
   }
   if (!user && custom?.user_id) {
     user = await queryOne(
-      'SELECT id,email,plan,signup_plan,provider_subscription_id,provider_subscription_updated_at FROM users WHERE id=$1 LIMIT 1',
+      'SELECT id,email,plan,signup_plan,provider_subscription_id,provider_subscription_updated_at,provider_variant_id FROM users WHERE id=$1 LIMIT 1',
       [String(custom.user_id)]
     );
   }
   if (!user && attrs?.user_email) {
     user = await queryOne(
-      'SELECT id,email,plan,signup_plan,provider_subscription_id,provider_subscription_updated_at FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1',
+      'SELECT id,email,plan,signup_plan,provider_subscription_id,provider_subscription_updated_at,provider_variant_id FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1',
       [String(attrs.user_email).trim()]
     );
   }
@@ -115,7 +115,7 @@ const recordLemonInvoice = async (user, resource, attrs, subscriptionId, eventNa
       "ON CONFLICT (provider,provider_order_id) DO UPDATE SET status=EXCLUDED.status,currency=EXCLUDED.currency,subtotal_minor=EXCLUDED.subtotal_minor,tax_minor=EXCLUDED.tax_minor,total_minor=EXCLUDED.total_minor,plan=COALESCE(EXCLUDED.plan,orders.plan),metadata=orders.metadata || EXCLUDED.metadata,updated_at=NOW()",
       [
         uuidv4(), user.id, orderKey, subscriptionId ? String(subscriptionId) : null, orderStatus,
-        currency, subtotal ?? total, tax ?? 0, total, (['starter','growth','pro','agency'].includes(user.plan) ? user.plan : user.signup_plan) || null,
+        currency, subtotal ?? total, tax ?? 0, total, (variantPlans()[String(user.provider_variant_id || '')] || (['starter','growth','pro','agency'].includes(user.plan) ? user.plan : user.signup_plan)) || null,
         JSON.stringify({ eventName, invoiceId: String(resource.id), billingReason: attrs.billing_reason || null }),
       ]
     );
@@ -223,8 +223,9 @@ router.post('/lemon-squeezy', async (req, res) => {
       const invoiceResult = await recordLemonInvoice(invoiceUser, resource, attrs, subscriptionId, eventName, eventKey, ledgerAvailable);
       if (subscriptionId && invoiceResult.paymentStatus === 'succeeded') {
         const customPlan = event?.meta?.custom_data?.plan;
-        const selectedPlan = ['starter','growth','pro','agency'].includes(customPlan) ? customPlan
-          : (['starter','growth','pro','agency'].includes(invoiceUser.signup_plan) ? invoiceUser.signup_plan : invoiceUser.plan);
+        const variantPlan = variantPlans()[String(invoiceUser.provider_variant_id || '')];
+        const selectedPlan = variantPlan || (['starter','growth','pro','agency'].includes(customPlan) ? customPlan
+          : (['starter','growth','pro','agency'].includes(invoiceUser.signup_plan) ? invoiceUser.signup_plan : invoiceUser.plan));
         await query(
           "UPDATE users SET plan=COALESCE($1,plan),subscription_status='active',payment_provider='lemon_squeezy'," +
           "provider_subscription_id=$2,provider_customer_id=COALESCE(provider_customer_id,$3)," +
@@ -263,8 +264,8 @@ router.post('/lemon-squeezy', async (req, res) => {
         if (conflict) throw new Error('Provider subscription is already linked to another account.');
         const endsAt = attrs.ends_at && !Number.isNaN(Date.parse(attrs.ends_at)) ? new Date(attrs.ends_at) : null;
         const updated = await query(
-          "UPDATE users SET plan=$1,subscription_status='active',payment_provider='lemon_squeezy',provider_subscription_id=$2,provider_customer_id=$3,provider_variant_id=$4,provider_subscription_updated_at=COALESCE($6,NOW()),provider_subscription_ends_at=$7,signup_plan=NULL,signup_interval=NULL,updated_at=NOW() WHERE id=$5 AND stripe_subscription_id IS NULL AND (payment_provider IS NULL OR payment_provider='lemon_squeezy') AND (provider_subscription_id IS NULL OR provider_subscription_id=$2)",
-          [plan,subscriptionId,String(attrs.customer_id || ''),String(attrs.variant_id),user.id,eventUpdatedAt,endsAt]
+          "UPDATE users SET subscription_status='active',payment_provider='lemon_squeezy',provider_subscription_id=$1,provider_customer_id=COALESCE(provider_customer_id,$2),provider_variant_id=$3,provider_subscription_updated_at=COALESCE($4,NOW()),provider_subscription_ends_at=$5,updated_at=NOW() WHERE id=$6 AND stripe_subscription_id IS NULL AND (payment_provider IS NULL OR payment_provider='lemon_squeezy') AND (provider_subscription_id IS NULL OR provider_subscription_id=$1)",
+          [subscriptionId,attrs.customer_id ? String(attrs.customer_id) : null,String(attrs.variant_id),eventUpdatedAt,endsAt,user.id]
         );
         if (updated.rowCount !== 1) throw new Error('Subscription could not be safely linked to this account.');
         if (attrs.order_id && ledgerAvailable) {
