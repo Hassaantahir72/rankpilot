@@ -20,11 +20,41 @@ const transporter = () => {
 };
 
 const send = async (to, subject, html) => {
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS || !process.env.EMAIL_FROM) {
-    throw new Error('Email is not configured. Set SMTP_USER, SMTP_PASS, and EMAIL_FROM in the backend environment.');
+  if (!process.env.EMAIL_FROM) throw new Error('Email sender is not configured. Set EMAIL_FROM in the backend environment.');
+
+  // Render Free blocks outbound SMTP ports 25, 465 and 587. Prefer Brevo's HTTPS API.
+  if (process.env.BREVO_API_KEY) {
+    const fromValue = String(process.env.EMAIL_FROM).trim();
+    const match = fromValue.match(/^(.*?)\\s*<([^<>]+)>$/);
+    const sender = match
+      ? { name: match[1].replace(/^["']|["']$/g, '').trim(), email: match[2].trim() }
+      : { email: fromValue };
+    try {
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'accept': 'application/json', 'api-key': process.env.BREVO_API_KEY, 'content-type': 'application/json' },
+        body: JSON.stringify({ sender, to: [{ email: to }], subject, htmlContent: html }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!response.ok) {
+        const detail = (await response.text()).slice(0, 500);
+        throw new Error('Brevo API returned HTTP ' + response.status + ': ' + detail);
+      }
+      return;
+    } catch (err) {
+      console.error('Email delivery failed through Brevo API:', err.message);
+      throw err;
+    }
+  }
+
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    throw new Error('Email is not configured. Set BREVO_API_KEY for Render Free, or SMTP_USER and SMTP_PASS on a paid Render service.');
   }
   try {
-    await transporter().sendMail({ from: process.env.EMAIL_FROM || 'RankPilot <noreply@rankpilot.ai>', to, subject, html });
+    await transporter().sendMail({
+      from: process.env.EMAIL_FROM, to, subject, html,
+      connectionTimeout: 15000, greetingTimeout: 15000, socketTimeout: 20000,
+    });
   } catch (err) {
     console.error('Email delivery failed:', err.message);
     throw err;
