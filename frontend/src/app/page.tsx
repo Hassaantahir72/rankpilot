@@ -52,6 +52,16 @@ function FAQ({ q, a }: { q: string; a: string }) {
 const LOGOS = ['Google Ads','Meta Ads','Shopify','WordPress','Webflow','HubSpot','Stripe','Salesforce','Mailchimp','Zapier','Slack','Notion','WooCommerce','Wix'];
 
 export default function HomePage() {
+  const [siteContent, setSiteContent] = useState<Record<string,string>>({});
+  useEffect(() => {
+    let active = true;
+    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    fetch(base.replace(/\\/$/, '') + '/site-content', { cache: 'no-store' })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => { if (active && data?.content) setSiteContent(data.content); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
   return (
     <>
       <style>{`
@@ -59,6 +69,7 @@ export default function HomePage() {
         @keyframes borderPulse{0%,100%{border-color:rgba(99,102,241,0.25)}50%{border-color:rgba(99,102,241,0.6)}}
       `}</style>
       <Navbar />
+      {siteContent.homepage_notice && <div role="status" style={{background:'rgba(99,102,241,.14)',borderBottom:'1px solid rgba(129,140,248,.25)',padding:'10px 18px',textAlign:'center',color:'#c7d2fe',fontSize:13}}>{siteContent.homepage_notice}</div>}
 
       {/* HERO */}
       <section style={{ position:'relative',minHeight:'100vh',display:'flex',alignItems:'center',overflow:'hidden',paddingTop:80 }}>
@@ -68,15 +79,15 @@ export default function HomePage() {
             <span className="tag"><span style={{ width:7,height:7,borderRadius:'50%',background:'#4ade80',display:'inline-block',marginRight:2 }} />14-day free trial · No credit card required</span>
           </div>
           <h1 className="animate-fade-up delay-1" style={{ fontSize:'clamp(2.6rem,7vw,5.6rem)',fontWeight:900,lineHeight:1.06,letterSpacing:'-0.04em',marginBottom:28,fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
-            Your AI-Powered<br />
+            {siteContent.homepage_hero_title || 'Your AI-Powered'}<br />
             <TypingText words={['SEO Expert','Marketing Team','Ad Manager','Content Writer','Growth Engine']} />
           </h1>
           <p className="animate-fade-up delay-2" style={{ fontSize:'clamp(1rem,2vw,1.2rem)',color:'rgba(255,255,255,0.5)',maxWidth:580,margin:'0 auto 44px',lineHeight:1.75 }}>
-            Paste your URL. RankPilot audits your SEO, writes optimized content, and helps prepare Google and Meta ad campaigns with AI-powered tools.
+            {siteContent.homepage_hero_subtitle || 'Paste your URL. RankPilot audits your SEO, writes optimized content, and helps prepare Google and Meta ad campaigns with AI-powered tools.'}
           </p>
           <div className="animate-fade-up delay-3" style={{ display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap',marginBottom:56 }}>
             <Link href="/auth/signup?flow=trial" className="btn-primary" style={{ fontSize:16,padding:'15px 32px' }}>
-              Start free — no card needed
+              {siteContent.homepage_cta_label || 'Start free — no card needed'}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </Link>
             <Link href="/features" className="btn-ghost" style={{ fontSize:16,padding:'15px 32px' }}>
