@@ -47,6 +47,7 @@ jobs:
               via
             }));
           }
+          if ((meta.total || 0) > 0) process.exit(1);
           NODE
       - name: Upload full npm audit report
         if: always()
