@@ -45,7 +45,7 @@ export default function OwnerAdminLoginPage() {
       const data = await request(setup?'/auth/admin/enroll-totp':'/auth/admin/verify-totp', setup?{stageToken,secret,code}:{stageToken,code});
       localStorage.setItem('rp_token',data.token);
       localStorage.removeItem('rp_user');
-      window.location.assign('/dashboard/admin');
+      window.location.assign('/admin');
     } catch(err:any) { setError(err.response?.data?.error || 'Authenticator verification failed.'); }
     finally { setBusy(false); }
   };
