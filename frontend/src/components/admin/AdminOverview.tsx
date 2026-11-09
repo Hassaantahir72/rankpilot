@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import { adminApi } from '@/lib/api';
 
-type Tab = 'overview'|'users'|'settings'|'security'|'contacts'|'billing'|'payment-methods'|'log';
+type Tab = 'overview'|'users'|'plans'|'settings'|'security'|'contacts'|'billing'|'payment-methods'|'log';
 
 function StatCard({ icon, label, value, color, sub }: any) {
   return (
@@ -33,6 +33,8 @@ export default function AdminPage() {
   const [auditLog, setAuditLog] = useState<any[]>([]);
   const [secEvents, setSecEvents] = useState<any[]>([]);
   const [settings, setSettings] = useState<any[]>([]);
+  const [planLimits, setPlanLimits] = useState<any[]>([]);
+  const [planEdits, setPlanEdits] = useState<Record<string, any>>({});
   const [blockedIPs, setBlockedIPs] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [userDetail, setUserDetail] = useState<any>(null);
@@ -59,7 +61,7 @@ export default function AdminPage() {
   useEffect(() => {
     const applyHash = () => {
       const requested = window.location.hash.replace(/^#/, '') as Tab;
-      const allowed: Tab[] = ['overview','users','settings','security','contacts','billing','payment-methods','log'];
+      const allowed: Tab[] = ['overview','users','plans','settings','security','contacts','billing','payment-methods','log'];
       if (allowed.includes(requested)) setTab(requested);
     };
     applyHash();
@@ -88,6 +90,7 @@ export default function AdminPage() {
         if (tab === 'payment-methods' && isAdmin) await loadPaymentMethods();
         if (tab === 'log') await loadAuditLog();
         if (tab === 'settings' && isAdmin) await loadSettings();
+        if (tab === 'plans' && isAdmin) await loadPlanLimits();
         if (tab === 'security') { await loadSecEvents(); if (isAdmin) await loadBlockedIPs(); }
       } catch (e:any) { setLoadError(e.response?.data?.error || 'Could not load this admin section.'); }
     };
@@ -104,6 +107,7 @@ export default function AdminPage() {
       else if (tab === 'payment-methods') await loadPaymentMethods();
       else if (tab === 'log') await loadAuditLog();
       else if (tab === 'settings') await loadSettings();
+      else if (tab === 'plans') await loadPlanLimits();
       else if (tab === 'security') { await loadSecEvents(); await loadBlockedIPs(); }
       setLastUpdated(new Date());
     } catch (e:any) { setLoadError(e.response?.data?.error || 'Could not refresh this section.'); }
@@ -129,6 +133,8 @@ export default function AdminPage() {
   const loadAuditLog  = async () => { const { data } = await adminApi.getAuditLog(); setAuditLog(data.log || []); setLastUpdated(new Date()); };
   const loadSecEvents = async () => { const { data } = await adminApi.getSecurityEvents(); setSecEvents(data.events || []); setLastUpdated(new Date()); };
   const loadSettings  = async () => { const { data } = await adminApi.getSiteSettings(); setSettings(data.settings || []); setLastUpdated(new Date()); };
+  const loadPlanLimits = async () => { const { data } = await adminApi.getPlanLimits(); const rows = data.plans || []; setPlanLimits(rows); setPlanEdits(Object.fromEntries(rows.map((row:any) => [row.plan, { ...row }]))); setLastUpdated(new Date()); };
+  const doSavePlanLimits = async (plan:string) => { try { const { data } = await adminApi.updatePlanLimits(plan, planEdits[plan]); showMsg(data.message || 'Plan limits saved.'); await loadPlanLimits(); } catch (e:any) { showMsg(e.response?.data?.error || 'Could not save plan limits.', 'err'); } };
   const loadPaymentMethods = async () => { try { const { data } = await adminApi.getPaymentMethods(); setPaymentMethods(data.methods || []); } catch (e:any) { showMsg(e.response?.data?.error || 'Could not load payment methods.', 'err'); } };
   const doCreatePaymentMethod = async () => {
     try {
@@ -237,6 +243,7 @@ export default function AdminPage() {
   const TABS = [
     { id:'overview',  l:'Overview',  i:'📊' },
     { id:'users',     l:'Users',     i:'👥' },
+    { id:'plans',     l:'Plans & Limits', i:'🧩' },
     { id:'settings',  l:'Settings',  i:'⚙️' },
     { id:'security',  l:'Security',  i:'🛡️' },
     { id:'contacts',  l:'Messages',  i:'💬' },
@@ -518,6 +525,40 @@ export default function AdminPage() {
             </div>
           </div>
         ) : <div style={{ padding:40,textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:14 }}>Superadmin access required to manage payment methods.</div>
+      )}
+
+      {/* PLAN LIMITS & ENTITLEMENTS */}
+      {tab === 'plans' && (
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(320px,1fr))',gap:14}}>
+          {planLimits.map((plan:any) => {
+            const edit = planEdits[plan.plan] || plan;
+            const numericFields = [['max_websites','Websites'],['max_keywords','Tracked keywords'],['max_audits_per_month','Audits / month'],['max_content_per_month','AI content / month'],['max_social_posts_per_month','Social posts / month']];
+            const featureFields = [['google_ads','Google Ads'],['meta_ads','Meta Ads'],['ab_testing','A/B testing'],['white_label','White label'],['api_access','API access'],['competitor_analysis','Competitor analysis'],['weekly_reports','Weekly reports'],['priority_support','Priority support']];
+            return <section key={plan.plan} style={{background:'rgba(255,255,255,.025)',border:'1px solid rgba(255,255,255,.08)',borderRadius:14,padding:18}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+                <h3 style={{fontSize:16,fontWeight:800,textTransform:'capitalize'}}>{plan.plan} plan</h3>
+                <span style={{fontSize:10,color:'#a5b4fc'}}>Server enforced</span>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                {numericFields.map(([key,label]) => <label key={key} style={{fontSize:11,color:'rgba(255,255,255,.55)'}}>{label}
+                  <input className="input-dark" type="number" min="0" max="1000000" value={edit[key] ?? 0} onChange={e=>setPlanEdits((prev:any)=>({...prev,[plan.plan]:{...edit,[key:Number(e.target.value)}}))} style={{display:'block',width:'100%',marginTop:5,padding:'8px 9px'}}/>
+                </label>)}
+              </div>
+              <label style={{display:'block',fontSize:11,color:'rgba(255,255,255,.55)',marginTop:12}}>Rank tracking frequency
+                <select className="input-dark" value={edit.rank_tracking_frequency || 'monthly'} onChange={e=>setPlanEdits((prev:any)=>({...prev,[plan.plan]:{...edit,rank_tracking_frequency:e.target.value}}))} style={{display:'block',width:'100%',marginTop:5,padding:'8px 9px'}}>
+                  {['monthly','weekly','daily'].map(v=><option key={v} value={v}>{v}</option>)}
+                </select>
+              </label>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:9,marginTop:14}}>
+                {featureFields.map(([key,label])=><label key={key} style={{display:'flex',alignItems:'center',gap:7,fontSize:11,color:'rgba(255,255,255,.7)'}}>
+                  <input type="checkbox" checked={Boolean(edit[key])} onChange={e=>setPlanEdits((prev:any)=>({...prev,[plan.plan]:{...edit,[key]:e.target.checked}}))}/>{label}
+                </label>)}
+              </div>
+              <button onClick={()=>doSavePlanLimits(plan.plan)} style={{marginTop:16,width:'100%',padding:'9px 12px',border:0,borderRadius:8,background:'#4f46e5',color:'#fff',fontWeight:700,cursor:'pointer'}}>Save {plan.plan} entitlements</button>
+            </section>;
+          })}
+          {!planLimits.length && <p style={{color:'rgba(255,255,255,.45)'}}>No plan limit records found.</p>}
+        </div>
       )}
 
       {/* SETTINGS (superadmin only) */}
