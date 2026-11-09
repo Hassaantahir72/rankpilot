@@ -502,7 +502,11 @@ INSERT INTO site_settings (key, value, description) VALUES
   ('free_plan_enabled', 'true',   'Allow users to stay on free plan (true/false)'),
   ('site_notice',       '',       'Banner notice shown to all users (empty = hidden)'),
   ('max_free_websites', '1',      'Max websites on free plan'),
-  ('trial_days',        '14',     'Number of trial days for new signups')
+  ('trial_days',        '14',     'Number of trial days for new signups'),
+  ('homepage_hero_title',    'Your AI-Powered', 'Homepage hero title, first line'),
+  ('homepage_hero_subtitle', 'Paste your URL. RankPilot audits your SEO, writes optimized content, and helps prepare Google and Meta ad campaigns with AI-powered tools.', 'Homepage hero description'),
+  ('homepage_cta_label',     'Start free — no card needed', 'Homepage primary call-to-action label'),
+  ('homepage_notice',        '', 'Optional announcement displayed above the homepage hero')
 ON CONFLICT (key) DO NOTHING;
 
 -- Run these if you already ran the schema before and just need the new tables:
