@@ -541,7 +541,7 @@ export default function AdminPage() {
               </div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
                 {numericFields.map(([key,label]) => <label key={key} style={{fontSize:11,color:'rgba(255,255,255,.55)'}}>{label}
-                  <input className="input-dark" type="number" min="0" max="1000000" value={edit[key] ?? 0} onChange={e=>setPlanEdits((prev:any)=>({...prev,[plan.plan]:{...edit,[key:Number(e.target.value)}}))} style={{display:'block',width:'100%',marginTop:5,padding:'8px 9px'}}/>
+                  <input className="input-dark" type="number" min="0" max="1000000" value={edit[key] ?? 0} onChange={e=>setPlanEdits((prev:any)=>({...prev,[plan.plan]:{...edit,[key]:Number(e.target.value)}}))} style={{display:'block',width:'100%',marginTop:5,padding:'8px 9px'}}/>
                 </label>)}
               </div>
               <label style={{display:'block',fontSize:11,color:'rgba(255,255,255,.55)',marginTop:12}}>Rank tracking frequency
