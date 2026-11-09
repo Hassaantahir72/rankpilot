@@ -45,7 +45,7 @@ const recordLemonOrder = async (user, resource, attrs, eventName, eventKey, ledg
   const total = minorAmount(attrs.total);
   const subtotal = minorAmount(attrs.subtotal);
   const tax = minorAmount(attrs.tax);
-  const currency = String(attrs.currency || 'USD').toUpperCase();
+  const currency = String(attrs.currency || '').toUpperCase();
   if (total === null || !/^[A-Z]{3}$/.test(currency)) throw new Error('Lemon Squeezy order is missing a valid total or currency.');
   const variantId = attrs.first_order_item?.variant_id || attrs.variant_id || '';
   const plan = variantPlans()[String(variantId)] || null;
