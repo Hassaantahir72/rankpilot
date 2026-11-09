@@ -44,7 +44,7 @@ In Lemon Squeezy, create a webhook pointing to:
 
 `https://rankpilot-ixnc.onrender.com/api/webhooks/lemon-squeezy`
 
-Set the exact signing secret in `LEMONSQUEEZY_WEBHOOK_SECRET`. Subscribe to at least: order-created, order-refunded, subscription-created, subscription-updated, subscription-resumed, subscription-unpaused, subscription-cancelled, subscription-expired, subscription-paused, subscription-payment-success, subscription-payment-recovered, subscription-payment-failed, and subscription-payment-refunded. Confirm the exact event names in the current Lemon Squeezy dashboard before production. The order and invoice events are required for the admin orders/transactions ledger.
+Set the exact signing secret in `LEMONSQUEEZY_WEBHOOK_SECRET`. Subscribe to these exact event names: `order_created`, `order_refunded`, `subscription_created`, `subscription_updated`, `subscription_resumed`, `subscription_unpaused`, `subscription_cancelled`, `subscription_expired`, `subscription_paused`, `subscription_payment_success`, `subscription_payment_recovered`, `subscription_payment_failed`, and `subscription_payment_refunded`. Confirm the exact event names in the current Lemon Squeezy dashboard before production. The order and invoice events are required for the admin orders/transactions ledger.
 
 After configuring the variables, create the Lemon Squeezy entry in Admin → Payment Methods. It starts disabled. The backend checks all credentials and eight monthly/annual variant IDs plus the explicit `LEMONSQUEEZY_ADAPTER_READY=true` gate before allowing the superadmin to enable it. Leave that flag unset until sandbox tests have passed. The frontend does not receive the API key or webhook secret.
 
