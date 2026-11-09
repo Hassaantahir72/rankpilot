@@ -1,1 +1,2 @@
-export { default } from '../dashboard/admin/page';
+'use client';
+export { default } from '@/components/admin/AdminOverview';
