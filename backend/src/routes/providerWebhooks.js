@@ -17,8 +17,9 @@ const variantPlans = () => {
 
 
 const minorAmount = (value) => {
+  if (value === null || value === undefined || value === '') return null;
   const amount = Number(value);
-  return Number.isSafeInteger(amount) && amount >= 0 ? amount : null;
+  return Number.isFinite(amount) && amount >= 0 && amount <= Number.MAX_SAFE_INTEGER ? Math.round(amount) : null;
 };
 
 const findAccount = async (custom, attrs, subscriptionId) => {
@@ -280,8 +281,19 @@ router.post('/lemon-squeezy', async (req, res) => {
         if (attrs.order_id && ledgerAvailable) {
           await query("UPDATE orders SET subscription_id=$1,updated_at=NOW() WHERE provider='lemon_squeezy' AND provider_order_id=$2 AND user_id=$3", [subscriptionId, String(attrs.order_id), user.id]);
         }
-      } else if (attrs.status && attrs.status !== 'active' && subscriptionId) {
-        await query("UPDATE users SET subscription_status='past_due',provider_subscription_updated_at=COALESCE($3,NOW()),updated_at=NOW() WHERE id=$1 AND payment_provider='lemon_squeezy' AND provider_subscription_id=$2", [user.id,subscriptionId,eventUpdatedAt]);
+      } else if (attrs.status && subscriptionId) {
+        const mappedStatus = attrs.status === 'paused' ? 'paused' : attrs.status === 'cancelled' ? 'cancelled' : 'past_due';
+        await query(
+          "UPDATE users SET subscription_status=$1,payment_provider='lemon_squeezy',provider_subscription_id=$2," +
+          "provider_customer_id=COALESCE(provider_customer_id,$3),provider_variant_id=COALESCE($4,provider_variant_id)," +
+          "provider_subscription_updated_at=COALESCE($5,NOW()),updated_at=NOW() " +
+          "WHERE id=$6 AND stripe_subscription_id IS NULL AND (payment_provider IS NULL OR payment_provider='lemon_squeezy') " +
+          "AND (provider_subscription_id IS NULL OR provider_subscription_id=$2)",
+          [mappedStatus,subscriptionId,attrs.customer_id ? String(attrs.customer_id) : null,attrs.variant_id ? String(attrs.variant_id) : null,eventUpdatedAt,user.id]
+        );
+        if (attrs.order_id && ledgerAvailable) {
+          await query("UPDATE orders SET subscription_id=$1,updated_at=NOW() WHERE provider='lemon_squeezy' AND provider_order_id=$2 AND user_id=$3", [subscriptionId,String(attrs.order_id),user.id]);
+        }
       }
     } else if (eventName === 'subscription_cancelled') {
       if (subscriptionId) {
