@@ -1,10 +1,10 @@
 'use client';
-import { useState, useRef } from 'react';
+import { Suspense, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const [step, setStep] = useState<'code' | 'password'>('code');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [password, setPassword] = useState('');
@@ -121,4 +121,9 @@ export default function ResetPasswordPage() {
       </div>
     </div>
   );
+}
+
+
+export default function ResetPasswordPage() {
+  return <Suspense fallback={<main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#08080f', color: '#fff' }}>Loading password reset…</main>}><ResetPasswordContent /></Suspense>;
 }

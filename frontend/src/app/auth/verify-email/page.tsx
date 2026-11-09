@@ -1,11 +1,11 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -179,4 +179,9 @@ export default function VerifyEmailPage() {
       </div>
     </div>
   );
+}
+
+
+export default function VerifyEmailPage() {
+  return <Suspense fallback={<main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#08080f', color: '#fff' }}>Loading email verification…</main>}><VerifyEmailContent /></Suspense>;
 }

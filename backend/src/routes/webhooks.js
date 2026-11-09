@@ -223,6 +223,41 @@ if (ledgerAvailable) {
         break;
       }
 
+      case 'charge.refunded': {
+        const charge = event.data.object;
+        if (!ledgerAvailable || !charge.customer) break;
+        const refundUser = await queryOne('SELECT id FROM users WHERE stripe_customer_id=$1 LIMIT 1', [charge.customer]);
+        if (!refundUser) break;
+        const paymentIntentId = charge.payment_intent ? String(charge.payment_intent) : '';
+        const invoiceId = charge.invoice ? String(charge.invoice) : '';
+        const originalPayment = await queryOne(
+          "SELECT id,order_id,amount_minor FROM payment_transactions WHERE provider='stripe' AND user_id=$1 AND type='payment' AND (provider_transaction_id=$2 OR provider_transaction_id=$3) ORDER BY created_at DESC LIMIT 1",
+          [refundUser.id, paymentIntentId, invoiceId]
+        );
+        const amount = Number(charge.amount_refunded || 0);
+        const originalAmount = Number(charge.amount || originalPayment?.amount_minor || 0);
+        const currency = String(charge.currency || 'usd').toUpperCase();
+        if (!Number.isSafeInteger(amount) || amount <= 0 || !Number.isSafeInteger(originalAmount) || !/^[A-Z]{3}$/.test(currency)) break;
+        const fullRefund = amount >= originalAmount;
+        if (fullRefund && originalPayment) {
+          await query("UPDATE payment_transactions SET status='refunded' WHERE id=$1", [originalPayment.id]);
+        }
+        if (originalPayment?.order_id) {
+          await query(
+            "UPDATE orders SET status=$1,updated_at=NOW() WHERE id=$2",
+            [fullRefund ? 'refunded' : 'partially_refunded', originalPayment.order_id]
+          );
+        }
+        await query(
+          "INSERT INTO payment_transactions (id,order_id,user_id,provider,provider_transaction_id,provider_event_id,type,status,amount_minor,currency,description,occurred_at,metadata) " +
+          "VALUES ($1,$2,$3,'stripe',$4,$5,'refund','succeeded',$6,$7,'Stripe charge refund',NOW(),$8) " +
+          "ON CONFLICT (provider,provider_transaction_id,type) DO UPDATE SET status='succeeded',amount_minor=EXCLUDED.amount_minor,provider_event_id=EXCLUDED.provider_event_id,metadata=payment_transactions.metadata || EXCLUDED.metadata",
+          [uuidv4(), originalPayment?.order_id || null, refundUser.id, 'charge-refund:' + String(charge.id), event.id, amount, currency,
+            JSON.stringify({ chargeId: String(charge.id), paymentIntentId: paymentIntentId || null, invoiceId: invoiceId || null, fullRefund })]
+        );
+        break;
+      }
+
       case 'customer.subscription.deleted': {
         const subscription = event.data.object;
         await query(

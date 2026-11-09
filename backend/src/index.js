@@ -6,7 +6,7 @@ const rateLimit = require('express-rate-limit');
 const cron = require('node-cron');
 
 // Init DB connection pool
-require('./config/db');
+const { queryOne } = require('./config/db');
 
 // Middleware
 const { securityHeaders } = require('./middleware/security');
@@ -65,6 +65,18 @@ app.use('/api/webhooks/lemon-squeezy', express.raw({ type: 'application/json' })
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// ── HEALTH CHECK ─────────────────────────────────────────────────
+app.get('/api/health', async (req, res) => {
+  try {
+    await queryOne('SELECT 1 AS ok');
+    return res.json({ status:'ok', version:'2.0.0', db:'connected', service:'RankPilot API', timestamp:new Date().toISOString() });
+  } catch (err) {
+    console.error('Health check database probe failed:', err.message);
+    return res.status(503).json({ status:'degraded', version:'2.0.0', db:'disconnected', service:'RankPilot API', timestamp:new Date().toISOString() });
+  }
+});
+
+
 // ── RATE LIMITS ───────────────────────────────────────────────────
 app.use('/api/', rateLimit({ windowMs:15*60*1000, max:150, message:{ error:'Too many requests.' }, skipSuccessfulRequests:true }));
 app.use('/api/auth/', rateLimit({ windowMs:15*60*1000, max:20, message:{ error:'Too many auth requests.' } }));
@@ -90,11 +102,6 @@ app.use('/api/contact',   contactRoutes);
 app.use('/api/support',   supportRoutes);
 app.use('/api/features',  featuresRoutes);
 if (gscRoutes) app.use('/api/gsc', gscRoutes);
-
-// ── HEALTH CHECK ─────────────────────────────────────────────────
-app.get('/api/health', (req, res) => {
-  res.json({ status:'ok', version:'2.0.0', db:'PostgreSQL', service:'RankPilot API', timestamp:new Date().toISOString() });
-});
 
 // ── PLAN LIMITS (public) ─────────────────────────────────────────
 app.get('/api/plans', async (req, res) => {

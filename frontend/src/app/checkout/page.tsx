@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
@@ -15,7 +15,7 @@ const PLANS: Record<string, { name: string; monthly: number; annual: number; des
 
 type BillingDetails = { name: string; email: string; country: string; state: string; zip: string; taxNumber: string };
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const router = useRouter();
   const params = useSearchParams();
   const { user, loading: authLoading, refreshUser } = useAuth();
@@ -248,3 +248,8 @@ const styles: Record<string, React.CSSProperties> = {
   legal: { color: 'rgba(255,255,255,.38)', fontSize: 11, lineHeight: 1.6, marginTop: 14 },
   trust: { borderTop: '1px solid rgba(255,255,255,.08)', marginTop: 20, paddingTop: 15, color: 'rgba(255,255,255,.5)', fontSize: 11, lineHeight: 1.6 },
 };
+
+
+export default function CheckoutPage() {
+  return <Suspense fallback={<main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#08080f', color: '#fff' }}>Loading secure checkout…</main>}><CheckoutContent /></Suspense>;
+}
