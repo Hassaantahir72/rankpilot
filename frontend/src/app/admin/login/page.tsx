@@ -1,13 +1,11 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
 
 const api = axios.create({ baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api', headers: { 'Content-Type':'application/json' } });
 
 export default function OwnerAdminLoginPage() {
-  const router = useRouter();
   const [email,setEmail] = useState('');
   const [password,setPassword] = useState('');
   const [code,setCode] = useState('');
