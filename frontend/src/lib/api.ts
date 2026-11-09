@@ -21,7 +21,7 @@ api.interceptors.response.use(
       if (!path.startsWith('/auth')) {
         localStorage.removeItem('rp_token');
         localStorage.removeItem('rp_user');
-        window.location.href = '/auth/login';
+        window.location.href = path.startsWith('/admin') ? '/admin/login' : '/auth/login';
       }
     }
     // Show maintenance mode message
@@ -130,6 +130,10 @@ export const adminApi = {
   createPaymentMethod: (d:any) => api.post('/admin/payment-methods', d),
   updatePaymentMethod: (id:string,d:any) => api.patch(`/admin/payment-methods/${id}`, d),
   deletePaymentMethod: (id:string) => api.delete(`/admin/payment-methods/${id}`),
+
+  // Plan limits and feature entitlements
+  getPlanLimits: () => api.get('/admin/plan-limits'),
+  updatePlanLimits: (plan:string,d:any) => api.patch(`/admin/plan-limits/${encodeURIComponent(plan)}`, d),
 
   // Site settings
   getSiteSettings: ()            => api.get('/admin/settings'),

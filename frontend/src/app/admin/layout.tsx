@@ -1,13 +1,21 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 
 const NAV = [
-  { href: '/admin', icon: '📊', label: 'Overview' },
-  { href: '/admin/commerce', icon: '💳', label: 'Commerce & Orders' },
+  { href: '/admin#overview', icon: '📊', label: 'Overview' },
+  { href: '/admin#users', icon: '👥', label: 'Users & Accounts' },
+  { href: '/admin#plans', icon: '🧩', label: 'Plans & Limits' },
+  { href: '/admin#settings', icon: '⚙️', label: 'Site Settings' },
+  { href: '/admin#security', icon: '🛡️', label: 'Security' },
+  { href: '/admin#contacts', icon: '💬', label: 'Messages' },
+  { href: '/admin#billing', icon: '💰', label: 'Billing' },
+  { href: '/admin#payment-methods', icon: '💳', label: 'Payment Methods' },
+  { href: '/admin#log', icon: '📋', label: 'Audit Log' },
+  { href: '/admin/commerce', icon: '🧾', label: 'Commerce & Orders' },
   { href: '/admin/support', icon: '🛟', label: 'Customer Support' },
 ];
 
@@ -15,7 +23,15 @@ export default function OwnerAdminLayout({ children }: { children: React.ReactNo
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAdmin, loading, logout } = useAuth();
+  const [activeHash, setActiveHash] = useState('overview');
   const publicAdminRoute = pathname === '/admin/login' || pathname === '/admin/setup';
+
+  useEffect(() => {
+    const syncHash = () => setActiveHash(window.location.hash.replace(/^#/, '') || 'overview');
+    syncHash();
+    window.addEventListener('hashchange', syncHash);
+    return () => window.removeEventListener('hashchange', syncHash);
+  }, []);
 
   useEffect(() => {
     if (!publicAdminRoute && !loading && !isAdmin) router.replace('/admin/login');
@@ -36,7 +52,7 @@ export default function OwnerAdminLayout({ children }: { children: React.ReactNo
         </div>
         <nav aria-label="Admin navigation" style={{padding:'16px 10px',display:'grid',gap:5,flex:1,alignContent:'start'}}>
           {NAV.map(item => {
-            const active = item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href);
+            const active = item.href.startsWith('/admin#') ? pathname === '/admin' && activeHash === item.href.split('#')[1] : pathname.startsWith(item.href);
             return <Link key={item.href} href={item.href} style={{display:'flex',alignItems:'center',gap:11,padding:'11px 12px',borderRadius:9,textDecoration:'none',fontSize:13,fontWeight:active?700:500,color:active?'#fff':'rgba(255,255,255,.58)',background:active?'rgba(245,158,11,.12)':'transparent',border:active?'1px solid rgba(245,158,11,.25)':'1px solid transparent'}}>
               <span>{item.icon}</span>{item.label}
             </Link>;
