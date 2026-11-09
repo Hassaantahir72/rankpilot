@@ -104,13 +104,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    const wasAdmin = adminAccess;
     try { await authApi.logout(); } catch { /* Clear local state even if the server cannot be reached. */ }
     localStorage.removeItem('rp_token');
     localStorage.removeItem('rp_user');
     setUser(null);
     setLimits(null);
     setAdminAccess(false);
-    router.push('/auth/login');
+    router.push(wasAdmin ? '/admin/login' : '/auth/login');
   };
 
   // canUse — checks if user's plan supports a feature
