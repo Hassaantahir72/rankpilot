@@ -66,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [limits, setLimits] = useState<Limits | null>(null);
   const [loading, setLoading] = useState(true);
+  const [adminAccess, setAdminAccess] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -82,11 +83,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data } = await authApi.me();
       setUser(data.user);
       setLimits(data.limits);
+      setAdminAccess(data.adminAccess === true);
     } catch {
       localStorage.removeItem('rp_token');
       localStorage.removeItem('rp_user');
       setUser(null);
       setLimits(null);
+      setAdminAccess(false);
     } finally {
       setLoading(false);
     }
@@ -96,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('rp_token', token);
     localStorage.setItem('rp_user', JSON.stringify(userData));
     setUser(userData);
+    setAdminAccess(false);
     refreshUser();
   };
 
@@ -105,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('rp_user');
     setUser(null);
     setLimits(null);
+    setAdminAccess(false);
     router.push('/auth/login');
   };
 
@@ -152,8 +157,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // UI visibility only; the backend independently enforces OWNER_ADMIN_EMAIL.
-  const isAdmin = user?.email?.trim().toLowerCase() === 'hassaantahir991@gmail.com' && user?.email_verified === true;
-  const isSuperAdmin = isAdmin;
+  // Admin visibility is derived from the server's verified MFA session claim, never a client-side email constant.
+  const isAdmin = adminAccess;
+  const isSuperAdmin = adminAccess;
   const trialEnd = user?.trial_ends_at ? new Date(user.trial_ends_at).getTime() : NaN;
   const trialDaysLeft = Number.isFinite(trialEnd)
     ? Math.max(0, Math.ceil((trialEnd - Date.now()) / (24 * 60 * 60 * 1000)))
