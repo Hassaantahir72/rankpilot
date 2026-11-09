@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { queryOne, query } = require('../config/db');
-const { sendOTPEmail } = require('../services/emailService');
+const { sendOTPEmail, sendOwnerSetupEmail } = require('../services/emailService');
 
 const ownerEmail = () => String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase();
 const ownerConfigured = () => Boolean(ownerEmail());
@@ -129,4 +129,45 @@ const verifyTotpLogin = async (req,res) => {
   } catch (err) { return reject(res,401,'Owner sign-in session expired or invalid. Start again.'); }
 };
 
-module.exports = { login, verifyEmail, enrollTotp, verifyTotpLogin };
+
+const requestOwnerSetup = async (req,res) => {
+  const generic = 'If this address is configured as the owner email, a setup link will be sent shortly.';
+  try {
+    const configured = ownerEmail();
+    const supplied = String(req.body.email || '').trim().toLowerCase();
+    if (!configured || supplied !== configured) return res.json({ message: generic });
+    const token = crypto.randomBytes(32).toString('base64url');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    await query('DELETE FROM owner_admin_setup_tokens WHERE expires_at < NOW() OR used_at IS NOT NULL');
+    await query('INSERT INTO owner_admin_setup_tokens (email,token_hash,expires_at) VALUES ($1,$2,NOW()+INTERVAL \'20 minutes\') ON CONFLICT (email) DO UPDATE SET token_hash=EXCLUDED.token_hash,expires_at=EXCLUDED.expires_at,used_at=NULL,created_at=NOW()', [configured,tokenHash]);
+    await sendOwnerSetupEmail(configured, (process.env.FRONTEND_URL || '').replace(/\/$/, '') + '/admin/setup?token=' + encodeURIComponent(token));
+    return res.json({ message: generic });
+  } catch (err) {
+    console.error('Owner setup request failed:',err.message);
+    return res.json({ message: generic });
+  }
+};
+const completeOwnerSetup = async (req,res) => {
+  try {
+    const token = String(req.body.token || '');
+    const password = String(req.body.password || '');
+    if (token.length < 32 || password.length < 12 || password.length > 128) return reject(res,400,'Use a valid setup link and a password of at least 12 characters.');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const pending = await queryOne('SELECT email FROM owner_admin_setup_tokens WHERE token_hash=$1 AND used_at IS NULL AND expires_at>NOW()', [tokenHash]);
+    if (!pending || pending.email !== ownerEmail()) return reject(res,400,'This setup link is invalid or expired. Request a new one.');
+    const passwordHash = await bcrypt.hash(password,12);
+    const existing = await queryOne('SELECT id FROM users WHERE lower(email)=lower($1)',[ownerEmail()]);
+    if (existing) {
+      await query("UPDATE users SET name=COALESCE(NULLIF(name,''),'RankPilot Owner'),password_hash=$1,role='superadmin',email_verified=TRUE,is_banned=FALSE,admin_totp_secret_enc=NULL,admin_totp_enabled=FALSE,admin_totp_last_counter=NULL,token_version=COALESCE(token_version,0)+1,updated_at=NOW() WHERE id=$2",[passwordHash,existing.id]);
+    } else {
+      await query("INSERT INTO users (id,email,name,password_hash,role,plan,subscription_status,email_verified,created_at,updated_at) VALUES ($1,$2,'RankPilot Owner',$3,'superadmin','free','free',TRUE,NOW(),NOW())",[crypto.randomUUID(),ownerEmail(),passwordHash]);
+    }
+    await query('UPDATE owner_admin_setup_tokens SET used_at=NOW() WHERE email=$1',[ownerEmail()]);
+    return res.json({ message:'Owner password created. Continue to admin sign-in to enrol your authenticator.' });
+  } catch (err) {
+    console.error('Owner setup completion failed:',err.message);
+    return reject(res,503,'Could not complete owner setup. Please request a new link.');
+  }
+};
+
+module.exports = { login, verifyEmail, enrollTotp, verifyTotpLogin, requestOwnerSetup, completeOwnerSetup };
