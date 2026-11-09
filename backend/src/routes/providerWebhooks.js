@@ -257,7 +257,7 @@ router.post('/lemon-squeezy', async (req, res) => {
 
     if (['subscription_created','subscription_updated','subscription_resumed','subscription_unpaused'].includes(eventName)) {
       const endsAt = attrs.ends_at && !Number.isNaN(Date.parse(attrs.ends_at)) ? new Date(attrs.ends_at) : null;
-      const isActive = attrs.status === 'active' || attrs.status === 'on_trial' || (attrs.status === 'cancelled' && endsAt && endsAt > new Date());
+      const isActive = attrs.status === 'active' || (attrs.status === 'cancelled' && endsAt && endsAt > new Date());
       if (isActive && plan && subscriptionId) {
         const conflict = await queryOne('SELECT id FROM users WHERE provider_subscription_id=$1 AND id<>$2 LIMIT 1', [subscriptionId,user.id]);
         if (conflict) throw new Error('Provider subscription is already linked to another account.');
