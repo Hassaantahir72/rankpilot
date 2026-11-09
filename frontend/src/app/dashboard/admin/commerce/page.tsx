@@ -76,7 +76,7 @@ export default function AdminCommercePage() {
 
   return <div style={{ color: '#fff', maxWidth: 1440, margin: '0 auto' }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 22 }}>
-      <div><Link href="/dashboard/admin" style={{ color: '#a5b4fc', fontSize: 12, textDecoration: 'none' }}>← Admin panel</Link>
+      <div><Link href="/admin" style={{ color: '#a5b4fc', fontSize: 12, textDecoration: 'none' }}>← Admin panel</Link>
         <h1 style={{ fontSize: 25, fontWeight: 800, marginTop: 8 }}>Commerce operations</h1>
         <p style={muted}>Owner-only view of orders, payment transactions and webhook processing.</p></div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><span style={muted}>{updated ? 'Updated ' + updated.toLocaleTimeString() : 'Not yet refreshed'}</span>
