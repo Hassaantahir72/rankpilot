@@ -25,7 +25,7 @@ const send = async (to, subject, html) => {
   // Render Free blocks outbound SMTP ports 25, 465 and 587. Prefer Brevo's HTTPS API.
   if (process.env.BREVO_API_KEY) {
     const fromValue = String(process.env.EMAIL_FROM).trim();
-    const match = fromValue.match(/^(.*?)\\s*<([^<>]+)>$/);
+    const match = fromValue.match(/^(.*?)\s*<([^<>]+)>$/);
     const sender = match
       ? { name: match[1].replace(/^["']|["']$/g, '').trim(), email: match[2].trim() }
       : { email: fromValue };
