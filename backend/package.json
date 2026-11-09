@@ -19,15 +19,14 @@
     "express-validator": "^7.0.1",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
-    "node-cron": "^3.0.3",
+    "node-cron": "4.6.0",
     "node-html-parser": "^6.1.13",
-    "nodemailer": "^6.9.7",
+    "nodemailer": "10.4.0",
     "pg": "^8.11.3",
     "stripe": "^14.7.0",
-    "uuid": "^9.0.0",
+    "uuid": "11.1.1",
     "xml2js": "^0.6.2"
   },
-  "devDependencies": {},
   "engines": {
     "node": ">=18.0.0"
   }
