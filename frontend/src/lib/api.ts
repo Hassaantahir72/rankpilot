@@ -21,7 +21,7 @@ api.interceptors.response.use(
       if (!path.startsWith('/auth')) {
         localStorage.removeItem('rp_token');
         localStorage.removeItem('rp_user');
-        window.location.href = '/auth/login';
+        window.location.href = path.startsWith('/admin') ? '/admin/login' : '/auth/login';
       }
     }
     // Show maintenance mode message
