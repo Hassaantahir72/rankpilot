@@ -51,6 +51,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="foot">© ${new Date().getFullYear()} RankPilot · <a href="${process.env.FRONTEND_URL}" style="color:#818cf8;text-decoration:none">rankpilot.ai</a></div>
 </div></body></html>`;
 
+const sendOwnerSetupEmail = async (email, url) => {
+  const html = base('<h2>Set up your RankPilot owner account</h2><p>A request was made to create or reset the owner admin password. Use the button below within 20 minutes.</p><a href="'+escapeHtml(url)+'" class="btn">Set owner password →</a><div class="note">This link can be used once. If you did not request it, ignore this email. Do not forward this link.</div>');
+  await send(email,'Set up your RankPilot owner account',html);
+};
+
 const sendOTPEmail = async (email, name, otp, type, plan = 'trial') => {
   const subjects = { verify: 'Verify your email — RankPilot', login: 'Your login code — RankPilot', reset: 'Password reset code — RankPilot' };
   const titles = { verify: 'Verify your email address', login: 'Your sign-in code', reset: 'Reset your password' };
@@ -133,7 +138,7 @@ const sendTrialEndingEmail = async (email, name, daysLeft) => {
   await send(email, `⏰ Your RankPilot trial ends in ${escapeHtml(daysLeft)} day${daysLeft !== 1 ? 's' : ''}`, html);
 };
 
-module.exports = { sendOTPEmail, sendWelcomeEmail, sendAuditCompleteEmail, sendWeeklyReport, sendPasswordResetEmail, sendTrialEndingEmail };
+module.exports = { sendOwnerSetupEmail, sendOTPEmail, sendWelcomeEmail, sendAuditCompleteEmail, sendWeeklyReport, sendPasswordResetEmail, sendTrialEndingEmail };
 
 const sendSupportTicketEmail = async (email, name, ticketNumber, subject) => {
   const html = base(`

@@ -1,0 +1,18 @@
+'use client';
+import {useEffect,useState} from 'react';
+import Link from 'next/link';
+import axios from 'axios';
+const api=axios.create({baseURL:process.env.NEXT_PUBLIC_API_URL||'http://localhost:5000/api'});
+export default function OwnerSetupPage(){
+ const [token,setToken]=useState('');
+ useEffect(()=>{setToken(new URLSearchParams(window.location.search).get('token')||'')},[]);
+ const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [confirm,setConfirm]=useState('');
+ const [sent,setSent]=useState(false); const [busy,setBusy]=useState(false); const [error,setError]=useState(''); const [done,setDone]=useState(false);
+ const submitRequest=async(e:React.FormEvent)=>{e.preventDefault();setBusy(true);setError('');try{await api.post('/auth/admin/request-setup',{email});setSent(true)}catch(x:any){setError(x.response?.data?.error||'Could not request setup.')}finally{setBusy(false)}};
+ const submitPassword=async(e:React.FormEvent)=>{e.preventDefault();setError('');if(password.length<12){setError('Use at least 12 characters.');return}if(password!==confirm){setError('Passwords do not match.');return}setBusy(true);try{await api.post('/auth/admin/complete-setup',{token,password});setDone(true)}catch(x:any){setError(x.response?.data?.error||'Setup link is invalid or expired.')}finally{setBusy(false)}};
+ const input={width:'100%',padding:13,marginTop:7,borderRadius:9,border:'1px solid #343448',background:'#171724',color:'#fff',boxSizing:'border-box' as const};
+ return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',background:'#090910',color:'#fff',padding:24,fontFamily:'Arial,sans-serif'}}><section style={{width:'100%',maxWidth:440,background:'#14141f',padding:30,borderRadius:18,border:'1px solid #303044'}}><h1>Owner account setup</h1><p style={{color:'#a1a1b5',lineHeight:1.6}}>Private setup for the configured RankPilot owner only. This is not customer registration.</p>
+ {error&&<p role="alert" style={{color:'#fca5a5'}}>{error}</p>}
+ {done?<><p>Owner password created successfully.</p><Link href="/admin/login" style={{color:'#c4b5fd'}}>Continue to secure admin sign in</Link></>:token?<form onSubmit={submitPassword} style={{display:'grid',gap:14}}><label>New owner password<input style={input} type="password" minLength={12} maxLength={128} autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)} required/></label><label>Confirm password<input style={input} type="password" minLength={12} maxLength={128} autoComplete="new-password" value={confirm} onChange={e=>setConfirm(e.target.value)} required/></label><button disabled={busy} style={{padding:14,border:0,borderRadius:9,background:'#6d5ce8',color:'#fff',fontWeight:700}}>{busy?'Saving…':'Create owner password'}</button></form>:sent?<p>Check the configured owner Gmail inbox for a one-time setup link. It expires in 20 minutes.</p>:<form onSubmit={submitRequest} style={{display:'grid',gap:14}}><label>Owner email<input style={input} type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} required/></label><button disabled={busy} style={{padding:14,border:0,borderRadius:9,background:'#6d5ce8',color:'#fff',fontWeight:700}}>{busy?'Sending…':'Email me a setup link'}</button></form>}
+ <p style={{marginTop:22,fontSize:12,color:'#85859a'}}>Already set up? <Link href="/admin/login" style={{color:'#c4b5fd'}}>Owner admin sign in</Link></p></section></main>
+}
