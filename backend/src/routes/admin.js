@@ -34,8 +34,8 @@ router.patch('/payment-methods/:id', requireSuperAdmin, paymentMethods.update);
 router.delete('/payment-methods/:id', requireSuperAdmin, paymentMethods.remove);
 
 // Plan entitlements (superadmin only)
-router.get('/plan-limits', c.getPlanLimits);
-router.patch('/plan-limits/:plan', c.updatePlanLimits);
+router.get('/plan-limits', requireSuperAdmin, c.getPlanLimits);
+router.patch('/plan-limits/:plan', requireSuperAdmin, c.updatePlanLimits);
 
 // Site settings (superadmin only)
 router.get('/settings',              requireSuperAdmin, c.getSiteSettings);
