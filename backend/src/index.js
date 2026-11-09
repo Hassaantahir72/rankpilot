@@ -6,7 +6,7 @@ const rateLimit = require('express-rate-limit');
 const cron = require('node-cron');
 
 // Init DB connection pool
-require('./config/db');
+const { queryOne } = require('./config/db');
 
 // Middleware
 const { securityHeaders } = require('./middleware/security');
@@ -92,8 +92,14 @@ app.use('/api/features',  featuresRoutes);
 if (gscRoutes) app.use('/api/gsc', gscRoutes);
 
 // ── HEALTH CHECK ─────────────────────────────────────────────────
-app.get('/api/health', (req, res) => {
-  res.json({ status:'ok', version:'2.0.0', db:'PostgreSQL', service:'RankPilot API', timestamp:new Date().toISOString() });
+app.get('/api/health', async (req, res) => {
+  try {
+    await queryOne('SELECT 1 AS ok');
+    return res.json({ status:'ok', version:'2.0.0', db:'connected', service:'RankPilot API', timestamp:new Date().toISOString() });
+  } catch (err) {
+    console.error('Health check database probe failed:', err.message);
+    return res.status(503).json({ status:'degraded', version:'2.0.0', db:'disconnected', service:'RankPilot API', timestamp:new Date().toISOString() });
+  }
 });
 
 // ── PLAN LIMITS (public) ─────────────────────────────────────────
