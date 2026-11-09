@@ -85,10 +85,11 @@ const verifyEmail = async (req,res) => {
     const token = stageToken(user);
     if (user.admin_totp_enabled && user.admin_totp_secret_enc) return res.json({ requiresTotp:true, stageToken:token });
     const secret = base32Encode(crypto.randomBytes(20));
+    if (!/^[A-Z2-7]{32}$/.test(secret)) throw new Error('Generated authenticator secret failed Base32 validation');
     const label = encodeURIComponent('RankPilot Owner');
     const issuer = encodeURIComponent('RankPilot');
     const otpauthUrl = 'otpauth://totp/' + issuer + ':' + label + '?secret=' + secret + '&issuer=' + issuer + '&algorithm=SHA1&digits=6&period=30';
-    return res.json({ requiresTotpSetup:true, stageToken:token, secret, otpauthUrl });
+    return res.json({ requiresTotpSetup:true, stageToken:token, secret, manualKey:secret.replace(/[^A-Z2-7]/g,''), otpauthUrl });
   } catch (err) { console.error('Owner email OTP verification failed:',err.message); return reject(res,500,'Could not verify owner code.'); }
 };
 
