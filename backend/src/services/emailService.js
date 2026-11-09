@@ -5,12 +5,19 @@ const escapeHtml = (value) => String(value ?? '').replace(/[&<>\"']/g, (char) =>
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;',
 }[char]));
 
-const transporter = () => nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
-  port: parseInt(process.env.SMTP_PORT, 10) || 587,
-  secure: Number(process.env.SMTP_PORT) === 465,
-  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-});
+const transporter = () => {
+  const port = parseInt(process.env.SMTP_PORT, 10) || 587;
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
+    port,
+    secure: port === 465,
+    requireTLS: port !== 465,
+    tls: { minVersion: 'TLSv1.2' },
+    disableFileAccess: true,
+    disableUrlAccess: true,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  });
+};
 
 const send = async (to, subject, html) => {
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS || !process.env.EMAIL_FROM) {
