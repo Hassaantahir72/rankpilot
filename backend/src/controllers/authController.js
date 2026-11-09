@@ -291,8 +291,8 @@ const googleCallback = async (req, res) => {
 
     // The owner account must complete the password + email-OTP sign-in flow.
     // Google OAuth has no equivalent second-factor challenge, so fail closed.
-    const ownerAdminEmail = ownerAdminEmail();
-    if (ownerAdminEmail && String(email || '').trim().toLowerCase() === ownerAdminEmail) {
+    const configuredOwnerEmail = ownerAdminEmail();
+    if (configuredOwnerEmail && String(email || '').trim().toLowerCase() === configuredOwnerEmail) {
       return res.redirect((process.env.FRONTEND_URL || '') + '/auth/login?error=owner_oauth_requires_password');
     }
 
