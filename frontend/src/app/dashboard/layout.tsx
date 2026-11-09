@@ -122,14 +122,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             );
           })}
 
-          {isAdmin && !collapsed && (
-            <div style={{ padding:'12px 8px 4px', fontSize:9, fontWeight:700, color:'rgba(245,158,11,0.5)', letterSpacing:'0.08em', textTransform:'uppercase' }}>ADMIN</div>
-          )}
-          {isAdmin && (
-            <Link href="/dashboard/admin" style={{ display:'flex', alignItems:'center', gap:9, padding:'7px 10px', borderRadius:9, marginBottom:1, background:pathname.startsWith('/dashboard/admin')?'rgba(245,158,11,0.1)':'transparent', color:pathname.startsWith('/dashboard/admin')?'#fbbf24':'rgba(255,255,255,0.4)', textDecoration:'none', fontSize:13, fontWeight:600, border:pathname.startsWith('/dashboard/admin')?'1px solid rgba(245,158,11,0.2)':'1px solid transparent', whiteSpace:'nowrap' }}>
-              <span style={{ fontSize:15 }}>⚡</span>{!collapsed&&'Admin Panel'}
-            </Link>
-          )}
+
         </nav>
 
         {/* User */}
