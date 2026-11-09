@@ -6,9 +6,11 @@ const pool = new Pool({
   database: process.env.DB_NAME     || 'rankpilot',
   user:     process.env.DB_USER     || 'postgres',
   password: process.env.DB_PASSWORD || '',
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
+  // Supabase session pooler is provisioned with a 15-client cap. Keep Render
+  // below that ceiling so deploy overlap and other trusted services retain headroom.
+  max: 5,
+  idleTimeoutMillis: 10000,
+  connectionTimeoutMillis: 10000,
   // Managed PostgreSQL (including Supabase) must use TLS in production.
   ssl: process.env.NODE_ENV === 'production' || process.env.DB_SSL === 'true'
     ? {
