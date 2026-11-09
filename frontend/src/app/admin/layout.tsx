@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth';
 const NAV = [
   { href: '/admin#overview', icon: '📊', label: 'Overview' },
   { href: '/admin#users', icon: '👥', label: 'Users & Accounts' },
+  { href: '/admin#plans', icon: '🧩', label: 'Plans & Limits' },
   { href: '/admin#settings', icon: '⚙️', label: 'Site Settings' },
   { href: '/admin#security', icon: '🛡️', label: 'Security' },
   { href: '/admin#contacts', icon: '💬', label: 'Messages' },
