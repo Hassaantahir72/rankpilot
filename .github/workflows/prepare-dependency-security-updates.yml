@@ -1,16 +1,16 @@
 name: Prepare tested dependency security updates
 
 on:
-  push:
-    branches:
-      - security/restrict-public-db-access
+  pull_request:
+    types: [synchronize]
+    branches: [master]
 
 permissions:
   contents: write
 
 jobs:
   remediate:
-    if: github.event.head_commit.message != 'Apply tested dependency security updates'
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'security/restrict-public-db-access'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
