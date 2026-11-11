@@ -106,8 +106,15 @@ if (gscRoutes) app.use('/api/gsc', gscRoutes);
 // ── PUBLIC WEBSITE CONTENT (safe, owner-managed fields only) ───────
 app.get('/api/site-content', async (_req, res) => {
   try {
-    const { queryAll } = require('./config/db');
-    const allowed = ['homepage_hero_title','homepage_hero_subtitle','homepage_cta_label','homepage_notice'];
+    const { query, queryAll } = require('./config/db');
+    // Seed only presentation copy. Existing owner edits are never overwritten.
+    const defaults = {"homepage_stats_eyebrow":"By the numbers","homepage_stats_heading":"Results that speak for themselves","homepage_how_eyebrow":"How it works","homepage_how_description":"No SEO knowledge needed. Start with one website and upgrade as your needs grow.","homepage_seo_eyebrow":"SEO Autopilot","homepage_seo_heading":"Everything an SEO expert does — automated","homepage_seo_description":"SEO agencies charge $2,000–$8,000/month. RankPilot does the same work automatically in minutes — full crawl, keyword research, content writing, rank tracking.","homepage_marketing_eyebrow":"Marketing Autopilot","homepage_marketing_heading":"AI helps prepare campaigns like a marketing assistant","homepage_marketing_description":"Use AI tools to prepare Google and Meta campaign drafts and ad copy. Review campaign settings and approve changes before publishing.","homepage_features_eyebrow":"Full feature set","homepage_features_heading":"Everything you need to dominate your market","homepage_features_description":"One platform replaces your SEO agency, ad manager, content writer, and analytics team.","homepage_testimonials_eyebrow":"Customer stories","homepage_testimonials_heading":"Don't take our word for it","homepage_testimonials_description":"1,200+ businesses replaced their agency with RankPilot.","homepage_pricing_eyebrow":"Pricing","homepage_pricing_heading":"Way cheaper than any agency","homepage_pricing_description":"Choose a plan that fits your workload. Start with a free trial and cancel any time.","homepage_faq_eyebrow":"FAQ","homepage_faq_heading":"Questions, answered","homepage_final_eyebrow":"Start today","homepage_final_heading":"Replace your agency. Keep the results.","homepage_final_description":"Start your 14-day Free Trial with no card required. It includes 1 website, 5 SEO audits/month, 10 AI content generations/month, 5 social posts/month, competitor analysis, and weekly rank tracking."};
+    const keys = Object.keys(defaults);
+    await query(
+      'INSERT INTO site_settings (key,value,description) SELECT k,v,\'Homepage content\' FROM unnest($1::text[],$2::text[]) AS seed(k,v) ON CONFLICT (key) DO NOTHING',
+      [keys, keys.map(key => defaults[key])]
+    );
+    const allowed = ['homepage_hero_title','homepage_hero_subtitle','homepage_cta_label','homepage_notice', ...keys];
     const rows = await queryAll('SELECT key,value FROM site_settings WHERE key = ANY($1::text[])', [allowed]);
     const content = Object.fromEntries(rows.map(row => [row.key, row.value || '']));
     res.set('Cache-Control', 'no-store');
