@@ -138,6 +138,7 @@ app.get('/api/plans', async (req, res) => {
   try {
     const { queryAll } = require('./config/db');
     const plans = await queryAll('SELECT * FROM plan_limits ORDER BY max_websites');
+    res.set('Cache-Control', 'no-store');
     res.json({ plans });
   } catch(err) { res.status(500).json({ error:'Failed to load plans.' }); }
 });
