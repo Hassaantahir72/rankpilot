@@ -42,6 +42,11 @@ export default function AdminSupportPage() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:'smooth' }); }, [msgs]);
   useEffect(() => { if (tab==='chats') loadChats().catch((e:any) => setLoadError(e.response?.data?.error || 'Could not load chat sessions.')); }, [tab]);
+  useEffect(() => {
+    if (!isAdmin || loading) return;
+    const timer = window.setInterval(() => { load().catch((e:any) => setLoadError(e.response?.data?.error || 'Could not refresh support data.')); }, 30000);
+    return () => window.clearInterval(timer);
+  }, [isAdmin, loading, sf, pf, af]);
 
   const load = async () => {
     setLoadError('');
@@ -164,7 +169,7 @@ export default function AdminSupportPage() {
                   {(opts as string[]).map((o,i)=><option key={o} value={o}>{(labels as string[])[i]}</option>)}
                 </select>
               ))}
-              <button onClick={loadTickets} style={{padding:'8px 14px',background:'rgba(99,102,241,0.15)',border:'1px solid rgba(99,102,241,0.3)',borderRadius:8,color:'#818cf8',cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>Filter</button>
+              <button onClick={()=>loadTickets().catch((e:any)=>setLoadError(e.response?.data?.error||'Could not filter tickets.'))} style={{padding:'8px 14px',background:'rgba(99,102,241,0.15)',border:'1px solid rgba(99,102,241,0.3)',borderRadius:8,color:'#818cf8',cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>Filter</button>
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:560,overflowY:'auto'}}>
               {tickets.map(t=>(
@@ -175,7 +180,7 @@ export default function AdminSupportPage() {
                   </div>
                   <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
                     <span style={{fontSize:10,color:'rgba(255,255,255,0.3)',fontFamily:'monospace'}}>#{t.ticket_number}</span>
-                    {t.users?.email&&<span style={{fontSize:10,color:'rgba(255,255,255,0.4)'}}>{t.users.email}</span>}
+                    {(t.user_email||t.guest_email)&&<span style={{fontSize:10,color:'rgba(255,255,255,0.4)'}}>{t.user_email||t.guest_email}</span>}
                     <span style={{fontSize:10,color:P_COLORS[t.priority],fontWeight:700,textTransform:'uppercase'}}>{t.priority}</span>
                     {!t.assigned_to&&<span style={{fontSize:10,color:'#ef4444',fontWeight:700}}>!</span>}
                   </div>
@@ -192,7 +197,7 @@ export default function AdminSupportPage() {
                   <p style={{fontSize:14,fontWeight:700,marginBottom:4}}>{selected.subject}</p>
                   <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
                     <span style={{fontSize:11,color:'rgba(255,255,255,0.35)',fontFamily:'monospace'}}>#{selected.ticket_number}</span>
-                    {selected.users&&<span style={{fontSize:11,color:'#818cf8'}}>{selected.users.name} · {selected.users.plan} plan</span>}
+                    {(selected.user_name||selected.guest_name)&&<span style={{fontSize:11,color:'#818cf8'}}>{selected.user_name||selected.guest_name}{selected.user_plan?' · '+selected.user_plan+' plan':''}</span>}
                   </div>
                 </div>
                 <button onClick={()=>setSelected(null)} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',cursor:'pointer',fontSize:18}}>✕</button>
@@ -206,7 +211,7 @@ export default function AdminSupportPage() {
                   {['low','normal','high','urgent'].map(p=><option key={p} value={p}>{p}</option>)}
                 </select>
                 <button onClick={updateTicket} style={{padding:'5px 12px',background:'rgba(99,102,241,0.12)',border:'1px solid rgba(99,102,241,0.25)',borderRadius:7,color:'#818cf8',cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>Update</button>
-                <button onClick={()=>{const a=document.createElement('a');a.href=`mailto:${selected.guest_email||selected.users?.email}`;a.click();}} style={{padding:'5px 12px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:7,color:'rgba(255,255,255,0.55)',cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>📧 Email</button>
+                <button onClick={()=>{const a=document.createElement('a');a.href=`mailto:${selected.guest_email||selected.user_email}`;a.click();}} style={{padding:'5px 12px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:7,color:'rgba(255,255,255,0.55)',cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>📧 Email</button>
               </div>
 
               <div style={{padding:'14px 18px',display:'flex',flexDirection:'column',gap:12,maxHeight:300,overflowY:'auto'}}>
