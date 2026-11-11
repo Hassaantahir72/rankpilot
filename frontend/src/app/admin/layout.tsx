@@ -5,18 +5,26 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 
-const NAV = [
-  { href: '/admin#overview', icon: '📊', label: 'Overview' },
-  { href: '/admin#users', icon: '👥', label: 'Users & Accounts' },
-  { href: '/admin#plans', icon: '🧩', label: 'Plans & Limits' },
-  { href: '/admin#settings', icon: '⚙️', label: 'Site Settings' },
-  { href: '/admin#security', icon: '🛡️', label: 'Security' },
-  { href: '/admin#contacts', icon: '💬', label: 'Messages' },
-  { href: '/admin#billing', icon: '💰', label: 'Billing' },
-  { href: '/admin#payment-methods', icon: '💳', label: 'Payment Methods' },
-  { href: '/admin#log', icon: '📋', label: 'Audit Log' },
-  { href: '/admin/commerce', icon: '🧾', label: 'Commerce & Orders' },
-  { href: '/admin/support', icon: '🛟', label: 'Customer Support' },
+const GROUPS = [
+  { title: 'COMMAND', items: [
+    { href: '/admin#overview', icon: '◫', label: 'Overview' },
+    { href: '/admin/commerce', icon: '▤', label: 'Commerce & Orders' },
+  ]},
+  { title: 'CUSTOMERS', items: [
+    { href: '/admin#users', icon: '♙', label: 'Users & Accounts' },
+    { href: '/admin#contacts', icon: '✉', label: 'Messages' },
+    { href: '/admin/support', icon: '◎', label: 'Customer Support' },
+  ]},
+  { title: 'CONFIGURATION', items: [
+    { href: '/admin#plans', icon: '◇', label: 'Plans & Entitlements' },
+    { href: '/admin#payment-methods', icon: '▣', label: 'Payment Methods' },
+    { href: '/admin#settings', icon: '⚙', label: 'Website Content' },
+  ]},
+  { title: 'TRUST & GOVERNANCE', items: [
+    { href: '/admin#security', icon: '⬡', label: 'Security Centre' },
+    { href: '/admin#billing', icon: '＄', label: 'Billing Records' },
+    { href: '/admin#log', icon: '≋', label: 'Audit Trail' },
+  ]},
 ];
 
 export default function OwnerAdminLayout({ children }: { children: React.ReactNode }) {
@@ -38,33 +46,74 @@ export default function OwnerAdminLayout({ children }: { children: React.ReactNo
   }, [publicAdminRoute, loading, isAdmin, router]);
 
   if (publicAdminRoute) return <>{children}</>;
-  if (loading || !isAdmin) return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',background:'#08080f',color:'#a1a1aa'}}>Verifying owner access…</main>;
+  if (loading || !isAdmin) return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',background:'#080b13',color:'#a1a1aa'}}>Verifying secure owner session…</main>;
+
+  const activeLabel = GROUPS.flatMap(g => g.items).find(item =>
+    item.href.startsWith('/admin#') ? pathname === '/admin' && activeHash === item.href.split('#')[1] : pathname.startsWith(item.href)
+  )?.label || 'Owner workspace';
 
   return (
-    <div style={{minHeight:'100vh',display:'flex',background:'#08080f',color:'#fff',fontFamily:"'Inter',-apple-system,sans-serif"}}>
-      <aside style={{width:244,flexShrink:0,display:'flex',flexDirection:'column',background:'#101019',borderRight:'1px solid rgba(255,255,255,.08)',minHeight:'100vh',position:'sticky',top:0,height:'100vh'}}>
-        <div style={{padding:'22px 18px',borderBottom:'1px solid rgba(255,255,255,.08)'}}>
-          <Link href="/admin" style={{display:'flex',alignItems:'center',gap:10,textDecoration:'none',color:'#fff'}}>
-            <span style={{width:34,height:34,borderRadius:10,display:'grid',placeItems:'center',background:'linear-gradient(135deg,#f59e0b,#ef4444)',fontSize:17}}>⚡</span>
-            <span style={{fontWeight:800,fontSize:16}}>RankPilot <span style={{color:'#fbbf24'}}>Control</span></span>
+    <div className="rp-admin-shell">
+      <style>{`
+        .rp-admin-shell{min-height:100vh;display:flex;background:#080b13;color:#f4f6fb;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+        .rp-admin-sidebar{width:258px;flex:0 0 258px;display:flex;flex-direction:column;background:#0d121d;border-right:1px solid #202a3a;min-height:100vh;position:sticky;top:0;height:100vh}
+        .rp-admin-brand{padding:24px 20px 21px;border-bottom:1px solid #202a3a}
+        .rp-admin-nav{padding:17px 12px;display:grid;gap:17px;flex:1;align-content:start;overflow:auto}
+        .rp-admin-group-title{font-size:9px;letter-spacing:.17em;color:#65738a;font-weight:800;padding:0 10px 7px}
+        .rp-admin-link{display:flex;align-items:center;gap:12px;padding:10px 11px;border-radius:9px;text-decoration:none;font-size:12px;font-weight:600;color:#8996aa;border:1px solid transparent;transition:all .15s}
+        .rp-admin-link:hover{background:#151f2e;color:#e8edf6}
+        .rp-admin-link.active{background:linear-gradient(100deg,rgba(245,158,11,.16),rgba(245,158,11,.055));border-color:rgba(245,158,11,.25);color:#ffd27a}
+        .rp-admin-link-icon{width:20px;text-align:center;font-size:16px}
+        .rp-admin-main{flex:1;min-width:0;padding:0 30px 40px}
+        .rp-admin-topbar{height:76px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1c2635;margin-bottom:27px;gap:14px}
+        .rp-admin-top-actions{display:flex;align-items:center;gap:10px}
+        .rp-admin-top-link{padding:8px 12px;border:1px solid #2a3547;border-radius:9px;color:#aab6c8;text-decoration:none;font-size:11px;font-weight:700}
+        .rp-admin-content{max-width:1600px;margin:0 auto}
+        .rp-admin-mobile-nav{display:none}
+        @media(max-width:1000px){.rp-admin-sidebar{width:220px;flex-basis:220px}.rp-admin-main{padding:0 20px 30px}}
+        @media(max-width:720px){.rp-admin-shell{display:block}.rp-admin-sidebar{position:relative;width:100%;height:auto;min-height:0;border-right:0;border-bottom:1px solid #202a3a}.rp-admin-brand{padding:15px 17px}.rp-admin-nav{display:flex;gap:7px;padding:10px 12px;overflow-x:auto}.rp-admin-nav-group{display:contents}.rp-admin-group-title{display:none}.rp-admin-link{white-space:nowrap;padding:9px 11px}.rp-admin-sidebar-footer{display:none}.rp-admin-main{padding:0 14px 28px}.rp-admin-topbar{height:auto;min-height:66px;margin-bottom:18px;flex-wrap:wrap;padding:12px 0}.rp-admin-top-actions{gap:6px}.rp-admin-top-link{padding:7px 9px;font-size:10px}}
+      `}</style>
+      <aside className="rp-admin-sidebar">
+        <div className="rp-admin-brand">
+          <Link href="/admin" style={{display:'flex',alignItems:'center',gap:11,textDecoration:'none',color:'#fff'}}>
+            <span style={{width:38,height:38,borderRadius:12,display:'grid',placeItems:'center',background:'linear-gradient(145deg,#fbbf24,#f97316 58%,#e34d5b)',boxShadow:'0 7px 22px rgba(249,115,22,.2)',fontSize:19}}>⚡</span>
+            <span><strong style={{fontSize:16,letterSpacing:'-.03em'}}>RankPilot <span style={{color:'#fbbf24'}}>Control</span></strong><small style={{display:'block',fontSize:9,color:'#718097',letterSpacing:'.15em',fontWeight:800,marginTop:4}}>OWNER CONSOLE</small></span>
           </Link>
-          <p style={{fontSize:10,color:'rgba(255,255,255,.35)',letterSpacing:'.12em',marginTop:10}}>OWNER ADMINISTRATION</p>
         </div>
-        <nav aria-label="Admin navigation" style={{padding:'16px 10px',display:'grid',gap:5,flex:1,alignContent:'start'}}>
-          {NAV.map(item => {
-            const active = item.href.startsWith('/admin#') ? pathname === '/admin' && activeHash === item.href.split('#')[1] : pathname.startsWith(item.href);
-            return <Link key={item.href} href={item.href} style={{display:'flex',alignItems:'center',gap:11,padding:'11px 12px',borderRadius:9,textDecoration:'none',fontSize:13,fontWeight:active?700:500,color:active?'#fff':'rgba(255,255,255,.58)',background:active?'rgba(245,158,11,.12)':'transparent',border:active?'1px solid rgba(245,158,11,.25)':'1px solid transparent'}}>
-              <span>{item.icon}</span>{item.label}
-            </Link>;
-          })}
+        <nav aria-label="Owner administration" className="rp-admin-nav">
+          {GROUPS.map(group => <div className="rp-admin-nav-group" key={group.title}>
+            <div className="rp-admin-group-title">{group.title}</div>
+            <div style={{display:'grid',gap:4}}>
+              {group.items.map(item => {
+                const active = item.href.startsWith('/admin#') ? pathname === '/admin' && activeHash === item.href.split('#')[1] : pathname.startsWith(item.href);
+                return <Link key={item.href} href={item.href} aria-current={active?'page':undefined} className={`rp-admin-link ${active?'active':''}`}>
+                  <span className="rp-admin-link-icon">{item.icon}</span><span>{item.label}</span>{active&&<span style={{marginLeft:'auto',fontSize:15}}>›</span>}
+                </Link>;
+              })}
+            </div>
+          </div>)}
         </nav>
-        <div style={{padding:16,borderTop:'1px solid rgba(255,255,255,.08)'}}>
-          <p style={{fontSize:12,color:'#fff',fontWeight:600,overflowWrap:'anywhere'}}>{user?.email || 'Owner account'}</p>
-          <p style={{fontSize:10,color:'rgba(255,255,255,.35)',marginTop:3,marginBottom:12}}>Secure owner session</p>
-          <button onClick={logout} style={{width:'100%',padding:'9px 12px',borderRadius:8,border:'1px solid rgba(255,255,255,.1)',background:'rgba(255,255,255,.04)',color:'rgba(255,255,255,.7)',cursor:'pointer'}}>Sign out</button>
+        <div className="rp-admin-sidebar-footer" style={{padding:'15px 17px',borderTop:'1px solid #202a3a'}}>
+          <div style={{display:'flex',alignItems:'center',gap:9,marginBottom:12}}>
+            <span style={{width:29,height:29,borderRadius:9,display:'grid',placeItems:'center',background:'#1b2939',color:'#fbbf24',fontWeight:800}}>O</span>
+            <span style={{minWidth:0}}><strong style={{display:'block',fontSize:11,overflowWrap:'anywhere'}}>{user?.email||'Owner account'}</strong><small style={{fontSize:9,color:'#6e7e94'}}>MFA-protected owner</small></span>
+          </div>
+          <button onClick={logout} style={{width:'100%',padding:'9px 11px',borderRadius:8,border:'1px solid #2a3547',background:'#131c29',color:'#aab6c8',cursor:'pointer',fontSize:11,fontWeight:700}}>Sign out securely ↗</button>
         </div>
       </aside>
-      <main style={{flex:1,minWidth:0,padding:'28px 32px',overflowX:'auto'}}>{children}</main>
+      <main className="rp-admin-main">
+        <header className="rp-admin-topbar">
+          <div>
+            <div style={{fontSize:9,color:'#728097',letterSpacing:'.16em',fontWeight:800}}>RANKPILOT / OWNER WORKSPACE</div>
+            <div style={{fontSize:16,fontWeight:800,marginTop:5}}>{activeLabel}</div>
+          </div>
+          <div className="rp-admin-top-actions">
+            <span style={{display:'inline-flex',alignItems:'center',gap:6,fontSize:10,color:'#7f91a9',padding:'7px 9px',borderRadius:20,background:'#101a27',border:'1px solid #253346'}}><span style={{width:6,height:6,borderRadius:20,background:'#34d399',boxShadow:'0 0 9px #34d399'}}/> OWNER SESSION ACTIVE</span>
+            <Link href="/" target="_blank" className="rp-admin-top-link">View website ↗</Link>
+          </div>
+        </header>
+        <div className="rp-admin-content">{children}</div>
+      </main>
     </div>
   );
 }
