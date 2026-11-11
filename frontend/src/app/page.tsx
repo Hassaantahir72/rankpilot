@@ -69,6 +69,7 @@ export default function HomePage() {
       .catch(() => {});
     return () => { active = false; };
   }, []);
+  const testimonials = readJsonList<any>(siteContent, 'homepage_testimonials_json', []);
   return (
     <>
       <style>{`
@@ -324,7 +325,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* TESTIMONIALS */}
+      {/* Verified testimonials are opt-in; never publish invented reviews. */}
+      {testimonials.length > 0 && (
       <section className="section">
         <div className="container">
           <ScrollReveal className="text-center" style={{ marginBottom:64 }}>
@@ -333,14 +335,7 @@ export default function HomePage() {
             <p style={{ color:'rgba(255,255,255,0.4)',maxWidth:460,margin:'0 auto',fontSize:16 }}>{siteContent.homepage_testimonials_description || '1,200+ businesses replaced their agency with RankPilot.'}</p>
           </ScrollReveal>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))',gap:20 }}>
-            {readJsonList<any>(siteContent, 'homepage_testimonials_json', [
-              { q:"We cancelled our $4,000/month agency after the first audit. RankPilot found 34 issues they had missed for 8 months. Rankings jumped 40 positions in 6 weeks.",n:'Sarah Chen',r:'CEO',c:'NovaTech Solutions',a:'SC',col:'#6366f1',d:0 },
-              { q:"As a dentist I have no time for marketing. RankPilot just runs everything. My Google Ads get 3x more leads at half the cost. My appointment book is full every week.",n:'Dr James Wilson',r:'Owner',c:'Wilson Dental',a:'JW',col:'#8b5cf6',d:100 },
-              { q:"The AI content it writes is genuinely better than what our content team produced. We went from page 4 to page 1 for our main keyword in 11 weeks.",n:'Priya Sharma',r:'Marketing Director',c:'Growfast Agency',a:'PS',col:'#ec4899',d:200 },
-              { q:"I run 6 e-commerce stores. Managing SEO across all of them was impossible. RankPilot handles all 6 automatically. Revenue is up 62% year over year.",n:'Marcus Johnson',r:'Founder',c:'MultiShop Group',a:'MJ',col:'#f59e0b',d:0 },
-              { q:"The weekly reports alone are worth the price. Plain English, no jargon. I finally understand what is happening with my marketing and what the ROI is.",n:'Lisa Torres',r:'Operations Manager',c:'Bloom Retail',a:'LT',col:'#4ade80',d:100 },
-              { q:"From 200 to 12,000 monthly organic visitors in 4 months. The SEO audit found everything. The content ranks better than anything we wrote manually.",n:'David Park',r:'Co-founder',c:'AppStack SaaS',a:'DP',col:'#60a5fa',d:200 },
-            ] ).map((t:any) => (
+            {testimonials ).map((t:any) => (
               <ScrollReveal key={t.n} delay={t.d}>
                 <div className="glass-card" style={{ padding:'26px',height:'100%' }}>
                   <div style={{ display:'flex',gap:3,marginBottom:14 }}>{[1,2,3,4,5].map(i=><span key={i} style={{ color:'#fbbf24',fontSize:14 }}>★</span>)}</div>
@@ -355,6 +350,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* PRICING */}
       <section className="section" id="pricing" style={{ background:'var(--dark-2)' }}>
