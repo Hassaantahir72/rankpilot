@@ -14,17 +14,21 @@ const logAction = async (adminId, action, targetId, details) => {
 // ── DASHBOARD STATS ───────────────────────────────────────────────
 const getDashboardStats = async (req, res) => {
   try {
+    const ownerEmail = String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase();
+    if (!ownerEmail) return res.status(503).json({ error: 'Owner admin configuration is missing.' });
+    // Customer KPIs must never count the private owner account as a paying/free customer.
+    const customerCount = 'SELECT COUNT(*) FROM users WHERE LOWER(email) <> LOWER($1)';
     const [users, websites, audits, revenue, contacts, newToday, newWeek, activeSubs, trialUsers, planCounts, topEvents] = await Promise.all([
-      queryOne('SELECT COUNT(*) FROM users'),
-      queryOne('SELECT COUNT(*) FROM websites'),
-      queryOne('SELECT COUNT(*) FROM audits'),
+      queryOne(customerCount, [ownerEmail]),
+      queryOne('SELECT COUNT(*) FROM websites w JOIN users u ON u.id=w.user_id WHERE LOWER(u.email) <> LOWER($1)', [ownerEmail]),
+      queryOne('SELECT COUNT(*) FROM audits a JOIN users u ON u.id=a.user_id WHERE LOWER(u.email) <> LOWER($1)', [ownerEmail]),
       queryOne("SELECT COALESCE(SUM(amount),0) as total FROM billing_history WHERE status='paid'"),
       queryOne("SELECT COUNT(*) FROM contact_messages WHERE status='unread'"),
-      queryOne("SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '1 day'"),
-      queryOne("SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '7 days'"),
-      queryOne("SELECT COUNT(*) FROM users WHERE subscription_status='active'"),
-      queryOne("SELECT COUNT(*) FROM users WHERE subscription_status='trial' AND trial_ends_at > NOW()"),
-      queryAll('SELECT plan, COUNT(*) as count FROM users GROUP BY plan ORDER BY count DESC'),
+      queryOne("SELECT COUNT(*) FROM users WHERE LOWER(email) <> LOWER($1) AND created_at > NOW() - INTERVAL '1 day'", [ownerEmail]),
+      queryOne("SELECT COUNT(*) FROM users WHERE LOWER(email) <> LOWER($1) AND created_at > NOW() - INTERVAL '7 days'", [ownerEmail]),
+      queryOne("SELECT COUNT(*) FROM users WHERE LOWER(email) <> LOWER($1) AND subscription_status='active'", [ownerEmail]),
+      queryOne("SELECT COUNT(*) FROM users WHERE LOWER(email) <> LOWER($1) AND subscription_status='trial' AND trial_ends_at > NOW()", [ownerEmail]),
+      queryAll('SELECT plan, COUNT(*) as count FROM users WHERE LOWER(email) <> LOWER($1) GROUP BY plan ORDER BY count DESC', [ownerEmail]),
       queryAll("SELECT event, COUNT(*) as count FROM security_events WHERE created_at > NOW()-INTERVAL '24 hours' GROUP BY event ORDER BY count DESC LIMIT 10"),
     ]);
     res.json({
@@ -69,8 +73,11 @@ const getUsers = async (req, res) => {
     return res.status(400).json({ error: 'Search must be 100 characters or fewer.' });
   }
 
+  const ownerEmail = String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase();
+  if (!ownerEmail) return res.status(503).json({ error: 'Owner admin configuration is missing.' });
   const offset = (page - 1) * limit;
-  const conds = ['1=1'], params = [];
+  // Keep the private owner identity out of the customer-management directory.
+  const conds = ['LOWER(u.email) <> LOWER($1)'], params = [ownerEmail];
   if (search && search.trim()) {
     params.push('%' + search.trim() + '%');
     conds.push('(u.email ILIKE $' + params.length + ' OR u.name ILIKE $' + params.length + ')');
@@ -421,10 +428,12 @@ const getBillingHistory = async (req, res) => {
 
 // ── SITE STATS (for dashboard charts) ────────────────────────────
 const getGrowthStats = async (req, res) => {
+  const ownerEmail = String(process.env.OWNER_ADMIN_EMAIL || '').trim().toLowerCase();
+  if (!ownerEmail) return res.status(503).json({ error: 'Owner admin configuration is missing.' });
   const [daily, planRev, topUsers] = await Promise.all([
-    queryAll("SELECT DATE(created_at) as date, COUNT(*) as users FROM users WHERE created_at > NOW()-INTERVAL '30 days' GROUP BY DATE(created_at) ORDER BY date"),
-    queryAll("SELECT plan, COUNT(*) as users, SUM(CASE WHEN subscription_status='active' THEN 1 ELSE 0 END) as paying FROM users GROUP BY plan"),
-    queryAll("SELECT u.id,u.name,u.email,u.plan,w.count as websites FROM users u LEFT JOIN (SELECT user_id,COUNT(*) as count FROM websites GROUP BY user_id) w ON u.id=w.user_id WHERE u.subscription_status='active' ORDER BY u.created_at DESC LIMIT 10"),
+    queryAll("SELECT DATE(created_at) as date, COUNT(*) as users FROM users WHERE LOWER(email) <> LOWER($1) AND created_at > NOW()-INTERVAL '30 days' GROUP BY DATE(created_at) ORDER BY date", [ownerEmail]),
+    queryAll("SELECT plan, COUNT(*) as users, SUM(CASE WHEN subscription_status='active' THEN 1 ELSE 0 END) as paying FROM users WHERE LOWER(email) <> LOWER($1) GROUP BY plan", [ownerEmail]),
+    queryAll("SELECT u.id,u.name,u.email,u.plan,w.count as websites FROM users u LEFT JOIN (SELECT user_id,COUNT(*) as count FROM websites GROUP BY user_id) w ON u.id=w.user_id WHERE LOWER(u.email) <> LOWER($1) AND u.subscription_status='active' ORDER BY u.created_at DESC LIMIT 10", [ownerEmail]),
   ]);
   res.json({ dailySignups: daily, planBreakdown: planRev, recentPaying: topUsers });
 };
