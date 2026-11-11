@@ -21,8 +21,16 @@ const chatWithBot = async (req, res) => {
     );
   }
 
-  await query('INSERT INTO chat_messages (id,session_id,sender_role,sender_name,message,created_at) VALUES ($1,$2,$$user$$,$3,$4,NOW())',
+  await query('INSERT INTO chat_messages (id,session_id,sender_role,sender_name,message,created_at) VALUES ($1,$2,$user$,$3,$4,NOW())',
     [uuidv4(), session.id, req.user?.name||'Guest', message.trim()]);
+
+  // Once a human has taken over, keep the conversation out of the AI path.
+  if (session.status === 'queued' || session.status === 'live') {
+    const reply = session.status === 'live'
+      ? 'Your message has been sent to a RankPilot support agent.'
+      : 'Your message has been added to the support queue. An agent will reply here.';
+    return res.json({ reply, sessionToken: session.session_token, escalate: false, quickReplies: [], sessionStatus: session.status });
+  }
 
   const systemPrompt = `You are Alex, RankPilot's AI support assistant. RankPilot is an AI SEO and marketing platform.
 Plans: Free ($0), Trial (14 days), Starter ($15/month or $12/month billed annually), Growth ($29/month or $23/month billed annually), Pro ($59/month or $47/month billed annually), Agency ($99/month or $79/month billed annually). Actual access limits come from the database plan_limits table; never promise unlimited usage.
@@ -51,6 +59,26 @@ Respond ONLY as JSON: {"reply":"...","escalate":false,"createTicket":false,"quic
   } catch (err) {
     console.error('Chat AI error:', err.message);
     res.json({ reply:"I'm having trouble connecting. Let me get you a human agent!", sessionToken:session?.session_token, escalate:true, quickReplies:[], sessionStatus:'queued' });
+  }
+};
+
+// HUMAN AGENT MESSAGE POLLING — the unguessable session token is the access credential.
+const pollAgentMessages = async (req, res) => {
+  const { sessionToken } = req.body || {};
+  if (typeof sessionToken !== 'string' || sessionToken.length < 20 || sessionToken.length > 100) {
+    return res.status(400).json({ error: 'Valid chat session token required.' });
+  }
+  try {
+    const session = await queryOne('SELECT id,status FROM chat_sessions WHERE session_token=$1', [sessionToken]);
+    if (!session) return res.status(404).json({ error: 'Chat session not found.' });
+    const messages = await queryAll(
+      "SELECT id,sender_role,sender_name,message,created_at FROM chat_messages WHERE session_id=$1 AND sender_role='agent' ORDER BY created_at ASC LIMIT 100",
+      [session.id]
+    );
+    return res.json({ sessionStatus: session.status, messages });
+  } catch (err) {
+    console.error('Chat agent polling error:', err.message);
+    return res.status(500).json({ error: 'Could not retrieve agent messages.' });
   }
 };
 
@@ -194,21 +222,71 @@ const adminUpdateTicket = async (req, res) => {
 
 const adminGetChatSessions = async (req, res) => {
   const { status } = req.query;
-  const params = status?[status]:[];
-  const where = status?'WHERE s.status=$1':'';
-  const sessions = await queryAll(`SELECT s.*,u.name as user_name,u.email as user_email FROM chat_sessions s LEFT JOIN users u ON s.user_id=u.id ${where} ORDER BY s.started_at DESC LIMIT 50`, params);
+  const validStatuses = ['bot','queued','live','closed'];
+  if (status && !validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid chat status.' });
+  const params = status ? [status] : [];
+  const where = status ? 'WHERE s.status=$1' : '';
+  const sessions = await queryAll(
+    `SELECT s.id,s.user_id,s.status,s.agent_id,s.ticket_id,s.started_at,s.ended_at,
+            u.name as user_name,u.email as user_email,
+            (SELECT COUNT(*) FROM chat_messages m WHERE m.session_id=s.id) AS message_count,
+            (SELECT MAX(m.created_at) FROM chat_messages m WHERE m.session_id=s.id) AS last_message_at
+     FROM chat_sessions s LEFT JOIN users u ON s.user_id=u.id ${where}
+     ORDER BY COALESCE((SELECT MAX(m.created_at) FROM chat_messages m WHERE m.session_id=s.id),s.started_at) DESC LIMIT 50`,
+    params
+  );
   res.json({ sessions });
 };
 
+const adminGetChatSession = async (req, res) => {
+  const session = await queryOne(
+    'SELECT s.id,s.user_id,s.status,s.agent_id,s.ticket_id,s.started_at,s.ended_at,u.name as user_name,u.email as user_email FROM chat_sessions s LEFT JOIN users u ON s.user_id=u.id WHERE s.id=$1',
+    [req.params.sessionId]
+  );
+  if (!session) return res.status(404).json({ error: 'Chat session not found.' });
+  const messages = await queryAll(
+    'SELECT id,sender_role,sender_name,message,created_at FROM chat_messages WHERE session_id=$1 ORDER BY created_at ASC LIMIT 200',
+    [session.id]
+  );
+  return res.json({ session, messages });
+};
+
+const adminReplyChat = async (req, res) => {
+  const message = typeof req.body?.message === 'string' ? req.body.message.trim() : '';
+  if (!message || message.length > 5000) return res.status(400).json({ error: 'Reply must be between 1 and 5000 characters.' });
+  try {
+    const session = await queryOne('SELECT id,status FROM chat_sessions WHERE id=$1', [req.params.sessionId]);
+    if (!session) return res.status(404).json({ error: 'Chat session not found.' });
+    if (session.status === 'closed') return res.status(409).json({ error: 'This chat is closed.' });
+    await query(
+      'INSERT INTO chat_messages (id,session_id,sender_role,sender_name,message,created_at) VALUES ($1,$2,$agent$,$3,$4,NOW())',
+      [uuidv4(), session.id, req.user?.name || 'RankPilot Support', message]
+    );
+    await query("UPDATE chat_sessions SET status='live',agent_id=$1 WHERE id=$2", [req.user.id, session.id]);
+    return res.json({ message: 'Reply sent to customer.', sessionStatus: 'live' });
+  } catch (err) {
+    console.error('Admin chat reply error:', err.message);
+    return res.status(500).json({ error: 'Could not send chat reply.' });
+  }
+};
+
 const adminGetSupportStats = async (req, res) => {
-  const [open, inProg, resolved, unassigned, chats] = await Promise.all([
+  const [open, inProg, resolved, unassigned, chats, responseTime, satisfaction] = await Promise.all([
     queryOne("SELECT COUNT(*) FROM support_tickets WHERE status='open'"),
     queryOne("SELECT COUNT(*) FROM support_tickets WHERE status='in_progress'"),
     queryOne("SELECT COUNT(*) FROM support_tickets WHERE status='resolved'"),
     queryOne("SELECT COUNT(*) FROM support_tickets WHERE assigned_to IS NULL AND status IN ('open','in_progress')"),
     queryOne("SELECT COUNT(*) FROM chat_sessions WHERE status='queued'"),
+    queryOne("SELECT AVG(EXTRACT(EPOCH FROM (first_response_at-created_at))/60) AS minutes FROM support_tickets WHERE first_response_at IS NOT NULL AND created_at > NOW()-INTERVAL '30 days'"),
+    queryOne("SELECT AVG(satisfaction_rating) AS average, COUNT(satisfaction_rating) AS total FROM support_tickets WHERE satisfaction_rating IS NOT NULL"),
   ]);
-  res.json({ open:parseInt(open.count), inProgress:parseInt(inProg.count), resolved:parseInt(resolved.count), unassigned:parseInt(unassigned.count), queuedChats:parseInt(chats.count) });
+  res.json({
+    open:parseInt(open.count,10), inProgress:parseInt(inProg.count,10), resolved:parseInt(resolved.count,10),
+    unassigned:parseInt(unassigned.count,10), queuedChats:parseInt(chats.count,10),
+    averageFirstResponseMinutes: responseTime.minutes === null ? null : Number(responseTime.minutes),
+    averageSatisfaction: satisfaction.average === null ? null : Number(satisfaction.average),
+    satisfactionResponses: parseInt(satisfaction.total,10),
+  });
 };
 
 const getCannedResponses = async (req, res) => {
@@ -216,4 +294,4 @@ const getCannedResponses = async (req, res) => {
   res.json({ responses });
 };
 
-module.exports = { chatWithBot, requestAgent, createTicket, getTickets, getTicket, replyToTicket, rateTicket, adminGetTickets, adminGetTicket, adminReplyTicket, adminUpdateTicket, adminGetChatSessions, adminGetSupportStats, getCannedResponses };
+module.exports = { chatWithBot, requestAgent, createTicket, getTickets, getTicket, replyToTicket, rateTicket, adminGetTickets, adminGetTicket, adminReplyTicket, adminUpdateTicket, adminGetChatSessions, adminGetChatSession, adminReplyChat, pollAgentMessages, adminGetSupportStats, getCannedResponses };
