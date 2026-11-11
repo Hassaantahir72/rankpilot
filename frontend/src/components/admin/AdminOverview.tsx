@@ -483,7 +483,7 @@ export default function AdminPage() {
           <div style={{ display:'flex',flexDirection:'column',gap:16 }}>
             <div style={{ background:'rgba(245,158,11,0.06)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:12,padding:'14px 16px' }}>
               <p style={{ fontSize:13,color:'#fbbf24',fontWeight:700,marginBottom:5 }}>Provider-independent payment controls</p>
-              <p style={{ fontSize:12,color:'rgba(255,255,255,0.55)',lineHeight:1.7 }}>The public website reads enabled methods from the backend. New methods start disabled. Secret keys belong only in Render environment variables. A provider cannot be published until credentials are present and its checkout + signed-webhook adapter is marked ready after sandbox tests. This repository currently does not mark either provider adapter as ready.</p>
+              <p style={{ fontSize:12,color:'rgba(255,255,255,0.55)',lineHeight:1.7 }}>The public website reads enabled methods from the backend. New methods start disabled. Secret keys belong only in Render environment variables. Lemon Squeezy checkout and signed-webhook handling are implemented, but it stays disabled until all listed Render variables are configured and sandbox tests pass. Safepay and manual bank transfer remain unavailable because their payment adapters are not implemented.</p>
             </div>
             <div style={{ background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:20 }}>
               <h3 style={{ fontSize:14,fontWeight:700,marginBottom:14 }}>Add payment provider</h3>
@@ -507,6 +507,8 @@ export default function AdminPage() {
                         <span style={{ fontSize:10,padding:'3px 8px',borderRadius:100,background:'rgba(255,255,255,0.05)',color:'rgba(255,255,255,0.55)' }}>{method.provider_key}</span>
                         <span style={{ fontSize:10,padding:'3px 8px',borderRadius:100,background:method.configured?'rgba(74,222,128,0.1)':'rgba(245,158,11,0.1)',color:method.configured?'#4ade80':'#fbbf24' }}>{method.configured?'Credentials detected':'Credentials missing'}</span>
                         <span style={{ fontSize:10,padding:'3px 8px',borderRadius:100,background:method.adapterReady?'rgba(74,222,128,0.1)':'rgba(239,68,68,0.1)',color:method.adapterReady?'#4ade80':'#fca5a5' }}>{method.adapterReady?'Adapter ready':'Checkout/webhook tests pending'}</span>
+                        {method.missingEnv?.length > 0 && <div style={{width:'100%',marginTop:8,padding:10,borderRadius:8,background:'rgba(245,158,11,.06)',border:'1px solid rgba(245,158,11,.16)'}}><p style={{fontSize:10,color:'#fbbf24',fontWeight:700,marginBottom:5}}>Missing Render environment variable names</p><p style={{fontSize:10,color:'rgba(255,255,255,.58)',lineHeight:1.7,fontFamily:'monospace',overflowWrap:'anywhere'}}>{method.missingEnv.join(' · ')}</p></div>}
+                        {method.readinessFlagMissing && <p style={{width:'100%',fontSize:10,color:'#fbbf24',marginTop:6}}>After sandbox checkout, renewal, cancellation, failure, refund and duplicate-webhook tests pass, set LEMONSQUEEZY_ADAPTER_READY=true.</p>}
                       </div>
                     </div>
                     <div style={{ display:'flex',gap:8,alignItems:'center' }}>
