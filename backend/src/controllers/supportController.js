@@ -21,7 +21,7 @@ const chatWithBot = async (req, res) => {
     );
   }
 
-  await query('INSERT INTO chat_messages (id,session_id,sender_role,sender_name,message,created_at) VALUES ($1,$2,$user$,$3,$4,NOW())',
+  await query("INSERT INTO chat_messages (id,session_id,sender_role,sender_name,message,created_at) VALUES ($1,$2,'user',$3,$4,NOW())",
     [uuidv4(), session.id, req.user?.name||'Guest', message.trim()]);
 
   // Once a human has taken over, keep the conversation out of the AI path.
@@ -259,7 +259,7 @@ const adminReplyChat = async (req, res) => {
     if (!session) return res.status(404).json({ error: 'Chat session not found.' });
     if (session.status === 'closed') return res.status(409).json({ error: 'This chat is closed.' });
     await query(
-      'INSERT INTO chat_messages (id,session_id,sender_role,sender_name,message,created_at) VALUES ($1,$2,$agent$,$3,$4,NOW())',
+      "INSERT INTO chat_messages (id,session_id,sender_role,sender_name,message,created_at) VALUES ($1,$2,'agent',$3,$4,NOW())",
       [uuidv4(), session.id, req.user?.name || 'RankPilot Support', message]
     );
     await query("UPDATE chat_sessions SET status='live',agent_id=$1 WHERE id=$2", [req.user.id, session.id]);
