@@ -49,6 +49,13 @@ function FAQ({ q, a }: { q: string; a: string }) {
   );
 }
 
+function readJsonList<T>(content: Record<string,string>, key: string, fallback: T[]): T[] {
+  const raw = content[key];
+  if (!raw) return fallback;
+  try { const parsed = JSON.parse(raw); return Array.isArray(parsed) ? parsed as T[] : fallback; }
+  catch { return fallback; }
+}
+
 const LOGOS = ['Google Ads','Meta Ads','Shopify','WordPress','Webflow','HubSpot','Stripe','Salesforce','Mailchimp','Zapier','Slack','Notion','WooCommerce','Wix'];
 
 export default function HomePage() {
@@ -188,7 +195,7 @@ export default function HomePage() {
               <span className="tag" style={{ marginBottom:20 }}>{siteContent.homepage_seo_eyebrow || 'SEO Autopilot'}</span>
               <h2 style={{ fontSize:'clamp(1.8rem,3.5vw,2.6rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.12,marginBottom:18 }}>{siteContent.homepage_seo_heading || 'Everything an SEO expert does — automated'}</h2>
               <p style={{ color:'rgba(255,255,255,0.45)',fontSize:15,lineHeight:1.8,marginBottom:32 }}>{siteContent.homepage_seo_description || 'SEO agencies charge $2,000–$8,000/month. RankPilot does the same work automatically in minutes — full crawl, keyword research, content writing, rank tracking.'}</p>
-              {['Full website crawl — every page audited and scored','AI researches 100+ keywords ranked by traffic opportunity','Page-by-page content rewrite with keywords naturally embedded','Competitor gap analysis — see what their traffic comes from','Weekly rank tracking with email alerts when positions change','Technical fixes: speed, schema markup, meta tags, broken links'].map(f => (
+              {readJsonList<string>(siteContent, 'homepage_seo_features_json', ['Full website crawl — every page audited and scored','AI researches 100+ keywords ranked by traffic opportunity','Page-by-page content rewrite with keywords naturally embedded','Competitor gap analysis — see what their traffic comes from','Weekly rank tracking with email alerts when positions change','Technical fixes: speed, schema markup, meta tags, broken links']).map(f => (
                 <div key={f} style={{ display:'flex',alignItems:'flex-start',gap:12,marginBottom:12 }}>
                   <div style={{ width:20,height:20,borderRadius:'50%',background:'rgba(99,102,241,0.15)',border:'1px solid rgba(99,102,241,0.35)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:2 }}>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>
@@ -326,14 +333,14 @@ export default function HomePage() {
             <p style={{ color:'rgba(255,255,255,0.4)',maxWidth:460,margin:'0 auto',fontSize:16 }}>{siteContent.homepage_testimonials_description || '1,200+ businesses replaced their agency with RankPilot.'}</p>
           </ScrollReveal>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))',gap:20 }}>
-            {[
+            {readJsonList<any>(siteContent, 'homepage_testimonials_json', [
               { q:"We cancelled our $4,000/month agency after the first audit. RankPilot found 34 issues they had missed for 8 months. Rankings jumped 40 positions in 6 weeks.",n:'Sarah Chen',r:'CEO',c:'NovaTech Solutions',a:'SC',col:'#6366f1',d:0 },
               { q:"As a dentist I have no time for marketing. RankPilot just runs everything. My Google Ads get 3x more leads at half the cost. My appointment book is full every week.",n:'Dr James Wilson',r:'Owner',c:'Wilson Dental',a:'JW',col:'#8b5cf6',d:100 },
               { q:"The AI content it writes is genuinely better than what our content team produced. We went from page 4 to page 1 for our main keyword in 11 weeks.",n:'Priya Sharma',r:'Marketing Director',c:'Growfast Agency',a:'PS',col:'#ec4899',d:200 },
               { q:"I run 6 e-commerce stores. Managing SEO across all of them was impossible. RankPilot handles all 6 automatically. Revenue is up 62% year over year.",n:'Marcus Johnson',r:'Founder',c:'MultiShop Group',a:'MJ',col:'#f59e0b',d:0 },
               { q:"The weekly reports alone are worth the price. Plain English, no jargon. I finally understand what is happening with my marketing and what the ROI is.",n:'Lisa Torres',r:'Operations Manager',c:'Bloom Retail',a:'LT',col:'#4ade80',d:100 },
               { q:"From 200 to 12,000 monthly organic visitors in 4 months. The SEO audit found everything. The content ranks better than anything we wrote manually.",n:'David Park',r:'Co-founder',c:'AppStack SaaS',a:'DP',col:'#60a5fa',d:200 },
-            ].map(t => (
+            ] ).map((t:any) => (
               <ScrollReveal key={t.n} delay={t.d}>
                 <div className="glass-card" style={{ padding:'26px',height:'100%' }}>
                   <div style={{ display:'flex',gap:3,marginBottom:14 }}>{[1,2,3,4,5].map(i=><span key={i} style={{ color:'#fbbf24',fontSize:14 }}>★</span>)}</div>
@@ -402,7 +409,7 @@ export default function HomePage() {
             <span className="tag" style={{ marginBottom:20 }}>{siteContent.homepage_faq_eyebrow || 'FAQ'}</span>
             <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif" }}>{siteContent.homepage_faq_heading || 'Questions, answered'}</h2>
           </ScrollReveal>
-          {[
+          {readJsonList<any>(siteContent, 'homepage_faq_items_json', [
             { q:'Do I need any SEO knowledge to use RankPilot?',a:'Zero. RankPilot is built for business owners, not SEO experts. You paste your URL and AI does everything — audit, content, fix list. All reports are in plain English with no jargon.' },
             { q:'How is this different from hiring an SEO agency?',a:'Agencies charge $2,000–$8,000/month and spend much of that on account managers and overhead. RankPilot uses AI to do the actual work for a fraction of the price — with faster results and full transparency into exactly what was done.' },
             { q:'How long does it take to see ranking improvements?',a:'Most customers see ranking movement within 4–8 weeks of implementing the AI recommendations. Full first-page rankings for competitive keywords typically take 3–6 months, which is faster than most agencies achieve.' },
@@ -410,7 +417,7 @@ export default function HomePage() {
             { q:'Can I use RankPilot for multiple websites?',a:'Yes. Starter includes 1 website, Growth includes 3, Pro includes 5, and Agency includes 10 websites. Upgrade any time to add more.' },
             { q:'Is the AI-generated content good enough to actually rank?',a:'Yes — and it is often better than manually written content because it is specifically engineered for search intent. Our AI uses your target keyword, related keywords, and competitor analysis to write content Google wants to rank. Customers regularly reach page 1 within 60–90 days of publishing.' },
             { q:'What happens to my data if I cancel?',a:'Your data stays in your account for 30 days after cancellation so you can export everything. We never sell your data to third parties. All website data is encrypted and stored securely.' },
-          ].map(faq => <FAQ key={faq.q} q={faq.q} a={faq.a} />)}
+          ] ).map((faq:any) => <FAQ key={faq.q} q={faq.q} a={faq.a} />)}
         </div>
       </section>
 
