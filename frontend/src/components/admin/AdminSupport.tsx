@@ -28,37 +28,73 @@ export default function AdminSupportPage() {
   const [canned, setCanned] = useState<any[]>([]);
   const [showCanned, setShowCanned] = useState(false);
   const [msg, setMsg] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [selectedChat, setSelectedChat] = useState<any>(null);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatReply, setChatReply] = useState('');
+  const [chatSending, setChatSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!loading && !isAdmin) { router.push('/admin/login'); return; }
-    if (isAdmin) { load(); }
+    if (isAdmin) { load().catch((e:any) => setLoadError(e.response?.data?.error || 'Could not load support data.')); }
   }, [isAdmin, loading]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:'smooth' }); }, [msgs]);
-  useEffect(() => { if (tab==='chats') loadChats(); }, [tab]);
+  useEffect(() => { if (tab==='chats') loadChats().catch((e:any) => setLoadError(e.response?.data?.error || 'Could not load chat sessions.')); }, [tab]);
 
   const load = async () => {
-    try { const { data } = await api.get('/support/admin/stats'); setStats(data); } catch {}
+    setLoadError('');
+    const [statsRes, cannedRes] = await Promise.all([
+      api.get('/support/admin/stats'),
+      api.get('/support/admin/canned'),
+    ]);
+    setStats(statsRes.data);
+    setCanned(cannedRes.data.responses || []);
     await loadTickets();
-    try { const { data } = await api.get('/support/admin/canned'); setCanned(data.responses||[]); } catch {}
   };
 
   const loadTickets = async () => {
     const p: any = {};
     if (sf) p.status=sf; if (pf) p.priority=pf; if (af) p.assigned=af;
-    try { const { data } = await api.get('/support/admin/tickets',{params:p}); setTickets(data.tickets||[]); } catch {}
+    const { data } = await api.get('/support/admin/tickets',{params:p});
+    setTickets(data.tickets||[]);
   };
 
   const loadChats = async () => {
-    try { const { data } = await api.get('/support/admin/chats'); setChats(data.sessions||[]); } catch {}
+    setLoadError('');
+    const { data } = await api.get('/support/admin/chats');
+    setChats(data.sessions||[]);
   };
 
   const openTicket = async (id: string) => {
     try {
       const { data } = await api.get(`/support/admin/tickets/${id}`);
       setSelected(data.ticket); setMsgs(data.messages||[]); setNs(data.ticket.status); setNp(data.ticket.priority);
-    } catch {}
+    } catch (err:any) { setLoadError(err.response?.data?.error || 'Could not open this support ticket.'); }
+  };
+
+  const openChat = async (id: string) => {
+    try {
+      setLoadError('');
+      const { data } = await api.get(`/support/admin/chats/${id}`);
+      setSelectedChat(data.session);
+      setChatMessages(data.messages || []);
+    } catch (err:any) { setLoadError(err.response?.data?.error || 'Could not open this chat session.'); }
+  };
+
+  const sendChatReply = async () => {
+    if (!selectedChat || !chatReply.trim() || chatSending) return;
+    setChatSending(true); setLoadError('');
+    try {
+      await api.post(`/support/admin/chats/${selectedChat.id}/reply`, { message: chatReply.trim() });
+      setChatReply('');
+      await openChat(selectedChat.id);
+      await loadChats();
+      setMsg('Reply sent. The customer chat is now connected to a human agent.');
+    } catch (err:any) {
+      setLoadError(err.response?.data?.error || 'Could not send the chat reply.');
+    } finally { setChatSending(false); }
   };
 
   const sendReply = async () => {
@@ -78,7 +114,7 @@ export default function AdminSupportPage() {
     try {
       await api.patch(`/support/admin/tickets/${selected.id}`,{ status:ns, priority:np, assigned_to:user?.id });
       await openTicket(selected.id); await load(); setMsg('Ticket updated.');
-    } catch {}
+    } catch (err:any) { setLoadError(err.response?.data?.error || 'Could not update the ticket.'); }
   };
 
   if (loading) return <div style={{color:'rgba(255,255,255,0.4)',padding:40}}>Loading...</div>;
@@ -93,6 +129,7 @@ export default function AdminSupportPage() {
         <div><h1 style={{fontSize:22,fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>Support Panel</h1><p style={{fontSize:12,color:'rgba(255,255,255,0.35)'}}>Tickets · Live chats · Analytics</p></div>
       </div>
 
+      {loadError&&<div role="alert" style={{marginBottom:16,padding:'11px 16px',background:'rgba(239,68,68,.08)',border:'1px solid rgba(239,68,68,.25)',borderRadius:10,fontSize:13,color:'#fca5a5'}}>{loadError}</div>}
       {msg&&<div style={{marginBottom:16,padding:'11px 16px',background:'rgba(99,102,241,0.08)',border:'1px solid rgba(99,102,241,0.2)',borderRadius:10,fontSize:13,color:'#a5b4fc',display:'flex',justifyContent:'space-between'}}><span>{msg}</span><button onClick={()=>setMsg('')} style={{background:'none',border:'none',color:'inherit',cursor:'pointer'}}>✕</button></div>}
 
       {stats&&(
@@ -223,24 +260,47 @@ export default function AdminSupportPage() {
       )}
 
       {tab==='chats'&&(
-        <div style={{display:'flex',flexDirection:'column',gap:10}}>
-          {chats.length===0&&<p style={{textAlign:'center',color:'rgba(255,255,255,0.3)',padding:'40px 0',fontSize:13}}>No chat sessions.</p>}
-          {chats.map(s=>(
-            <div key={s.id} style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:12,padding:16,display:'flex',alignItems:'center',justifyContent:'space-between',gap:16,flexWrap:'wrap'}}>
-              <div>
-                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
-                  <div style={{width:8,height:8,borderRadius:'50%',background:s.status==='queued'?'#fbbf24':s.status==='live'?'#4ade80':'rgba(255,255,255,0.3)'}}/>
-                  <span style={{fontSize:13,fontWeight:600,textTransform:'capitalize',color:'rgba(255,255,255,0.8)'}}>{s.status}</span>
-                  {s.users&&<span style={{fontSize:12,color:'rgba(255,255,255,0.4)'}}>{s.users.name} ({s.users.email})</span>}
-                </div>
-                <p style={{fontSize:11,color:'rgba(255,255,255,0.28)'}}>Started: {new Date(s.started_at).toLocaleString()}</p>
-              </div>
-              <div style={{display:'flex',gap:8}}>
-                {s.status==='queued'&&<span style={{fontSize:11,padding:'5px 14px',background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:8,color:'#fbbf24',fontWeight:600}}>Waiting for agent</span>}
-                {s.ticket_id&&<span style={{fontSize:11,color:'#818cf8',padding:'5px 10px',background:'rgba(99,102,241,0.1)',borderRadius:100}}>Has ticket</span>}
-              </div>
+        <div style={{display:'grid',gridTemplateColumns:selectedChat?'minmax(260px,360px) minmax(0,1fr)':'1fr',gap:16,alignItems:'start'}}>
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10}}>
+              <p style={{fontSize:12,color:'rgba(255,255,255,.4)'}}>Queued requests and active human conversations</p>
+              <button onClick={()=>loadChats().catch((e:any)=>setLoadError(e.response?.data?.error||'Could not refresh chats.'))} style={{padding:'7px 11px',background:'rgba(99,102,241,.12)',border:'1px solid rgba(99,102,241,.25)',borderRadius:8,color:'#a5b4fc',cursor:'pointer'}}>↻ Refresh</button>
             </div>
-          ))}
+            {chats.length===0&&<p style={{textAlign:'center',color:'rgba(255,255,255,0.3)',padding:'40px 0',fontSize:13}}>No chat sessions.</p>}
+            {chats.map(s=>(
+              <button key={s.id} onClick={()=>openChat(s.id)} style={{textAlign:'left',background:selectedChat?.id===s.id?'rgba(99,102,241,.1)':'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:12,padding:14,color:'#fff',cursor:'pointer'}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:5}}>
+                  <span style={{width:8,height:8,borderRadius:'50%',background:s.status==='queued'?'#fbbf24':s.status==='live'?'#4ade80':'rgba(255,255,255,.3)'}}/>
+                  <strong style={{fontSize:12,textTransform:'capitalize'}}>{s.status}</strong>
+                  <span style={{marginLeft:'auto',fontSize:10,color:'rgba(255,255,255,.35)'}}>{s.message_count||0} messages</span>
+                </div>
+                <p style={{fontSize:12,color:'rgba(255,255,255,.72)'}}>{s.user_name||'Guest visitor'}{s.user_email?' · '+s.user_email:''}</p>
+                <p style={{fontSize:10,color:'rgba(255,255,255,.3)',marginTop:5}}>Last activity: {new Date(s.last_message_at||s.started_at).toLocaleString()}</p>
+                {s.ticket_id&&<span style={{display:'inline-block',marginTop:7,fontSize:10,color:'#a5b4fc'}}>Linked support ticket</span>}
+              </button>
+            ))}
+          </div>
+          {selectedChat&&(
+            <section style={{background:'rgba(255,255,255,.02)',border:'1px solid rgba(255,255,255,.08)',borderRadius:14,overflow:'hidden'}}>
+              <header style={{padding:15,borderBottom:'1px solid rgba(255,255,255,.07)',display:'flex',justifyContent:'space-between',gap:12,alignItems:'center'}}>
+                <div><h3 style={{fontSize:14,fontWeight:700}}>Live conversation</h3><p style={{fontSize:11,color:'rgba(255,255,255,.4)',marginTop:4}}>{selectedChat.user_name||'Guest visitor'}{selectedChat.user_email?' · '+selectedChat.user_email:''}</p></div>
+                <span style={{fontSize:11,color:selectedChat.status==='live'?'#4ade80':selectedChat.status==='queued'?'#fbbf24':'#9ca3af',textTransform:'capitalize'}}>{selectedChat.status}</span>
+              </header>
+              <div style={{padding:15,maxHeight:430,overflowY:'auto',display:'flex',flexDirection:'column',gap:10}}>
+                {chatMessages.map(m=><div key={m.id} style={{alignSelf:m.sender_role==='user'?'flex-end':'flex-start',maxWidth:'88%'}}>
+                  <p style={{fontSize:10,color:'rgba(255,255,255,.35)',marginBottom:3}}>{m.sender_name||m.sender_role} · {new Date(m.created_at).toLocaleString()}</p>
+                  <div style={{padding:'9px 12px',borderRadius:10,background:m.sender_role==='user'?'rgba(99,102,241,.2)':m.sender_role==='agent'?'rgba(74,222,128,.09)':'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.06)',fontSize:12,lineHeight:1.6,whiteSpace:'pre-wrap',wordBreak:'break-word'}}>{m.message}</div>
+                </div>)}
+                {!chatMessages.length&&<p style={{fontSize:12,color:'rgba(255,255,255,.35)'}}>No messages recorded for this session.</p>}
+              </div>
+              <div style={{padding:14,borderTop:'1px solid rgba(255,255,255,.07)'}}>
+                {selectedChat.status==='closed'?<p style={{fontSize:12,color:'rgba(255,255,255,.4)'}}>This chat session is closed.</p>:<>
+                  <textarea value={chatReply} onChange={e=>setChatReply(e.target.value)} rows={3} maxLength={5000} placeholder="Reply to the customer. Sending the first reply connects this session to a human agent." style={{width:'100%',boxSizing:'border-box',padding:10,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.1)',borderRadius:9,color:'#fff',fontSize:12,resize:'vertical'}}/>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:8,gap:10}}><span style={{fontSize:10,color:'rgba(255,255,255,.3)'}}>Up to 5,000 characters</span><button onClick={sendChatReply} disabled={!chatReply.trim()||chatSending} style={{padding:'8px 15px',background:'linear-gradient(135deg,#6366f1,#7c3aed)',border:0,borderRadius:8,color:'#fff',cursor:'pointer',opacity:chatReply.trim()&&!chatSending?1:.5}}>{chatSending?'Sending…':'Send reply & take chat'}</button></div>
+                </>}
+              </div>
+            </section>
+          )}
         </div>
       )}
 
@@ -264,13 +324,16 @@ export default function AdminSupportPage() {
             })}
           </div>
           <div style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:24}}>
-            <h3 style={{fontSize:14,fontWeight:700,marginBottom:16}}>SLA Targets</h3>
-            {[{l:'Urgent',t:'< 1 hour',c:'#ef4444'},{l:'High',t:'2-4 hours',c:'#f59e0b'},{l:'Normal',t:'4-8 hours',c:'#818cf8'},{l:'Low',t:'24 hours',c:'rgba(255,255,255,0.4)'}].map(s=>(
-              <div key={s.l} style={{display:'flex',justifyContent:'space-between',padding:'9px 0',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
-                <span style={{fontSize:13,color:s.c,fontWeight:500}}>{s.l}</span>
-                <span style={{fontSize:13,color:'rgba(255,255,255,0.4)'}}>{s.t}</span>
-              </div>
-            ))}
+            <h3 style={{fontSize:14,fontWeight:700,marginBottom:16}}>Measured service quality · last 30 days</h3>
+            <div style={{marginBottom:18}}>
+              <p style={{fontSize:11,color:'rgba(255,255,255,.4)'}}>Average first response</p>
+              <p style={{fontSize:27,fontWeight:800,color:'#a5b4fc',marginTop:5}}>{stats?.averageFirstResponseMinutes == null ? 'No data yet' : stats.averageFirstResponseMinutes < 60 ? Math.round(stats.averageFirstResponseMinutes)+' min' : (stats.averageFirstResponseMinutes/60).toFixed(1)+' hrs'}</p>
+            </div>
+            <div style={{marginBottom:8}}>
+              <p style={{fontSize:11,color:'rgba(255,255,255,.4)'}}>Customer satisfaction</p>
+              <p style={{fontSize:27,fontWeight:800,color:'#4ade80',marginTop:5}}>{stats?.averageSatisfaction == null ? 'No ratings yet' : stats.averageSatisfaction.toFixed(1)+' / 5'}</p>
+              <p style={{fontSize:10,color:'rgba(255,255,255,.3)',marginTop:3}}>{stats?.satisfactionResponses||0} customer ratings recorded</p>
+            </div>
           </div>
         </div>
       )}
