@@ -259,21 +259,16 @@ export default function AdminPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:24,flexWrap:'wrap',gap:12 }}>
-        <div style={{ display:'flex',alignItems:'center',gap:12 }}>
-          <div style={{ width:38,height:38,borderRadius:11,background:'linear-gradient(135deg,#f59e0b,#ef4444)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20 }}>⚡</div>
-          <div>
-            <h1 style={{ fontSize:22,fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif" }}>Admin Panel</h1>
-            <p style={{ fontSize:12,color:'rgba(255,255,255,0.35)' }}>{user?.email} · {user?.role}</p>
-          </div>
+      {/* Owner operations shortcuts */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginBottom:18,padding:'13px 15px',background:'linear-gradient(110deg,rgba(245,158,11,.08),rgba(99,102,241,.055))',border:'1px solid rgba(255,255,255,.07)',borderRadius:12}}>
+        <div>
+          <div style={{fontSize:12,fontWeight:800,color:'#e5e7eb'}}>Owner operations</div>
+          <div style={{fontSize:10,color:'rgba(255,255,255,.4)',marginTop:3}}>Customer metrics exclude the private owner account · Data refreshes automatically every 30 seconds</div>
         </div>
-        <Link href="/admin/support" style={{ display:'flex',alignItems:'center',gap:8,padding:'9px 18px',background:'rgba(99,102,241,0.1)',border:'1px solid rgba(99,102,241,0.25)',borderRadius:10,color:'#818cf8',textDecoration:'none',fontSize:13,fontWeight:600 }}>
-          🛟 Support Panel →
-        </Link>
-        <Link href="/admin/commerce" style={{ display:'flex',alignItems:'center',gap:8,padding:'9px 18px',background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.25)',borderRadius:10,color:'#fbbf24',textDecoration:'none',fontSize:13,fontWeight:600 }}>
-          💳 Commerce →
-        </Link>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          <Link href="/admin/support" style={{display:'flex',alignItems:'center',gap:7,padding:'8px 12px',background:'rgba(99,102,241,.1)',border:'1px solid rgba(99,102,241,.25)',borderRadius:9,color:'#a5b4fc',textDecoration:'none',fontSize:11,fontWeight:700}}>◎ Support centre</Link>
+          <Link href="/admin/commerce" style={{display:'flex',alignItems:'center',gap:7,padding:'8px 12px',background:'rgba(245,158,11,.1)',border:'1px solid rgba(245,158,11,.25)',borderRadius:9,color:'#fbbf24',textDecoration:'none',fontSize:11,fontWeight:700}}>▤ Commerce & orders</Link>
+        </div>
       </div>
 
       <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:12,marginBottom:16}}><span style={{fontSize:11,color:'rgba(255,255,255,0.35)'}}>{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Live data'}</span><button onClick={refreshCurrentTab} disabled={refreshing} className="btn-primary" style={{fontSize:12,padding:'7px 14px',opacity:refreshing?0.6:1}}>{refreshing?'Refreshing…':'↻ Refresh'}</button></div>
