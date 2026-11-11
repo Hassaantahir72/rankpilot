@@ -6,6 +6,7 @@ const { authMiddleware, requireAdmin } = require('../middleware/auth');
 // Public (no auth needed for guest chat/tickets)
 router.post('/chat', c.chatWithBot);
 router.post('/chat/request-agent', c.requestAgent);
+router.post('/chat/poll', c.pollAgentMessages);
 
 // Authenticated user routes
 router.use(authMiddleware);
@@ -22,6 +23,8 @@ router.get('/admin/tickets/:ticketId', requireAdmin, c.adminGetTicket);
 router.post('/admin/tickets/:ticketId/reply', requireAdmin, c.adminReplyTicket);
 router.patch('/admin/tickets/:ticketId', requireAdmin, c.adminUpdateTicket);
 router.get('/admin/chats', requireAdmin, c.adminGetChatSessions);
+router.get('/admin/chats/:sessionId', requireAdmin, c.adminGetChatSession);
+router.post('/admin/chats/:sessionId/reply', requireAdmin, c.adminReplyChat);
 router.get('/admin/canned', requireAdmin, c.getCannedResponses);
 
 module.exports = router;

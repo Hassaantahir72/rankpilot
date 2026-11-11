@@ -42,6 +42,7 @@ export default function ChatWidget() {
   const [rating, setRating] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const seenAgentMessageIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -50,6 +51,34 @@ export default function ChatWidget() {
   useEffect(() => {
     if (open) { setUnread(0); setTimeout(() => inputRef.current?.focus(), 100); }
   }, [open]);
+
+  useEffect(() => {
+    if (!sessionToken || status === 'bot') return;
+    let active = true;
+    const poll = async () => {
+      try {
+        const { data } = await api.post('/support/chat/poll', { sessionToken });
+        if (!active) return;
+        if (data.sessionStatus) setStatus(data.sessionStatus);
+        const incoming = (data.messages || []).filter((m: any) => m.id && !seenAgentMessageIds.current.has(m.id));
+        if (incoming.length) {
+          incoming.forEach((m: any) => seenAgentMessageIds.current.add(m.id));
+          setMessages(prev => [...prev, ...incoming.map((m: any) => ({
+            role: 'agent' as const,
+            content: m.message,
+            name: m.sender_name || 'RankPilot Support',
+            time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          }))]);
+          if (!open) setUnread(n => n + incoming.length);
+        }
+      } catch {
+        // Temporary polling failures do not interrupt the conversation.
+      }
+    };
+    poll();
+    const timer = window.setInterval(poll, 4000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [sessionToken, status, open]);
 
   const addMsg = (role: Msg['role'], content: string, name?: string) => {
     const msg: Msg = { role, content, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), name };
