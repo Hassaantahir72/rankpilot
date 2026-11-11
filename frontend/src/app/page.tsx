@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import ScrollReveal from '@/components/ui/ScrollReveal';
+import { getPlanFeatureLines, PublicPlanLimits } from '@/lib/planFeatures';
 
 function TypingText({ words }: { words: string[] }) {
   const [idx, setIdx] = useState(0);
@@ -58,12 +59,17 @@ function readJsonList<T>(content: Record<string,string>, key: string, fallback: 
 
 export default function HomePage() {
   const [siteContent, setSiteContent] = useState<Record<string,string>>({});
+  const [planLimits, setPlanLimits] = useState<PublicPlanLimits[]>([]);
   useEffect(() => {
     let active = true;
     const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
     fetch((base.endsWith('/') ? base.slice(0, -1) : base) + '/site-content', { cache: 'no-store' })
       .then(response => response.ok ? response.json() : null)
       .then(data => { if (active && data?.content) setSiteContent(data.content); })
+      .catch(() => {});
+    fetch((base.endsWith('/') ? base.slice(0, -1) : base) + '/plans', { cache: 'no-store' })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => { if (active && Array.isArray(data?.plans)) setPlanLimits(data.plans); })
       .catch(() => {});
     return () => { active = false; };
   }, []);
@@ -345,10 +351,10 @@ export default function HomePage() {
           </ScrollReveal>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:20 }}>
             {[
-              { name:'Starter',price:15,desc:'Essential SEO for one website',features:['1 website','5 SEO audits/month','10 AI content generations/month','Monthly rank tracking','Competitor analysis','Email support'],col:'#6366f1',popular:false },
-              { name:'Growth',price:29,desc:'More capacity for growing businesses',features:['3 websites','15 SEO audits/month','30 AI content generations/month','Weekly rank tracking','Google Ads AI tools','10 social posts/month','Weekly reports'],col:'#8b5cf6',popular:true },
-              { name:'Pro',price:59,desc:'Advanced marketing for active teams',features:['5 websites','40 SEO audits/month','80 AI content generations/month','Google + Meta Ads AI tools','30 social posts/month','Branded PDF reports'],col:'#ec4899',popular:false },
-              { name:'Agency',price:99,desc:'Higher limits for agency workflows',features:['10 websites','100 SEO audits/month','200 AI content generations/month','Google + Meta Ads AI tools','100 social posts/month','Branded PDF reports'],col:'#f59e0b',popular:false },
+              { name:'Starter',price:15,desc:'Essential SEO for one website',features:getPlanFeatureLines('starter',planLimits.find(p=>p.plan==='starter')),col:'#6366f1',popular:false },
+              { name:'Growth',price:29,desc:'More capacity for growing businesses',features:getPlanFeatureLines('growth',planLimits.find(p=>p.plan==='growth')),col:'#8b5cf6',popular:true },
+              { name:'Pro',price:59,desc:'Advanced marketing for active teams',features:getPlanFeatureLines('pro',planLimits.find(p=>p.plan==='pro')),col:'#ec4899',popular:false },
+              { name:'Agency',price:99,desc:'Higher limits for agency workflows',features:getPlanFeatureLines('agency',planLimits.find(p=>p.plan==='agency')),col:'#f59e0b',popular:false },
             ].map((plan,i) => (
               <ScrollReveal key={plan.name} delay={i*80} type="up">
                 <div className={`pricing-card ${plan.popular?'popular':''}`} style={{ height:'100%',display:'flex',flexDirection:'column' }}>
