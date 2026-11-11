@@ -309,6 +309,16 @@ const updateSiteSetting = async (req, res) => {
   const { key } = req.params;
   const { value } = req.body || {};
   if (typeof value !== 'string' || value.length > 10000) return res.status(400).json({ error: 'Setting value must be text of 10,000 characters or fewer.' });
+  const jsonValidators = {
+    homepage_seo_features_json: (items) => Array.isArray(items) && items.length <= 12 && items.every(item => typeof item === 'string' && item.trim().length > 0 && item.length <= 240),
+    homepage_faq_items_json: (items) => Array.isArray(items) && items.length <= 20 && items.every(item => item && typeof item.q === 'string' && item.q.trim().length > 0 && item.q.length <= 240 && typeof item.a === 'string' && item.a.trim().length > 0 && item.a.length <= 1600),
+    homepage_testimonials_json: (items) => Array.isArray(items) && items.length <= 12 && items.every(item => item && typeof item.q === 'string' && item.q.trim().length > 0 && item.q.length <= 1600 && ['n','r','c','a'].every(key => typeof item[key] === 'string' && item[key].length <= 120) && (item.col === undefined || (typeof item.col === 'string' && /^#[0-9a-fA-F]{6}$/.test(item.col))))
+  };
+  if (Object.prototype.hasOwnProperty.call(jsonValidators, key)) {
+    let parsed;
+    try { parsed = JSON.parse(value); } catch { return res.status(400).json({ error: 'This field must contain valid JSON.' }); }
+    if (!jsonValidators[key](parsed)) return res.status(400).json({ error: 'The JSON array has an invalid shape or exceeds the allowed item/field limits.' });
+  }
   const existing = await queryOne('SELECT key FROM site_settings WHERE key=$1', [key]);
   if (!existing) return res.status(404).json({ error: 'Setting not found.' });
   await query('UPDATE site_settings SET value=$1,updated_by=$2,updated_at=NOW() WHERE key=$3', [value, req.user.id, key]);
