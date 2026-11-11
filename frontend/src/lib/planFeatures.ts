@@ -1,6 +1,7 @@
 export type PublicPlanLimits = {
   plan: string;
   max_websites?: number;
+  max_keywords?: number;
   max_audits_per_month?: number;
   max_content_per_month?: number;
   max_social_posts_per_month?: number;
@@ -14,10 +15,10 @@ export type PublicPlanLimits = {
 };
 
 const DEFAULTS: Record<string, Omit<PublicPlanLimits, 'plan'>> = {
-  starter: { max_websites: 1, max_audits_per_month: 5, max_content_per_month: 10, max_social_posts_per_month: 0, rank_tracking_frequency: 'monthly', competitor_analysis: true, google_ads: false, meta_ads: false, weekly_reports: false, priority_support: false, white_label: false },
-  growth: { max_websites: 3, max_audits_per_month: 15, max_content_per_month: 30, max_social_posts_per_month: 10, rank_tracking_frequency: 'weekly', competitor_analysis: true, google_ads: true, meta_ads: false, weekly_reports: true, priority_support: true, white_label: false },
-  pro: { max_websites: 5, max_audits_per_month: 40, max_content_per_month: 80, max_social_posts_per_month: 30, rank_tracking_frequency: 'weekly', competitor_analysis: true, google_ads: true, meta_ads: true, weekly_reports: true, priority_support: true, white_label: false },
-  agency: { max_websites: 10, max_audits_per_month: 100, max_content_per_month: 200, max_social_posts_per_month: 100, rank_tracking_frequency: 'weekly', competitor_analysis: true, google_ads: true, meta_ads: true, weekly_reports: true, priority_support: true, white_label: false },
+  starter: { max_websites: 1, max_keywords: 150, max_audits_per_month: 5, max_content_per_month: 10, max_social_posts_per_month: 0, rank_tracking_frequency: 'monthly', competitor_analysis: true, google_ads: false, meta_ads: false, weekly_reports: false, priority_support: false, white_label: false },
+  growth: { max_websites: 3, max_keywords: 300, max_audits_per_month: 15, max_content_per_month: 30, max_social_posts_per_month: 10, rank_tracking_frequency: 'weekly', competitor_analysis: true, google_ads: true, meta_ads: false, weekly_reports: true, priority_support: true, white_label: false },
+  pro: { max_websites: 5, max_keywords: 500, max_audits_per_month: 40, max_content_per_month: 80, max_social_posts_per_month: 30, rank_tracking_frequency: 'weekly', competitor_analysis: true, google_ads: true, meta_ads: true, weekly_reports: true, priority_support: true, white_label: false },
+  agency: { max_websites: 10, max_keywords: 1000, max_audits_per_month: 100, max_content_per_month: 200, max_social_posts_per_month: 100, rank_tracking_frequency: 'weekly', competitor_analysis: true, google_ads: true, meta_ads: true, weekly_reports: true, priority_support: true, white_label: false },
 };
 
 export function getPlanFeatureLines(plan: string, row?: PublicPlanLimits) {
@@ -26,6 +27,7 @@ export function getPlanFeatureLines(plan: string, row?: PublicPlanLimits) {
   const frequency = String(value.rank_tracking_frequency || 'monthly');
   return [
     `${value.max_websites ?? fallback.max_websites} website${(value.max_websites ?? fallback.max_websites) === 1 ? '' : 's'}`,
+    `${value.max_keywords ?? fallback.max_keywords} tracked keywords`,
     `${value.max_audits_per_month ?? fallback.max_audits_per_month} SEO audits/month`,
     `${value.max_content_per_month ?? fallback.max_content_per_month} AI content generations/month`,
     `${frequency.charAt(0).toUpperCase() + frequency.slice(1)} rank tracking`,
@@ -49,6 +51,7 @@ export function getPlanComparisonRows(plans: PublicPlanLimits[]) {
   const social = (v: number) => v > 0 ? `${v}/mo` : '—';
   return [
     { f: 'Websites', s: String(starter.max_websites), g: String(growth.max_websites), p: String(pro.max_websites), a: String(agency.max_websites) },
+    { f: 'Tracked Keywords', s: String(starter.max_keywords), g: String(growth.max_keywords), p: String(pro.max_keywords), a: String(agency.max_keywords) },
     { f: 'SEO Audits / month', s: String(starter.max_audits_per_month), g: String(growth.max_audits_per_month), p: String(pro.max_audits_per_month), a: String(agency.max_audits_per_month) },
     { f: 'AI Content / month', s: String(starter.max_content_per_month), g: String(growth.max_content_per_month), p: String(pro.max_content_per_month), a: String(agency.max_content_per_month) },
     { f: 'Rank Tracking', s: String(starter.rank_tracking_frequency), g: String(growth.rank_tracking_frequency), p: String(pro.rank_tracking_frequency), a: String(agency.rank_tracking_frequency) },
