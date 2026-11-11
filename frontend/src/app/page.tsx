@@ -103,21 +103,10 @@ export default function HomePage() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16 10,8"/></svg>
             </Link>
           </div>
-          {/* Social proof */}
-          <div className="animate-fade-up delay-4" style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:24,flexWrap:'wrap' }}>
-            <div style={{ display:'flex' }}>
-              {['#6366f1','#8b5cf6','#ec4899','#f59e0b','#4ade80'].map((c,i) => (
-                <div key={i} style={{ width:34,height:34,borderRadius:'50%',background:c,border:'2px solid #08080f',marginLeft:i?-10:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'#fff' }}>
-                  {['A','B','C','D','E'][i]}
-                </div>
-              ))}
-            </div>
-            <div>
-              <div style={{ display:'flex',gap:2,marginBottom:4 }}>{[1,2,3,4,5].map(i=><span key={i} style={{ color:'#fbbf24',fontSize:14 }}>★</span>)}</div>
-              <p style={{ fontSize:13,color:'rgba(255,255,255,0.4)' }}>Trusted by 1,200+ businesses worldwide</p>
-            </div>
-            <div style={{ width:1,height:36,background:'rgba(255,255,255,0.1)' }} />
-            <p style={{ fontSize:13,color:'rgba(255,255,255,0.4)' }}>Average <span style={{ color:'#4ade80',fontWeight:600 }}>+340% organic traffic</span> in 90 days</p>
+          <div className="animate-fade-up delay-4" style={{display:'flex',justifyContent:'center',gap:20,flexWrap:'wrap',color:'rgba(255,255,255,.5)',fontSize:13}}>
+            <span>✓ No credit card required for trial</span>
+            <span>✓ Separate owner and customer workspaces</span>
+            <span>✓ Plan-based feature limits</span>
           </div>
         </div>
       </section>
@@ -134,26 +123,25 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* STATS */}
-      <section className="section" style={{ background:'var(--dark-2)' }}>
+      {/* CAPABILITIES — factual product features, not unverified performance metrics */}
+      <section className="section" style={{background:'var(--dark-2)'}}>
         <div className="container">
-          <ScrollReveal className="text-center" style={{ marginBottom:64 }}>
-            <span className="tag" style={{ marginBottom:20 }}>{siteContent.homepage_stats_eyebrow || 'By the numbers'}</span>
-            <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif" }}>{siteContent.homepage_stats_heading || 'Results that speak for themselves'}</h2>
+          <ScrollReveal className="text-center" style={{marginBottom:64}}>
+            <span className="tag" style={{marginBottom:20}}>{siteContent.homepage_stats_eyebrow || 'What you can do'}</span>
+            <h2 style={{fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif"}}>{siteContent.homepage_stats_heading || 'Core capabilities'}</h2>
           </ScrollReveal>
-          <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:20 }}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:20}}>
             {[
-              { num:1200,suffix:'+',label:'Businesses using RankPilot',col:'#6366f1' },
-              { num:340,suffix:'%',label:'Avg traffic increase in 90 days',col:'#8b5cf6' },
-              { num:50000,suffix:'+',label:'SEO audits completed',col:'#ec4899' },
-              { num:98,suffix:'%',label:'Customer satisfaction rate',col:'#4ade80' },
-            ].map((s,i) => (
-              <ScrollReveal key={s.label} delay={i*100} type="scale">
-                <div className="glass-card" style={{ padding:'36px 24px',textAlign:'center' }}>
-                  <p style={{ fontSize:'3rem',fontWeight:900,fontFamily:"'Plus Jakarta Sans',sans-serif",color:s.col,lineHeight:1,marginBottom:10 }}>
-                    <CountUp end={s.num} suffix={s.suffix} />
-                  </p>
-                  <p style={{ fontSize:14,color:'rgba(255,255,255,0.4)',lineHeight:1.55 }}>{s.label}</p>
+              {icon:'⌕',title:'SEO audits',description:'Review technical and on-page issues that may affect search visibility.',color:'#6366f1'},
+              {icon:'⌘',title:'Keyword research',description:'Explore relevant keyword opportunities and organise your SEO priorities.',color:'#8b5cf6'},
+              {icon:'✎',title:'AI content tools',description:'Prepare search-focused content drafts for review and refinement.',color:'#ec4899'},
+              {icon:'▤',title:'Reporting',description:'Keep website work, audit history and progress information together.',color:'#4ade80'},
+            ].map((item,i)=>(
+              <ScrollReveal key={item.title} delay={i*80} type="scale">
+                <div className="glass-card" style={{padding:'30px 24px',height:'100%'}}>
+                  <div style={{fontSize:26,color:item.color,marginBottom:14}}>{item.icon}</div>
+                  <h3 style={{fontWeight:700,fontSize:16,marginBottom:9,color:'#fff'}}>{item.title}</h3>
+                  <p style={{fontSize:13,color:'rgba(255,255,255,.45)',lineHeight:1.7}}>{item.description}</p>
                 </div>
               </ScrollReveal>
             ))}
@@ -175,8 +163,8 @@ export default function HomePage() {
             <div style={{ position:'absolute',top:22,left:'calc(33% + 20px)',right:'calc(33% + 20px)',height:1,background:'linear-gradient(90deg,rgba(99,102,241,0.5),rgba(99,102,241,0.1))' }} />
             {[
               { n:'1',title:'Paste your URL',desc:'Add your website URL and tell us your industry. Takes 30 seconds. No setup, no code, no configuration.' },
-              { n:'2',title:'AI analyses everything',desc:'RankPilot crawls your entire site, researches 100+ keywords, checks competitors, and spots every issue.' },
-              { n:'3',title:'Rankings climb automatically',desc:'We fix your SEO, write content, launch ads, and send you weekly plain-English reports every Monday.' },
+              { n:'2',title:'AI analyses everything',desc:'RankPilot helps review your website, explore keyword opportunities, and identify practical areas to improve.' },
+              { n:'3',title:'Turn insights into an action plan',desc:'Review recommendations, write content, launch ads, and send you weekly plain-English reports every Monday.' },
             ].map((s,i) => (
               <ScrollReveal key={s.n} delay={i*150} type="up" className="text-center">
                 <div style={{ width:52,height:52,borderRadius:'50%',background:'linear-gradient(135deg,#6366f1,#7c3aed)',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:20,margin:'0 auto 22px',boxShadow:'0 0 28px rgba(99,102,241,0.4)',fontFamily:"'Plus Jakarta Sans',sans-serif" }}>{s.n}</div>
@@ -194,8 +182,8 @@ export default function HomePage() {
           <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:80,alignItems:'center' }}>
             <ScrollReveal type="left">
               <span className="tag" style={{ marginBottom:20 }}>{siteContent.homepage_seo_eyebrow || 'SEO Autopilot'}</span>
-              <h2 style={{ fontSize:'clamp(1.8rem,3.5vw,2.6rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.12,marginBottom:18 }}>{siteContent.homepage_seo_heading || 'Everything an SEO expert does — automated'}</h2>
-              <p style={{ color:'rgba(255,255,255,0.45)',fontSize:15,lineHeight:1.8,marginBottom:32 }}>{siteContent.homepage_seo_description || 'SEO agencies charge $2,000–$8,000/month. RankPilot does the same work automatically in minutes — full crawl, keyword research, content writing, rank tracking.'}</p>
+              <h2 style={{ fontSize:'clamp(1.8rem,3.5vw,2.6rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.12,marginBottom:18 }}>{siteContent.homepage_seo_heading || 'AI-assisted tools for everyday SEO work'}</h2>
+              <p style={{ color:'rgba(255,255,255,0.45)',fontSize:15,lineHeight:1.8,marginBottom:32 }}>{siteContent.homepage_seo_description || 'Review technical and on-page SEO issues, explore keyword opportunities, prepare search-focused drafts, and monitor your work from one workspace.'}</p>
               {readJsonList<string>(siteContent, 'homepage_seo_features_json', ['Full website crawl — every page audited and scored','AI researches 100+ keywords ranked by traffic opportunity','Page-by-page content rewrite with keywords naturally embedded','Competitor gap analysis — see what their traffic comes from','Weekly rank tracking with email alerts when positions change','Technical fixes: speed, schema markup, meta tags, broken links']).map(f => (
                 <div key={f} style={{ display:'flex',alignItems:'flex-start',gap:12,marginBottom:12 }}>
                   <div style={{ width:20,height:20,borderRadius:'50%',background:'rgba(99,102,241,0.15)',border:'1px solid rgba(99,102,241,0.35)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:2 }}>
@@ -296,7 +284,7 @@ export default function HomePage() {
           <ScrollReveal className="text-center" style={{ marginBottom:64 }}>
             <span className="tag" style={{ marginBottom:20 }}>{siteContent.homepage_features_eyebrow || 'Full feature set'}</span>
             <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",marginBottom:14 }}>{siteContent.homepage_features_heading || 'Everything you need to dominate your market'}</h2>
-            <p style={{ color:'rgba(255,255,255,0.4)',maxWidth:500,margin:'0 auto',fontSize:16 }}>{siteContent.homepage_features_description || 'One platform replaces your SEO agency, ad manager, content writer, and analytics team.'}</p>
+            <p style={{ color:'rgba(255,255,255,0.4)',maxWidth:500,margin:'0 auto',fontSize:16 }}>{siteContent.homepage_features_description || 'Bring SEO, content and marketing workflows together in one workspace.'}</p>
           </ScrollReveal>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(250px,1fr))',gap:18 }}>
             {[
@@ -407,8 +395,8 @@ export default function HomePage() {
           </ScrollReveal>
           {readJsonList<any>(siteContent, 'homepage_faq_items_json', [
             { q:'Do I need any SEO knowledge to use RankPilot?',a:'Zero. RankPilot is built for business owners, not SEO experts. You paste your URL and AI does everything — audit, content, fix list. All reports are in plain English with no jargon.' },
-            { q:'How is this different from hiring an SEO agency?',a:'Agencies charge $2,000–$8,000/month and spend much of that on account managers and overhead. RankPilot uses AI to do the actual work for a fraction of the price — with faster results and full transparency into exactly what was done.' },
-            { q:'How long does it take to see ranking improvements?',a:'Most customers see ranking movement within 4–8 weeks of implementing the AI recommendations. Full first-page rankings for competitive keywords typically take 3–6 months, which is faster than most agencies achieve.' },
+            { q:'How is this different from hiring an SEO agency?',a:'RankPilot brings website audits, keyword research, AI-assisted content tools and reporting into one workspace. Available workflows and limits depend on your plan and connected services.' },
+            { q:'How long does it take to see ranking improvements?',a:'SEO timelines vary with competition, website history, technical health and content quality. RankPilot helps identify issues and organise work, but search rankings are not guaranteed.' },
             { q:'Does RankPilot actually run my Google Ads, or just suggest things?',a:'Both. On eligible plans, RankPilot provides Google Ads and Meta Ads AI tools to help prepare campaign assets. Live campaign publishing depends on supported account connections and configuration.' },
             { q:'Can I use RankPilot for multiple websites?',a:'Yes. Starter includes 1 website, Growth includes 3, Pro includes 5, and Agency includes 10 websites. Upgrade any time to add more.' },
             { q:'Is the AI-generated content good enough to actually rank?',a:'Yes — and it is often better than manually written content because it is specifically engineered for search intent. Our AI uses your target keyword, related keywords, and competitor analysis to write content Google wants to rank. Customers regularly reach page 1 within 60–90 days of publishing.' },
@@ -425,7 +413,7 @@ export default function HomePage() {
               <div style={{ position:'absolute',top:-100,left:'50%',transform:'translateX(-50%)',width:500,height:500,background:'radial-gradient(circle,rgba(99,102,241,0.12),transparent 65%)',pointerEvents:'none' }} />
               <span className="tag" style={{ marginBottom:24 }}>{siteContent.homepage_final_eyebrow || 'Start today'}</span>
               <h2 style={{ fontSize:'clamp(2rem,5vw,3.2rem)',fontWeight:900,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.08,marginBottom:20 }}>
-                {siteContent.homepage_final_heading || 'Replace your agency. Keep the results.'}
+                {siteContent.homepage_final_heading || 'Build a clearer, more consistent SEO workflow.'}
               </h2>
               <p style={{ fontSize:16,color:'rgba(255,255,255,0.45)',marginBottom:44,lineHeight:1.75,maxWidth:500,margin:'0 auto 44px' }}>{siteContent.homepage_final_description || 'Start your 14-day Free Trial with no card required. It includes 1 website, 5 SEO audits/month, 10 AI content generations/month, 5 social posts/month, competitor analysis, and weekly rank tracking.'}</p>
               <div style={{ display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap' }}>
