@@ -55,23 +55,25 @@ export default function OwnerAdminLayout({ children }: { children: React.ReactNo
   return (
     <div className="rp-admin-shell">
       <style>{`
-        .rp-admin-shell{min-height:100vh;display:flex;background:#080b13;color:#f4f6fb;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-        .rp-admin-sidebar{width:258px;flex:0 0 258px;display:flex;flex-direction:column;background:#0d121d;border-right:1px solid #202a3a;min-height:100vh;position:sticky;top:0;height:100vh}
-        .rp-admin-brand{padding:24px 20px 21px;border-bottom:1px solid #202a3a}
-        .rp-admin-nav{padding:17px 12px;display:grid;gap:17px;flex:1;align-content:start;overflow:auto}
-        .rp-admin-group-title{font-size:9px;letter-spacing:.17em;color:#65738a;font-weight:800;padding:0 10px 7px}
-        .rp-admin-link{display:flex;align-items:center;gap:12px;padding:10px 11px;border-radius:9px;text-decoration:none;font-size:12px;font-weight:600;color:#8996aa;border:1px solid transparent;transition:all .15s}
-        .rp-admin-link:hover{background:#151f2e;color:#e8edf6}
-        .rp-admin-link.active{background:linear-gradient(100deg,rgba(245,158,11,.16),rgba(245,158,11,.055));border-color:rgba(245,158,11,.25);color:#ffd27a}
-        .rp-admin-link-icon{width:20px;text-align:center;font-size:16px}
-        .rp-admin-main{flex:1;min-width:0;padding:0 30px 40px}
-        .rp-admin-topbar{height:76px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1c2635;margin-bottom:27px;gap:14px}
-        .rp-admin-top-actions{display:flex;align-items:center;gap:10px}
-        .rp-admin-top-link{padding:8px 12px;border:1px solid #2a3547;border-radius:9px;color:#aab6c8;text-decoration:none;font-size:11px;font-weight:700}
-        .rp-admin-content{max-width:1600px;margin:0 auto}
-        .rp-admin-mobile-nav{display:none}
-        @media(max-width:1000px){.rp-admin-sidebar{width:220px;flex-basis:220px}.rp-admin-main{padding:0 20px 30px}}
-        @media(max-width:720px){.rp-admin-shell{display:block}.rp-admin-sidebar{position:relative;width:100%;height:auto;min-height:0;border-right:0;border-bottom:1px solid #202a3a}.rp-admin-brand{padding:15px 17px}.rp-admin-nav{display:flex;gap:7px;padding:10px 12px;overflow-x:auto}.rp-admin-nav-group{display:contents}.rp-admin-group-title{display:none}.rp-admin-link{white-space:nowrap;padding:9px 11px}.rp-admin-sidebar-footer{display:none}.rp-admin-main{padding:0 14px 28px}.rp-admin-topbar{height:auto;min-height:66px;margin-bottom:18px;flex-wrap:wrap;padding:12px 0}.rp-admin-top-actions{gap:6px}.rp-admin-top-link{padding:7px 9px;font-size:10px}}
+.rp-admin-shell{--admin-line:rgba(148,163,184,.13);min-height:100vh;display:flex;background:radial-gradient(ellipse at 78% -10%,rgba(59,91,145,.17),transparent 38%),#080d18;color:#f4f7fc;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.rp-admin-sidebar{width:276px;flex:0 0 276px;display:flex;flex-direction:column;background:rgba(10,17,29,.96);border-right:1px solid var(--admin-line);min-height:100vh;position:sticky;top:0;height:100vh;z-index:20;backdrop-filter:blur(16px)}
+.rp-admin-brand{padding:23px 20px 21px;border-bottom:1px solid var(--admin-line)}
+.rp-admin-nav{padding:18px 12px;display:grid;gap:19px;flex:1;align-content:start;overflow:auto}
+.rp-admin-group-title{font-size:9px;letter-spacing:.18em;color:#65758e;font-weight:850;padding:0 11px 8px}
+.rp-admin-link{display:flex;align-items:center;gap:12px;padding:10px 11px;border-radius:11px;text-decoration:none;font-size:12px;font-weight:650;color:#91a0b6;border:1px solid transparent;min-height:42px;transition:all .16s}
+.rp-admin-link:hover{background:rgba(148,163,184,.09);color:#f0f4fa;border-color:rgba(148,163,184,.08)}
+.rp-admin-link:focus-visible{outline:2px solid #fbbf24;outline-offset:2px}
+.rp-admin-link.active{background:linear-gradient(100deg,rgba(245,158,11,.18),rgba(245,158,11,.055));border-color:rgba(245,158,11,.28);color:#ffda91;box-shadow:inset 3px 0 #fbbf24,0 5px 18px rgba(0,0,0,.12)}
+.rp-admin-link-icon{width:21px;flex:0 0 21px;text-align:center;font-size:16px}
+.rp-admin-main{flex:1;min-width:0;padding:0 34px 44px}
+.rp-admin-topbar{min-height:82px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--admin-line);margin-bottom:30px;gap:16px}
+.rp-admin-top-actions{display:flex;align-items:center;gap:10px}
+.rp-admin-top-link{padding:9px 13px;border:1px solid #2b394d;border-radius:10px;color:#c2ccda;text-decoration:none;font-size:10px;font-weight:750;white-space:nowrap;background:rgba(255,255,255,.025);transition:all .15s}
+.rp-admin-top-link:hover{background:#182437;color:#fff;border-color:#43546b}
+.rp-admin-content{max-width:1680px;margin:0 auto}
+@media(max-width:1100px){.rp-admin-sidebar{width:238px;flex-basis:238px}.rp-admin-main{padding-left:22px;padding-right:22px}}
+@media(max-width:760px){.rp-admin-shell{display:block}.rp-admin-sidebar{position:relative;width:100%;height:auto;min-height:0;border-right:0;border-bottom:1px solid var(--admin-line)}.rp-admin-brand{padding:14px 16px}.rp-admin-nav{display:flex;gap:8px;padding:10px 12px;overflow-x:auto;align-items:center}.rp-admin-nav-group{display:contents}.rp-admin-group-title{display:none}.rp-admin-link{white-space:nowrap;padding:9px 11px;min-height:38px}.rp-admin-sidebar-footer{display:none}.rp-admin-main{padding:0 15px 30px}.rp-admin-topbar{min-height:68px;margin-bottom:20px;flex-wrap:wrap;padding:12px 0}.rp-admin-top-actions{gap:7px}.rp-admin-top-link{padding:8px 9px;font-size:9px}}
+@media(max-width:440px){.rp-admin-main{padding-left:12px;padding-right:12px}.rp-admin-topbar{align-items:flex-start}.rp-admin-top-actions{width:100%;justify-content:space-between}}
       `}</style>
       <aside className="rp-admin-sidebar">
         <div className="rp-admin-brand">
