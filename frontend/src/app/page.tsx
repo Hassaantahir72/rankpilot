@@ -332,10 +332,10 @@ export default function HomePage() {
           <ScrollReveal className="text-center" style={{ marginBottom:64 }}>
             <span className="tag" style={{ marginBottom:20 }}>{siteContent.homepage_testimonials_eyebrow || 'Customer stories'}</span>
             <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",marginBottom:14 }}>{siteContent.homepage_testimonials_heading || "Don't take our word for it"}</h2>
-            <p style={{ color:'rgba(255,255,255,0.4)',maxWidth:460,margin:'0 auto',fontSize:16 }}>{siteContent.homepage_testimonials_description || '1,200+ businesses replaced their agency with RankPilot.'}</p>
+            <p style={{ color:'rgba(255,255,255,0.4)',maxWidth:460,margin:'0 auto',fontSize:16 }}>{siteContent.homepage_testimonials_description || 'Verified customer feedback will appear here as customers share their experience.'}</p>
           </ScrollReveal>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))',gap:20 }}>
-            {testimonials ).map((t:any) => (
+            {testimonials.map((t:any) => (
               <ScrollReveal key={t.n} delay={t.d}>
                 <div className="glass-card" style={{ padding:'26px',height:'100%' }}>
                   <div style={{ display:'flex',gap:3,marginBottom:14 }}>{[1,2,3,4,5].map(i=><span key={i} style={{ color:'#fbbf24',fontSize:14 }}>★</span>)}</div>
