@@ -9,13 +9,14 @@ type Tab = 'overview'|'users'|'plans'|'settings'|'security'|'contacts'|'billing'
 
 function StatCard({ icon, label, value, color, sub }: any) {
   return (
-    <div style={{ background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'20px 18px' }}>
-      <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10 }}>
-        <span style={{ fontSize:22 }}>{icon}</span>
-        <span style={{ fontSize:26,fontWeight:900,color,fontFamily:"'Plus Jakarta Sans',sans-serif" }}>{value}</span>
+    <div style={{ position:'relative',overflow:'hidden',background:'linear-gradient(145deg,rgba(20,31,49,.96),rgba(12,19,31,.94))',border:'1px solid rgba(148,163,184,.13)',borderRadius:16,padding:'19px 18px',boxShadow:'0 12px 30px rgba(0,0,0,.16)' }}>
+      <span aria-hidden="true" style={{position:'absolute',right:-22,top:-30,width:100,height:100,borderRadius:'50%',background:color,opacity:.075,filter:'blur(2px)'}} />
+      <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:15,position:'relative' }}>
+        <span style={{ width:37,height:37,borderRadius:12,display:'grid',placeItems:'center',background:color+'18',border:'1px solid '+color+'35',fontSize:18 }}>{icon}</span>
+        <span style={{ fontSize:27,fontWeight:900,color,fontFamily:"'Plus Jakarta Sans',sans-serif",letterSpacing:'-.04em',lineHeight:1 }}>{value ?? '—'}</span>
       </div>
-      <p style={{ fontSize:13,color:'rgba(255,255,255,0.5)',fontWeight:500 }}>{label}</p>
-      {sub && <p style={{ fontSize:11,color:'rgba(255,255,255,0.28)',marginTop:3 }}>{sub}</p>}
+      <p style={{ fontSize:12,color:'#aebbd0',fontWeight:700,letterSpacing:'.01em',position:'relative' }}>{label}</p>
+      {sub && <p style={{ fontSize:10,color:'#718199',marginTop:5,position:'relative' }}>{sub}</p>}
     </div>
   );
 }
@@ -259,6 +260,14 @@ export default function AdminPage() {
 
   return (
     <div>
+      <section style={{position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'space-between',gap:16,flexWrap:'wrap',marginBottom:20,padding:'21px 22px',background:'radial-gradient(circle at 90% 0%,rgba(99,102,241,.22),transparent 34%),linear-gradient(110deg,rgba(22,34,54,.98),rgba(14,22,36,.96))',border:'1px solid rgba(148,163,184,.16)',borderRadius:17,boxShadow:'0 18px 40px rgba(0,0,0,.16)'}}>
+        <div>
+          <div style={{fontSize:9,color:'#fbbf24',letterSpacing:'.17em',fontWeight:850,marginBottom:7}}>RANKPILOT CONTROL CENTRE</div>
+          <h1 style={{fontSize:23,fontWeight:900,letterSpacing:'-.04em',color:'#f5f7fb'}}>Business overview</h1>
+          <p style={{fontSize:11,color:'#8999b1',marginTop:5}}>Monitor customers, subscriptions, revenue and platform activity from one secure workspace.</p>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:8,padding:'9px 12px',borderRadius:30,background:'rgba(16,185,129,.07)',border:'1px solid rgba(52,211,153,.16)',color:'#91b5a7',fontSize:9,fontWeight:800,letterSpacing:'.08em'}}><span style={{width:6,height:6,borderRadius:20,background:'#34d399',boxShadow:'0 0 10px #34d399'}}/> LIVE OWNER WORKSPACE</div>
+      </section>
       {/* Owner operations shortcuts */}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginBottom:18,padding:'13px 15px',background:'linear-gradient(110deg,rgba(245,158,11,.08),rgba(99,102,241,.055))',border:'1px solid rgba(255,255,255,.07)',borderRadius:12}}>
         <div>
