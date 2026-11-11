@@ -19,19 +19,24 @@ const PROVIDERS = {
   safepay: {
     displayName: 'Safepay',
     description: 'Pakistan-focused payments',
-    // Checkout and signed-webhook adapters must be implemented and verified before enabling.
+    requiredEnv: ['SAFEPAY_API_KEY','SAFEPAY_SECRET_KEY','SAFEPAY_WEBHOOK_SECRET'],
+    // Checkout and signed-webhook adapters are not implemented; this provider must remain disabled.
     configured: () => Boolean(process.env.SAFEPAY_API_KEY && process.env.SAFEPAY_SECRET_KEY && process.env.SAFEPAY_WEBHOOK_SECRET),
     adapterReady: () => false,
   },
   lemon_squeezy: {
     displayName: 'Lemon Squeezy',
     description: 'International subscriptions',
+    requiredEnv: ['LEMONSQUEEZY_API_KEY','LEMONSQUEEZY_STORE_ID','LEMONSQUEEZY_WEBHOOK_SECRET',
+      'LEMONSQUEEZY_VARIANT_STARTER_MONTHLY','LEMONSQUEEZY_VARIANT_GROWTH_MONTHLY','LEMONSQUEEZY_VARIANT_PRO_MONTHLY','LEMONSQUEEZY_VARIANT_AGENCY_MONTHLY',
+      'LEMONSQUEEZY_VARIANT_STARTER_ANNUAL','LEMONSQUEEZY_VARIANT_GROWTH_ANNUAL','LEMONSQUEEZY_VARIANT_PRO_ANNUAL','LEMONSQUEEZY_VARIANT_AGENCY_ANNUAL','FRONTEND_URL'],
     configured: hasLemonSqueezyConfig,
     adapterReady: () => process.env.LEMONSQUEEZY_ADAPTER_READY === 'true',
   },
   manual_bank_transfer: {
     displayName: 'Manual bank transfer',
     description: 'Manual payment requiring admin verification',
+    requiredEnv: ['MANUAL_PAYMENT_INSTRUCTIONS'],
     configured: () => Boolean(process.env.MANUAL_PAYMENT_INSTRUCTIONS),
     adapterReady: () => false,
   },
@@ -49,10 +54,13 @@ const safePublicConfig = (value) => {
 
 const statusFor = (providerKey) => {
   const provider = PROVIDERS[providerKey];
+  const missingEnv = provider ? (provider.requiredEnv || []).filter(key => !String(process.env[key] || '').trim()) : [];
   return {
     configured: Boolean(provider && provider.configured()),
     adapterReady: Boolean(provider && provider.adapterReady()),
     ready: Boolean(provider && provider.configured() && provider.adapterReady()),
+    missingEnv,
+    readinessFlagMissing: providerKey === 'lemon_squeezy' && process.env.LEMONSQUEEZY_ADAPTER_READY !== 'true',
   };
 };
 
