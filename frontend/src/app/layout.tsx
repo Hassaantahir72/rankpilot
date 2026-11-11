@@ -5,7 +5,7 @@ import { AuthProvider } from '@/lib/auth'
 
 export const metadata: Metadata = {
   title: { default: 'RankPilot — AI SEO & Marketing Autopilot', template: '%s | RankPilot' },
-  description: 'Replace your SEO agency and digital marketing team with AI. Automated audits, content generation, Google Ads, Meta Ads, weekly reports — from $99/month.',
+  description: 'AI-assisted SEO and marketing workflows. Review website audits, prepare search-focused content, and organise campaign work from one workspace.',
   keywords: ['SEO automation','AI marketing','Google Ads AI','SEO audit tool','digital marketing automation'],
   openGraph: {
     title: 'RankPilot — AI SEO & Marketing Autopilot',
