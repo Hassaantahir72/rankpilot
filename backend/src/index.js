@@ -103,6 +103,21 @@ app.use('/api/support',   supportRoutes);
 app.use('/api/features',  featuresRoutes);
 if (gscRoutes) app.use('/api/gsc', gscRoutes);
 
+// ── PUBLIC WEBSITE CONTENT (safe, owner-managed fields only) ───────
+app.get('/api/site-content', async (_req, res) => {
+  try {
+    const { queryAll } = require('./config/db');
+    const allowed = ['homepage_hero_title','homepage_hero_subtitle','homepage_cta_label','homepage_notice'];
+    const rows = await queryAll('SELECT key,value FROM site_settings WHERE key = ANY($1::text[])', [allowed]);
+    const content = Object.fromEntries(rows.map(row => [row.key, row.value || '']));
+    res.set('Cache-Control', 'no-store');
+    return res.json({ content });
+  } catch (err) {
+    console.error('Public site content lookup failed:', err.message);
+    return res.status(500).json({ error:'Could not load website content.' });
+  }
+});
+
 // ── PLAN LIMITS (public) ─────────────────────────────────────────
 app.get('/api/plans', async (req, res) => {
   try {

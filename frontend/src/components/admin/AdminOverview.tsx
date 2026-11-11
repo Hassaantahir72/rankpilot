@@ -575,8 +575,12 @@ export default function AdminPage() {
                     <div style={{ flex:1 }}>
                       <p style={{ fontWeight:700,fontSize:13,color:'#fff',marginBottom:4,fontFamily:'monospace' }}>{s.key}</p>
                       <p style={{ fontSize:12,color:'rgba(255,255,255,0.4)',marginBottom:8 }}>{s.description}</p>
-                      <div style={{ display:'flex',gap:8 }}>
-                        <input className="input-dark" value={settingEdits[s.key] ?? s.value} onChange={e => setSettingEdits(p => ({...p,[s.key]:e.target.value}))} style={{ fontSize:13,padding:'7px 12px',flex:1 }}/>
+                      <div style={{ display:'flex',gap:8,alignItems:'stretch' }}>
+                        {['homepage_hero_subtitle','homepage_notice'].includes(s.key) ? (
+                          <textarea className="input-dark" rows={3} maxLength={10000} value={settingEdits[s.key] ?? s.value ?? ''} onChange={e => setSettingEdits(p => ({...p,[s.key]:e.target.value}))} style={{ fontSize:13,padding:'9px 12px',flex:1,resize:'vertical',minHeight:76 }}/>
+                        ) : (
+                          <input className="input-dark" value={settingEdits[s.key] ?? s.value ?? ''} onChange={e => setSettingEdits(p => ({...p,[s.key]:e.target.value}))} style={{ fontSize:13,padding:'7px 12px',flex:1 }}/>
+                        )}
                         <button onClick={() => doUpdateSetting(s.key)} style={{ padding:'7px 16px',background:'rgba(99,102,241,0.15)',border:'1px solid rgba(99,102,241,0.3)',borderRadius:8,color:'#818cf8',cursor:'pointer',fontSize:12,fontFamily:'inherit',whiteSpace:'nowrap' }}>Save</button>
                       </div>
                     </div>
