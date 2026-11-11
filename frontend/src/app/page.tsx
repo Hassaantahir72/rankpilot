@@ -389,13 +389,13 @@ export default function HomePage() {
             <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif" }}>{siteContent.homepage_faq_heading || 'Questions, answered'}</h2>
           </ScrollReveal>
           {readJsonList<any>(siteContent, 'homepage_faq_items_json', [
-            { q:'Do I need any SEO knowledge to use RankPilot?',a:'Zero. RankPilot is built for business owners, not SEO experts. You paste your URL and AI does everything — audit, content, fix list. All reports are in plain English with no jargon.' },
+            { q:'Do I need any SEO knowledge to use RankPilot?',a:'The interface is designed to guide you through website audits, keyword research and content tools. You can review recommendations and choose what to do next.' },
             { q:'How is this different from hiring an SEO agency?',a:'RankPilot brings website audits, keyword research, AI-assisted content tools and reporting into one workspace. Available workflows and limits depend on your plan and connected services.' },
             { q:'How long does it take to see ranking improvements?',a:'SEO timelines vary with competition, website history, technical health and content quality. RankPilot helps identify issues and organise work, but search rankings are not guaranteed.' },
             { q:'Does RankPilot actually run my Google Ads, or just suggest things?',a:'RankPilot can help prepare campaign assets. Live campaign publishing depends on supported account connections, plan eligibility and configuration.' },
             { q:'Can I use RankPilot for multiple websites?',a:'Yes. Starter includes 1 website, Growth includes 3, Pro includes 5, and Agency includes 10 websites. Upgrade any time to add more.' },
             { q:'Will AI-generated content guarantee higher rankings?',a:'No tool can guarantee search rankings. RankPilot helps prepare content drafts around search intent and target keywords; results depend on competition, quality, website health and implementation.' },
-            { q:'What happens to my data if I cancel?',a:'Your data stays in your account for 30 days after cancellation so you can export everything. We never sell your data to third parties. All website data is encrypted and stored securely.' },
+            { q:'What happens to my data if I cancel?',a:'Your data is handled according to our privacy policy and applicable retention terms. Review those terms or contact support if you need help before cancelling.' },
           ] ).map((faq:any) => <FAQ key={faq.q} q={faq.q} a={faq.a} />)}
         </div>
       </section>
