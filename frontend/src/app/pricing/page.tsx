@@ -1,10 +1,11 @@
 'use client';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import ScrollReveal from '@/components/ui/ScrollReveal';
 import AvailablePaymentMethods from '@/components/billing/AvailablePaymentMethods';
+import { getPlanFeatureLines, getPlanComparisonRows, PublicPlanLimits } from '@/lib/planFeatures';
 
 const PLANS = [
   {
@@ -59,6 +60,14 @@ function PricingFAQ({q,a}:{q:string;a:string}) {
 
 export default function PricingPage() {
   const [annual,setAnnual]=useState(false);
+  const [planLimits,setPlanLimits]=useState<PublicPlanLimits[]>([]);
+  useEffect(()=>{
+    const base=process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    fetch((base.endsWith('/')?base.slice(0,-1):base)+'/plans',{cache:'no-store'})
+      .then(response=>response.ok?response.json():null)
+      .then(data=>{if(Array.isArray(data?.plans))setPlanLimits(data.plans);})
+      .catch(()=>{});
+  },[]);
   return (
     <>
       <Navbar/>
@@ -102,18 +111,13 @@ export default function PricingPage() {
                     <p style={{fontSize:13,color:'rgba(255,255,255,0.38)',marginBottom:24,marginTop:6}}>{plan.desc}</p>
                     <div style={{height:1,background:'rgba(255,255,255,0.07)',marginBottom:22}}/>
                     <ul style={{listStyle:'none',marginBottom:28,display:'flex',flexDirection:'column',gap:10,flex:1}}>
-                      {plan.features.map(f=>(
+                      {getPlanFeatureLines(plan.id,planLimits.find(p=>p.plan===plan.id)).map(f=>(
                         <li key={f} style={{display:'flex',alignItems:'flex-start',gap:10,fontSize:13}}>
                           <svg style={{flexShrink:0,marginTop:2}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={plan.color} strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
                           <span style={{color:'rgba(255,255,255,0.72)'}}>{f}</span>
                         </li>
                       ))}
-                      {plan.not.map(f=>(
-                        <li key={f} style={{display:'flex',alignItems:'flex-start',gap:10,fontSize:13,opacity:0.3}}>
-                          <svg style={{flexShrink:0,marginTop:2}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                          <span style={{color:'rgba(255,255,255,0.5)',textDecoration:'line-through'}}>{f}</span>
-                        </li>
-                      ))}
+
                     </ul>
                     <Link href={`/checkout?plan=${plan.id}&interval=${annual ? 'annual' : 'monthly'}`} className="btn-primary" style={{width:'100%',justifyContent:'center',background:plan.popular?'linear-gradient(135deg,#6366f1,#7c3aed)':'rgba(255,255,255,0.05)',boxShadow:plan.popular?undefined:'none',border:plan.popular?'none':'1px solid rgba(255,255,255,0.1)'}}>
                       Choose plan
@@ -146,7 +150,7 @@ export default function PricingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {TABLE.map((row,i)=>(
+                  {getPlanComparisonRows(planLimits).map((row:any,i:number)=>(
                     <tr key={row.f} style={{borderBottom:'1px solid rgba(255,255,255,0.04)',background:i%2===0?'rgba(255,255,255,0.01)':'transparent'}}>
                       <td style={{padding:'13px 20px',color:'rgba(255,255,255,0.6)',fontWeight:500}}>{row.f}</td>
                       {[row.s,row.g,row.p,row.a].map((v,j)=>(
