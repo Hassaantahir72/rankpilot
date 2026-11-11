@@ -130,8 +130,8 @@ export default function HomePage() {
       <section className="section" style={{ background:'var(--dark-2)' }}>
         <div className="container">
           <ScrollReveal className="text-center" style={{ marginBottom:64 }}>
-            <span className="tag" style={{ marginBottom:20 }}>By the numbers</span>
-            <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif" }}>Results that speak for themselves</h2>
+            <span className="tag" style={{ marginBottom:20 }}>{siteContent.homepage_stats_eyebrow || 'By the numbers'}</span>
+            <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif" }}>{siteContent.homepage_stats_heading || 'Results that speak for themselves'}</h2>
           </ScrollReveal>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:20 }}>
             {[
@@ -157,11 +157,11 @@ export default function HomePage() {
       <section className="section">
         <div className="container">
           <ScrollReveal className="text-center" style={{ marginBottom:80 }}>
-            <span className="tag" style={{ marginBottom:20 }}>How it works</span>
+            <span className="tag" style={{ marginBottom:20 }}>{siteContent.homepage_how_eyebrow || 'How it works'}</span>
             <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",marginBottom:16 }}>
               From zero to ranking in <span className="gradient-text">3 steps</span>
             </h2>
-            <p style={{ color:'rgba(255,255,255,0.45)',maxWidth:460,margin:'0 auto',fontSize:16 }}>No SEO knowledge needed. Start with one website and upgrade as your needs grow.</p>
+            <p style={{ color:'rgba(255,255,255,0.45)',maxWidth:460,margin:'0 auto',fontSize:16 }}>{siteContent.homepage_how_description || 'No SEO knowledge needed. Start with one website and upgrade as your needs grow.'}</p>
           </ScrollReveal>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:40,position:'relative' }}>
             <div style={{ position:'absolute',top:22,left:'calc(33% + 20px)',right:'calc(33% + 20px)',height:1,background:'linear-gradient(90deg,rgba(99,102,241,0.5),rgba(99,102,241,0.1))' }} />
@@ -185,9 +185,9 @@ export default function HomePage() {
         <div className="container">
           <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:80,alignItems:'center' }}>
             <ScrollReveal type="left">
-              <span className="tag" style={{ marginBottom:20 }}>SEO Autopilot</span>
-              <h2 style={{ fontSize:'clamp(1.8rem,3.5vw,2.6rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.12,marginBottom:18 }}>Everything an SEO expert does — <span className="gradient-text">automated</span></h2>
-              <p style={{ color:'rgba(255,255,255,0.45)',fontSize:15,lineHeight:1.8,marginBottom:32 }}>SEO agencies charge $2,000–$8,000/month. RankPilot does the same work automatically in minutes — full crawl, keyword research, content writing, rank tracking.</p>
+              <span className="tag" style={{ marginBottom:20 }}>{siteContent.homepage_seo_eyebrow || 'SEO Autopilot'}</span>
+              <h2 style={{ fontSize:'clamp(1.8rem,3.5vw,2.6rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.12,marginBottom:18 }}>{siteContent.homepage_seo_heading || 'Everything an SEO expert does — automated'}</h2>
+              <p style={{ color:'rgba(255,255,255,0.45)',fontSize:15,lineHeight:1.8,marginBottom:32 }}>{siteContent.homepage_seo_description || 'SEO agencies charge $2,000–$8,000/month. RankPilot does the same work automatically in minutes — full crawl, keyword research, content writing, rank tracking.'}</p>
               {['Full website crawl — every page audited and scored','AI researches 100+ keywords ranked by traffic opportunity','Page-by-page content rewrite with keywords naturally embedded','Competitor gap analysis — see what their traffic comes from','Weekly rank tracking with email alerts when positions change','Technical fixes: speed, schema markup, meta tags, broken links'].map(f => (
                 <div key={f} style={{ display:'flex',alignItems:'flex-start',gap:12,marginBottom:12 }}>
                   <div style={{ width:20,height:20,borderRadius:'50%',background:'rgba(99,102,241,0.15)',border:'1px solid rgba(99,102,241,0.35)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:2 }}>
@@ -263,9 +263,9 @@ export default function HomePage() {
               </div>
             </ScrollReveal>
             <ScrollReveal type="right">
-              <span className="tag" style={{ marginBottom:20 }}>Marketing Autopilot</span>
-              <h2 style={{ fontSize:'clamp(1.8rem,3.5vw,2.6rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.12,marginBottom:18 }}>AI helps prepare campaigns like a <span className="gradient-text">marketing assistant</span></h2>
-              <p style={{ color:'rgba(255,255,255,0.45)',fontSize:15,lineHeight:1.8,marginBottom:32 }}>Use AI tools to prepare Google and Meta campaign drafts and ad copy. Review campaign settings and approve changes before publishing.</p>
+              <span className="tag" style={{ marginBottom:20 }}>{siteContent.homepage_marketing_eyebrow || 'Marketing Autopilot'}</span>
+              <h2 style={{ fontSize:'clamp(1.8rem,3.5vw,2.6rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.12,marginBottom:18 }}>{siteContent.homepage_marketing_heading || 'AI helps prepare campaigns like a marketing assistant'}</h2>
+              <p style={{ color:'rgba(255,255,255,0.45)',fontSize:15,lineHeight:1.8,marginBottom:32 }}>{siteContent.homepage_marketing_description || 'Use AI tools to prepare Google and Meta campaign drafts and ad copy. Review campaign settings and approve changes before publishing.'}</p>
               {['AI-written Google Ads and Meta Ads copy that converts','Campaign draft assistance using your goals and budget','Reviewable campaign drafts before publishing','Keyword and audience suggestions for campaign planning','Social post generation within your plan’s monthly allowance','Weekly plain-English performance report delivered by email'].map(f => (
                 <div key={f} style={{ display:'flex',alignItems:'flex-start',gap:12,marginBottom:12 }}>
                   <div style={{ width:20,height:20,borderRadius:'50%',background:'rgba(139,92,246,0.15)',border:'1px solid rgba(139,92,246,0.35)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:2 }}>
@@ -286,9 +286,9 @@ export default function HomePage() {
       <section className="section" style={{ background:'var(--dark-2)' }}>
         <div className="container">
           <ScrollReveal className="text-center" style={{ marginBottom:64 }}>
-            <span className="tag" style={{ marginBottom:20 }}>Full feature set</span>
-            <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",marginBottom:14 }}>Everything you need to dominate your market</h2>
-            <p style={{ color:'rgba(255,255,255,0.4)',maxWidth:500,margin:'0 auto',fontSize:16 }}>One platform replaces your SEO agency, ad manager, content writer, and analytics team.</p>
+            <span className="tag" style={{ marginBottom:20 }}>{siteContent.homepage_features_eyebrow || 'Full feature set'}</span>
+            <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",marginBottom:14 }}>{siteContent.homepage_features_heading || 'Everything you need to dominate your market'}</h2>
+            <p style={{ color:'rgba(255,255,255,0.4)',maxWidth:500,margin:'0 auto',fontSize:16 }}>{siteContent.homepage_features_description || 'One platform replaces your SEO agency, ad manager, content writer, and analytics team.'}</p>
           </ScrollReveal>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(250px,1fr))',gap:18 }}>
             {[
@@ -321,9 +321,9 @@ export default function HomePage() {
       <section className="section">
         <div className="container">
           <ScrollReveal className="text-center" style={{ marginBottom:64 }}>
-            <span className="tag" style={{ marginBottom:20 }}>Customer stories</span>
-            <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",marginBottom:14 }}>Don't take our word for it</h2>
-            <p style={{ color:'rgba(255,255,255,0.4)',maxWidth:460,margin:'0 auto',fontSize:16 }}>1,200+ businesses replaced their agency with RankPilot.</p>
+            <span className="tag" style={{ marginBottom:20 }}>{siteContent.homepage_testimonials_eyebrow || 'Customer stories'}</span>
+            <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",marginBottom:14 }}>{siteContent.homepage_testimonials_heading || "Don't take our word for it"}</h2>
+            <p style={{ color:'rgba(255,255,255,0.4)',maxWidth:460,margin:'0 auto',fontSize:16 }}>{siteContent.homepage_testimonials_description || '1,200+ businesses replaced their agency with RankPilot.'}</p>
           </ScrollReveal>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))',gap:20 }}>
             {[
@@ -353,9 +353,9 @@ export default function HomePage() {
       <section className="section" id="pricing" style={{ background:'var(--dark-2)' }}>
         <div className="container">
           <ScrollReveal className="text-center" style={{ marginBottom:64 }}>
-            <span className="tag" style={{ marginBottom:20 }}>Pricing</span>
-            <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",marginBottom:14 }}>Way cheaper than any agency</h2>
-            <p style={{ color:'rgba(255,255,255,0.4)',maxWidth:500,margin:'0 auto',fontSize:16 }}>Choose a plan that fits your workload. Start with a free trial and cancel any time.</p>
+            <span className="tag" style={{ marginBottom:20 }}>{siteContent.homepage_pricing_eyebrow || 'Pricing'}</span>
+            <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif",marginBottom:14 }}>{siteContent.homepage_pricing_heading || 'Way cheaper than any agency'}</h2>
+            <p style={{ color:'rgba(255,255,255,0.4)',maxWidth:500,margin:'0 auto',fontSize:16 }}>{siteContent.homepage_pricing_description || 'Choose a plan that fits your workload. Start with a free trial and cancel any time.'}</p>
           </ScrollReveal>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:20 }}>
             {[
@@ -399,8 +399,8 @@ export default function HomePage() {
       <section className="section">
         <div className="container" style={{ maxWidth:760 }}>
           <ScrollReveal className="text-center" style={{ marginBottom:64 }}>
-            <span className="tag" style={{ marginBottom:20 }}>FAQ</span>
-            <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif" }}>Questions, answered</h2>
+            <span className="tag" style={{ marginBottom:20 }}>{siteContent.homepage_faq_eyebrow || 'FAQ'}</span>
+            <h2 style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)',fontWeight:800,fontFamily:"'Plus Jakarta Sans',sans-serif" }}>{siteContent.homepage_faq_heading || 'Questions, answered'}</h2>
           </ScrollReveal>
           {[
             { q:'Do I need any SEO knowledge to use RankPilot?',a:'Zero. RankPilot is built for business owners, not SEO experts. You paste your URL and AI does everything — audit, content, fix list. All reports are in plain English with no jargon.' },
@@ -420,11 +420,11 @@ export default function HomePage() {
           <ScrollReveal type="scale">
             <div style={{ textAlign:'center',maxWidth:680,margin:'0 auto',padding:'72px 40px',background:'linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.06))',border:'1px solid rgba(99,102,241,0.22)',borderRadius:32,position:'relative',overflow:'hidden' }}>
               <div style={{ position:'absolute',top:-100,left:'50%',transform:'translateX(-50%)',width:500,height:500,background:'radial-gradient(circle,rgba(99,102,241,0.12),transparent 65%)',pointerEvents:'none' }} />
-              <span className="tag" style={{ marginBottom:24 }}>Start today</span>
+              <span className="tag" style={{ marginBottom:24 }}>{siteContent.homepage_final_eyebrow || 'Start today'}</span>
               <h2 style={{ fontSize:'clamp(2rem,5vw,3.2rem)',fontWeight:900,fontFamily:"'Plus Jakarta Sans',sans-serif",lineHeight:1.08,marginBottom:20 }}>
-                Replace your agency.<br /><span className="gradient-text">Keep the results.</span>
+                {siteContent.homepage_final_heading || 'Replace your agency. Keep the results.'}
               </h2>
-              <p style={{ fontSize:16,color:'rgba(255,255,255,0.45)',marginBottom:44,lineHeight:1.75,maxWidth:500,margin:'0 auto 44px' }}>Start your 14-day Free Trial with no card required. It includes 1 website, 5 SEO audits/month, 10 AI content generations/month, 5 social posts/month, competitor analysis, and weekly rank tracking.</p>
+              <p style={{ fontSize:16,color:'rgba(255,255,255,0.45)',marginBottom:44,lineHeight:1.75,maxWidth:500,margin:'0 auto 44px' }}>{siteContent.homepage_final_description || 'Start your 14-day Free Trial with no card required. It includes 1 website, 5 SEO audits/month, 10 AI content generations/month, 5 social posts/month, competitor analysis, and weekly rank tracking.'}</p>
               <div style={{ display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap' }}>
                 <Link href="/auth/signup?flow=trial" className="btn-primary" style={{ fontSize:16,padding:'16px 36px' }}>
                   Start free trial
