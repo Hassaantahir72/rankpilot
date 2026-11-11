@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import ScrollReveal from '@/components/ui/ScrollReveal';
-import CountUp from '@/components/ui/CountUp';
 
 function TypingText({ words }: { words: string[] }) {
   const [idx, setIdx] = useState(0);
@@ -56,7 +55,6 @@ function readJsonList<T>(content: Record<string,string>, key: string, fallback: 
   catch { return fallback; }
 }
 
-const LOGOS = ['Google Ads','Meta Ads','Shopify','WordPress','Webflow','HubSpot','Stripe','Salesforce','Mailchimp','Zapier','Slack','Notion','WooCommerce','Wix'];
 
 export default function HomePage() {
   const [siteContent, setSiteContent] = useState<Record<string,string>>({});
@@ -111,15 +109,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* LOGO MARQUEE */}
-      <section style={{ background:'#05050d',borderTop:'1px solid rgba(255,255,255,0.05)',borderBottom:'1px solid rgba(255,255,255,0.05)',padding:'40px 0' }}>
-        <p style={{ textAlign:'center',fontSize:12,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:600,marginBottom:28 }}>Integrates with your favourite tools</p>
-        <div className="marquee-wrap">
-          <div className="marquee-track animate-marquee">
-            {[...LOGOS,...LOGOS].map((l,i) => (
-              <div key={i} style={{ padding:'0 44px',whiteSpace:'nowrap',color:'rgba(255,255,255,0.22)',fontSize:14,fontWeight:600,letterSpacing:'0.04em' }}>{l}</div>
-            ))}
-          </div>
+      <section style={{background:'#05050d',borderTop:'1px solid rgba(255,255,255,0.05)',borderBottom:'1px solid rgba(255,255,255,0.05)',padding:'34px 0'}}>
+        <div className="container" style={{display:'flex',justifyContent:'center',gap:28,flexWrap:'wrap',textAlign:'center'}}>
+          <span style={{color:'rgba(255,255,255,.55)',fontSize:13}}>Website audits</span>
+          <span style={{color:'rgba(255,255,255,.55)',fontSize:13}}>Keyword research</span>
+          <span style={{color:'rgba(255,255,255,.55)',fontSize:13}}>AI content tools</span>
+          <span style={{color:'rgba(255,255,255,.55)',fontSize:13}}>Reporting</span>
         </div>
       </section>
 
@@ -163,8 +158,8 @@ export default function HomePage() {
             <div style={{ position:'absolute',top:22,left:'calc(33% + 20px)',right:'calc(33% + 20px)',height:1,background:'linear-gradient(90deg,rgba(99,102,241,0.5),rgba(99,102,241,0.1))' }} />
             {[
               { n:'1',title:'Paste your URL',desc:'Add your website URL and tell us your industry. Takes 30 seconds. No setup, no code, no configuration.' },
-              { n:'2',title:'AI analyses everything',desc:'RankPilot helps review your website, explore keyword opportunities, and identify practical areas to improve.' },
-              { n:'3',title:'Turn insights into an action plan',desc:'Review recommendations, write content, launch ads, and send you weekly plain-English reports every Monday.' },
+              { n:'2',title:'Review your SEO opportunities',desc:'RankPilot helps review your website, explore keyword opportunities, and identify practical areas to improve.' },
+              { n:'3',title:'Turn insights into an action plan',desc:'Review recommendations, prepare content drafts, and monitor progress in your dashboard.' },
             ].map((s,i) => (
               <ScrollReveal key={s.n} delay={i*150} type="up" className="text-center">
                 <div style={{ width:52,height:52,borderRadius:'50%',background:'linear-gradient(135deg,#6366f1,#7c3aed)',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:20,margin:'0 auto 22px',boxShadow:'0 0 28px rgba(99,102,241,0.4)',fontFamily:"'Plus Jakarta Sans',sans-serif" }}>{s.n}</div>
