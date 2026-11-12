@@ -73,7 +73,7 @@ router.post('/checkout', authMiddleware, requireVerified, async (req, res) => {
       const checkoutUrl = transactionPayload?.data?.checkout?.url;
       let parsed;
       try { parsed = new URL(checkoutUrl); } catch {}
-      if (!parsed || parsed.protocol !== 'https:' || !(parsed.hostname === 'paddle.com' || parsed.hostname.endsWith('.paddle.com'))) {
+      if (!parsed || parsed.protocol !== 'https:' || parsed.origin !== frontend.origin || parsed.pathname !== '/paddle-checkout') {
         return res.status(502).json({ error: 'Paddle returned an invalid checkout URL.' });
       }
       return res.json({ url: parsed.toString(), provider: 'paddle' });
