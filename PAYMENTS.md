@@ -22,9 +22,17 @@ Add these directly in Render → RankPilot backend → Environment. Never send s
 - `PADDLE_ADAPTER_READY=false` until all sandbox lifecycle tests pass.
 - `FRONTEND_URL=https://rankpilot-sync786.vercel.app`
 
+Add these public Paddle.js settings in Vercel → Project → Settings → Environment Variables (not in Render):
+- `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN` — Paddle sandbox client-side token while testing; replace with the live `live_...` token only for production.
+- `NEXT_PUBLIC_PADDLE_ENVIRONMENT=sandbox` while testing; change to `production` for live.
+
+The client-side token is designed to be public and is safe in a `NEXT_PUBLIC_` variable. Never expose `PADDLE_API_KEY` or `PADDLE_WEBHOOK_SECRET` to the frontend.
+
 The eight price IDs must be Paddle recurring price IDs beginning with `pri_`, with the matching billing interval. Sandbox and live Paddle catalogs have different IDs; never reuse sandbox IDs in production.
 
 ### Paddle webhook destination
+
+In Paddle, approve `https://rankpilot-sync786.vercel.app` under Website approval, then set the default payment link to `https://rankpilot-sync786.vercel.app/paddle-checkout` in Checkout settings. Sandbox and live environments need their own approved URL/default payment link.
 
 Create an HTTPS webhook destination in Paddle → Developer tools / Events → Notifications:
 
@@ -42,11 +50,11 @@ Copy that destination's endpoint secret into `PADDLE_WEBHOOK_SECRET`. The backen
 
 1. Obtain Paddle seller approval and complete business/payout verification.
 2. Create the four RankPilot products and eight recurring prices in Paddle sandbox.
-3. Configure the sandbox API key, webhook secret, environment, and eight sandbox price IDs in Render.
+3. Configure the sandbox API key, webhook secret, environment, and eight sandbox price IDs in Render; set the sandbox client token and environment in Vercel.
 4. Keep `PADDLE_ADAPTER_READY=false`; run checkout and webhook simulator tests for initial payment, renewal, failed payment, scheduled cancellation, immediate cancellation, and duplicate/out-of-order events.
 5. Verify the admin Orders and Transactions ledger and that access changes only from signed provider events.
 6. After sandbox verification, create the matching live catalog, live API key and live webhook destination; replace all sandbox values in Render.
-7. Set `PADDLE_ENVIRONMENT=production`, then set `PADDLE_ADAPTER_READY=true` and enable Paddle in Admin → Payment Methods.
+7. Set `PADDLE_ENVIRONMENT=production`, update the Vercel client token/environment to live, then set `PADDLE_ADAPTER_READY=true` and enable Paddle in Admin → Payment Methods.
 
 Paddle's live and sandbox keys, products, prices, and notification destinations are separate. Never enable production payments before live seller approval and live webhook testing.
 
