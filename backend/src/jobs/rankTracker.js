@@ -15,8 +15,19 @@ const runWeeklyRankCheck = async () => {
         const now = new Date();
         if (lastChecked && lastChecked.getFullYear() === now.getFullYear() && lastChecked.getMonth() === now.getMonth()) continue;
       }
-      // The audit worker caps the saved keyword set by the account's plan allowance.
-      const keywords = await queryAll('SELECT keyword FROM keywords WHERE website_id=$1 ORDER BY priority DESC', [site.id]);
+      // Enforce the current account-wide allowance even when an account has
+      // older tracked keywords left over from a higher plan.
+      const keywordLimit = Math.max(0, Number(site.max_keywords) || 0);
+      const keywords = await queryAll(
+        `SELECT keyword FROM keywords
+         WHERE website_id=$1 AND user_id=$2
+           AND id IN (
+             SELECT id FROM keywords WHERE user_id=$2
+             ORDER BY priority DESC,created_at ASC LIMIT $3
+           )
+         ORDER BY priority DESC,created_at ASC`,
+        [site.id, site.user_id, keywordLimit]
+      );
       for (const kw of keywords) {
         try {
           const pos = await dataforSeoService.checkRanking(site.url, kw.keyword);
