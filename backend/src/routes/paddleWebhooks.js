@@ -51,6 +51,7 @@ const recordTransaction = async (user, data, eventId, planInfo) => {
   const total = minorAmount(totals.total, currency);
   const subtotal = minorAmount(totals.subtotal ?? totals.total, currency);
   const tax = minorAmount(totals.tax ?? 0, currency);
+  if (total <= 0) throw new Error('Paddle completed transaction has no valid positive total.');
   const transactionId = String(data.id || '');
   if (!/^txn_[a-z0-9]+$/i.test(transactionId) || data.status !== 'completed') throw new Error('Only completed Paddle transactions can provision paid access.');
   const subscriptionId = data.subscription_id ? String(data.subscription_id) : null;
