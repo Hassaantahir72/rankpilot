@@ -18,7 +18,7 @@ router.post('/checkout', authMiddleware, requireVerified, async (req, res) => {
     const billingName = typeof details.name === 'string' ? details.name.trim().slice(0,120) : '';
     const billingEmail = typeof details.email === 'string' ? details.email.trim().toLowerCase().slice(0,254) : '';
     const billingCountry = typeof details.country === 'string' ? details.country.trim().toUpperCase() : '';
-    if (!billingName || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(billingEmail) || !/^[A-Z]{2}$/.test(billingCountry)) {
+    if (!billingName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billingEmail) || !/^[A-Z]{2}$/.test(billingCountry)) {
       return res.status(400).json({ error: 'Enter a valid billing name, email, and two-letter billing country code.' });
     }
     const priceId = process.env['PADDLE_PRICE_' + plan.toUpperCase() + '_' + interval.toUpperCase()];
