@@ -128,6 +128,7 @@ router.post('/paddle', async (req,res) => {
   } catch (error) {
     console.error('Paddle webhook processing failed:',error.message);
     await query("UPDATE provider_event_inbox SET status='failed',error=$1,processed_at=NOW() WHERE provider='paddle' AND provider_event_id=$2",[String(error.message).slice(0,500),eventId]).catch(()=>{});
+    await query("DELETE FROM payment_provider_events WHERE provider_key='paddle' AND event_key=$1",[eventId]).catch(()=>{});
     // Return 500 so Paddle retries; a failed event is not silently acknowledged.
     return res.status(500).json({error:'Paddle webhook processing failed; provider will retry.'});
   }
