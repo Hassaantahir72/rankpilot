@@ -54,8 +54,6 @@ Paddle's live and sandbox keys, products, prices, and notification destinations 
 
 Existing Lemon Squeezy code and subscription references are retained only for accounts already linked to that provider during migration. It is not the primary new-customer payment route. Existing Stripe billing webhooks remain for legacy subscriptions.
 
-Safepay has been removed from the supported payment-provider registry. The migration removes its payment-method row and replaces its database constraint entry with Paddle.
-
 ## Security behavior
 
 - Provider secrets remain server-side in Render.
