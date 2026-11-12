@@ -6,7 +6,7 @@ const verifyPaddleSignature = (rawBody, header, secret, nowMs = Date.now()) => {
     const index = part.indexOf('=');
     return index > 0 ? [part.slice(0,index).trim(), part.slice(index+1).trim()] : ['', ''];
   }).filter(([key,value]) => key && value));
-  if (!/^\\d+$/.test(parts.ts || '') || !parts.h1 || !/^[a-f0-9]{64}$/i.test(parts.h1)) return false;
+  if (!/^\d+$/.test(parts.ts || '') || !parts.h1 || !/^[a-f0-9]{64}$/i.test(parts.h1)) return false;
   const timestamp = Number(parts.ts);
   if (!Number.isSafeInteger(timestamp) || Math.abs(nowMs/1000 - timestamp) > 300) return false;
   const expected = crypto.createHmac('sha256', secret).update(parts.ts + ':' + rawBody.toString('utf8')).digest();
