@@ -5,9 +5,18 @@ const dataforSeoService = require('../services/dataforSeoService');
 const runWeeklyRankCheck = async () => {
   console.log('Running weekly rank check...');
   try {
-    const websites = await queryAll("SELECT * FROM websites WHERE status='active'");
+    const websites = await queryAll(
+      "SELECT w.*,pl.rank_tracking_frequency,pl.max_keywords FROM websites w JOIN users u ON u.id=w.user_id JOIN plan_limits pl ON pl.plan=u.plan WHERE w.status='active'"
+    );
     for (const site of websites) {
-      const keywords = await queryAll('SELECT keyword FROM keywords WHERE website_id=$1 LIMIT 50', [site.id]);
+      if (site.rank_tracking_frequency === 'monthly') {
+        const latest = await queryAll('SELECT MAX(checked_at) AS last_checked FROM rankings WHERE website_id=$1', [site.id]);
+        const lastChecked = latest[0]?.last_checked ? new Date(latest[0].last_checked) : null;
+        const now = new Date();
+        if (lastChecked && lastChecked.getFullYear() === now.getFullYear() && lastChecked.getMonth() === now.getMonth()) continue;
+      }
+      // The audit worker caps the saved keyword set by the account's plan allowance.
+      const keywords = await queryAll('SELECT keyword FROM keywords WHERE website_id=$1 ORDER BY priority DESC', [site.id]);
       for (const kw of keywords) {
         try {
           const pos = await dataforSeoService.checkRanking(site.url, kw.keyword);

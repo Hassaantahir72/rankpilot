@@ -50,9 +50,14 @@ const requireVerified = (req, res, next) => {
 };
 
 const requireSubscription = (req, res, next) => {
-  const { plan, subscription_status, trial_ends_at } = req.user;
-  const trialValid = plan === 'trial' && trial_ends_at && new Date(trial_ends_at) > new Date();
-  if (!trialValid && subscription_status !== 'active' && plan !== 'free') {
+  const { plan, subscription_status, trial_ends_at, provider_subscription_ends_at } = req.user;
+  const now = Date.now();
+  const trialValid = plan === 'trial' && trial_ends_at && new Date(trial_ends_at).getTime() > now;
+  // A provider cancellation scheduled for the end of a paid period keeps access until that date.
+  const paidThroughValid = plan !== 'free' && plan !== 'trial' &&
+    subscription_status === 'cancelled' && provider_subscription_ends_at &&
+    new Date(provider_subscription_ends_at).getTime() > now;
+  if (!trialValid && !paidThroughValid && subscription_status !== 'active' && plan !== 'free') {
     return res.status(403).json({ error: 'Active subscription required.', code: 'SUBSCRIPTION_REQUIRED' });
   }
   next();
