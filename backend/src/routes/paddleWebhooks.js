@@ -71,7 +71,9 @@ const updateSubscription = async (data, eventType, occurredAt) => {
   const planInfo = priceMap()[String(priceId || '')];
   const scheduledCancel = data.scheduled_change?.action === 'cancel' ? eventDate(data.scheduled_change.effective_at) : null;
   const active = ['active','trialing','past_due'].includes(status);
-  const plan = planInfo && active ? planInfo.plan : (status === 'canceled' || status === 'paused' ? 'free' : user.plan);
+  // Subscription events synchronize lifecycle only. Paid plan provisioning and plan changes
+  // happen exclusively on transaction.completed, after Paddle confirms processing.
+  const plan = status === 'canceled' || status === 'paused' ? 'free' : user.plan;
   await query(
     "UPDATE users SET plan=$1,subscription_status=$2,payment_provider='paddle',provider_customer_id=COALESCE($3,provider_customer_id),provider_subscription_id=$4,provider_variant_id=COALESCE($5,provider_variant_id),provider_subscription_updated_at=COALESCE($6,NOW()),provider_subscription_ends_at=$7,updated_at=NOW() WHERE id=$8 AND (payment_provider IS NULL OR payment_provider='paddle') AND (provider_subscription_id IS NULL OR provider_subscription_id=$4)",
     [plan,status,data.customer_id ? String(data.customer_id) : null,subscriptionId,priceId,happenedAt,scheduledCancel,user.id]
