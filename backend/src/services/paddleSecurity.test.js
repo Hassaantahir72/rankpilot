@@ -25,6 +25,7 @@ test('rejects stale Paddle signatures', () => {
 });
 
 test('converts Paddle decimal totals to currency minor units', () => {
+  assert.equal(minorAmount('19900', 'USD'), 19900);
   assert.equal(minorAmount('29.99', 'USD'), 2999);
   assert.equal(minorAmount('2500', 'JPY'), 2500);
   assert.equal(minorAmount('-1', 'USD'), null);
