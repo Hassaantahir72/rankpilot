@@ -20,8 +20,21 @@ function CallbackInner() {
     })
       .then(r => r.json())
       .then(data => {
-        if (data.user) { login(token, data.user); router.push('/dashboard'); }
-        else router.push('/auth/login');
+        if (data.user) {
+          login(token, data.user);
+          const selectedPlan = data.user.signup_plan;
+          const allowedPlans = ['starter', 'growth', 'pro', 'agency'];
+          const hasPendingPaidPlan = selectedPlan && allowedPlans.includes(selectedPlan) &&
+            data.user.plan === 'free' && data.user.subscription_status === 'free';
+          if (hasPendingPaidPlan) {
+            const interval = data.user.signup_interval === 'annual' ? '&interval=annual' : '';
+            router.replace(`/checkout?plan=${encodeURIComponent(selectedPlan)}${interval}`);
+          } else if (!data.user.onboarding_completed) {
+            router.replace(data.user.plan === 'trial' ? '/onboarding?flow=trial' : '/onboarding');
+          } else {
+            router.replace('/dashboard');
+          }
+        } else router.replace('/auth/login');
       })
       .catch(() => router.push('/auth/login'));
   }, []);
