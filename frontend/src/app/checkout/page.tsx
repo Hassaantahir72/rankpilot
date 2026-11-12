@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { authApi, billingApi, paymentMethodsApi } from '@/lib/api';
+import { getPlanFeatureLines, PublicPlanLimits } from '@/lib/planFeatures';
 
 const PLANS: Record<string, { name: string; monthly: number; annual: number; description: string; features: string[] }> = {
   starter: { name: 'Starter', monthly: 15, annual: 12, description: 'Essential SEO for one website', features: ['1 website', '5 SEO audits/month', '10 AI content generations/month', 'Competitor analysis'] },
@@ -23,6 +24,7 @@ function CheckoutContent() {
   const interval = params.get('interval') === 'annual' ? 'annual' : 'monthly';
   const plan = PLANS[planId];
   const [methods, setMethods] = useState<any[]>([]);
+  const [planLimits, setPlanLimits] = useState<PublicPlanLimits[]>([]);
   const [provider, setProvider] = useState('');
   const [loading, setLoading] = useState(false);
   const [freeLoading, setFreeLoading] = useState(false);
@@ -42,6 +44,11 @@ function CheckoutContent() {
 
   useEffect(() => {
     let active = true;
+    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    fetch((base.endsWith('/') ? base.slice(0, -1) : base) + '/plans', { cache: 'no-store' })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => { if (active && Array.isArray(data?.plans)) setPlanLimits(data.plans); })
+      .catch(() => {});
     paymentMethodsApi.listPublic()
       .then(({ data }) => {
         if (!active) return;
@@ -187,7 +194,7 @@ function CheckoutContent() {
             {interval === 'annual' && <p style={styles.annual}>{'$' + (price * 12)} billed annually</p>}
             <div style={styles.rule}/>
             <p style={styles.sectionTitle}>Included in {plan.name}</p>
-            {plan.features.map(feature => <p key={feature} style={styles.feature}><span style={{ color: '#86efac' }}>✓</span>{feature}</p>)}
+            {getPlanFeatureLines(planId, planLimits.find(row => row.plan === planId)).map(feature => <p key={feature} style={styles.feature}><span style={{ color: '#86efac' }}>✓</span>{feature}</p>)}
             <div style={styles.rule}/>
             <div style={styles.total}><span>Subscription</span><strong>{'$' + (price * (interval === 'annual' ? 12 : 1))} {interval === 'annual' ? '/ year' : '/ month'}</strong></div>
             <p style={styles.legal}>The final tax and total are calculated by the payment provider before you confirm payment. You will not be charged by RankPilot on this page.</p>
