@@ -184,7 +184,7 @@ const verifyLoginOTP = async (req, res) => {
     }
     await query('UPDATE users SET otp_code=NULL,otp_purpose=NULL,otp_expires_at=NULL,otp_attempts=0 WHERE id=$1', [userId]);
     const token = signToken(user);
-    res.json({ token, user: { id:user.id, email:user.email, name:user.name, plan:user.plan, subscription_status:user.subscription_status, trial_ends_at:user.trial_ends_at, email_verified:user.email_verified, role:user.role||'user' } });
+    res.json({ token, user: { id:user.id, email:user.email, name:user.name, plan:user.plan, subscription_status:user.subscription_status, trial_ends_at:user.trial_ends_at, signup_plan:user.signup_plan || null, signup_interval:user.signup_interval || null, onboarding_completed:user.onboarding_completed || false, email_verified:user.email_verified, role:user.role||'user' } });
   } catch (err) {
     console.error('Verify login OTP error:', err);
     res.status(500).json({ error: 'Verification failed.' });
