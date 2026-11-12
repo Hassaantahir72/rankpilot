@@ -105,7 +105,8 @@ function CheckoutContent() {
       });
       const checkoutUrl = new URL(data.url);
       const trusted = checkoutUrl.protocol === 'https:' &&
-        (checkoutUrl.hostname === 'lemonsqueezy.com' || checkoutUrl.hostname.endsWith('.lemonsqueezy.com'));
+        ((checkoutUrl.hostname === 'lemonsqueezy.com' || checkoutUrl.hostname.endsWith('.lemonsqueezy.com')) ||
+         (checkoutUrl.origin === window.location.origin && checkoutUrl.pathname === '/paddle-checkout'));
       if (!trusted) throw new Error('The payment provider returned an untrusted checkout address.');
       window.location.assign(checkoutUrl.toString());
     } catch (err: any) {

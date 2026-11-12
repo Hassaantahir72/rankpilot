@@ -328,7 +328,7 @@ CREATE TABLE IF NOT EXISTS stripe_webhook_events (
 -- ── PROVIDER-INDEPENDENT PAYMENT METHODS ─────────────────────────
 CREATE TABLE IF NOT EXISTS payment_methods (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  provider_key TEXT NOT NULL CHECK (provider_key IN ('safepay','lemon_squeezy','manual_bank_transfer')),
+  provider_key TEXT NOT NULL CHECK (provider_key IN ('paddle','lemon_squeezy','manual_bank_transfer')),
   display_name TEXT NOT NULL CHECK (length(trim(display_name)) BETWEEN 2 AND 80),
   description TEXT NOT NULL DEFAULT '' CHECK (length(description) <= 240),
   enabled BOOLEAN NOT NULL DEFAULT FALSE,

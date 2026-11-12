@@ -52,9 +52,9 @@ export default function AdminPage() {
   const [msgType, setMsgType] = useState<'ok'|'err'>('ok');
   const [settingEdits, setSettingEdits] = useState<Record<string,string>>({});
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
-  const [newProvider, setNewProvider] = useState('safepay');
-  const [newMethodName, setNewMethodName] = useState('Safepay');
-  const [newMethodDescription, setNewMethodDescription] = useState('Pakistan-focused payments');
+  const [newProvider, setNewProvider] = useState('paddle');
+  const [newMethodName, setNewMethodName] = useState('Paddle');
+  const [newMethodDescription, setNewMethodDescription] = useState('Global subscription checkout and billing');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState('');
@@ -189,7 +189,7 @@ export default function AdminPage() {
     if (!selectedUser) return;
     try {
       const { data } = await adminApi.createUserBillingPortal(selectedUser.id);
-      if (!data.url || !(data.url.startsWith('https://billing.stripe.com/') || /^https:\/\/[a-z0-9.-]+\.lemonsqueezy\.com\//i.test(data.url))) {
+      if (!data.url || !(data.url.startsWith('https://billing.stripe.com/') || /^https:\/\/[a-z0-9.-]+\.lemonsqueezy\.com\//i.test(data.url) || /^https:\/\/[a-z0-9.-]+\.paddle\.com\//i.test(data.url))) {
         showMsg('Payment provider returned an invalid billing portal URL.', 'err');
         return;
       }
@@ -492,13 +492,13 @@ export default function AdminPage() {
           <div style={{ display:'flex',flexDirection:'column',gap:16 }}>
             <div style={{ background:'rgba(245,158,11,0.06)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:12,padding:'14px 16px' }}>
               <p style={{ fontSize:13,color:'#fbbf24',fontWeight:700,marginBottom:5 }}>Provider-independent payment controls</p>
-              <p style={{ fontSize:12,color:'rgba(255,255,255,0.55)',lineHeight:1.7 }}>The public website reads enabled methods from the backend. New methods start disabled. Secret keys belong only in Render environment variables. Lemon Squeezy checkout and signed-webhook handling are implemented, but it stays disabled until all listed Render variables are configured and sandbox tests pass. Safepay and manual bank transfer remain unavailable because their payment adapters are not implemented.</p>
+              <p style={{ fontSize:12,color:'rgba(255,255,255,0.55)',lineHeight:1.7 }}>The public website reads enabled methods from the backend. New methods start disabled. Secret keys belong only in Render environment variables. Paddle hosted checkout and signed-webhook handling are implemented. Keep it disabled until Paddle seller approval, all Render variables, the eight recurring price IDs, and sandbox lifecycle tests are complete. Legacy Lemon Squeezy entries are retained only for existing subscriptions.</p>
             </div>
             <div style={{ background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:20 }}>
               <h3 style={{ fontSize:14,fontWeight:700,marginBottom:14 }}>Add payment provider</h3>
               <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:10 }}>
-                <select className="input-dark" value={newProvider} onChange={e => { setNewProvider(e.target.value); const presets:any={safepay:['Safepay','Pakistan-focused payments'],lemon_squeezy:['Lemon Squeezy','International SaaS subscriptions'],manual_bank_transfer:['Manual bank transfer','Manual verification required']}; setNewMethodName(presets[e.target.value][0]); setNewMethodDescription(presets[e.target.value][1]); }} style={{ fontSize:13,padding:'9px 12px' }}>
-                  <option value="safepay">Safepay</option><option value="lemon_squeezy">Lemon Squeezy</option><option value="manual_bank_transfer">Manual bank transfer</option>
+                <select className="input-dark" value={newProvider} onChange={e => { setNewProvider(e.target.value); const presets:any={paddle:['Paddle','Global subscription checkout and billing'],lemon_squeezy:['Lemon Squeezy','Legacy subscriptions only'],manual_bank_transfer:['Manual bank transfer','Manual verification required']}; setNewMethodName(presets[e.target.value][0]); setNewMethodDescription(presets[e.target.value][1]); }} style={{ fontSize:13,padding:'9px 12px' }}>
+                  <option value="paddle">Paddle</option><option value="lemon_squeezy">Lemon Squeezy (legacy)</option><option value="manual_bank_transfer">Manual bank transfer</option>
                 </select>
                 <input className="input-dark" value={newMethodName} onChange={e => setNewMethodName(e.target.value)} maxLength={80} placeholder="Public display name" style={{ fontSize:13,padding:'9px 12px' }} />
                 <input className="input-dark" value={newMethodDescription} onChange={e => setNewMethodDescription(e.target.value)} maxLength={240} placeholder="Public description" style={{ fontSize:13,padding:'9px 12px' }} />
@@ -527,7 +527,7 @@ export default function AdminPage() {
                   </div>
                 </div>
               ))}
-              {!paymentMethods.length && <p style={{ textAlign:'center',padding:36,color:'rgba(255,255,255,0.35)',fontSize:13 }}>No payment methods configured. Add Safepay or Lemon Squeezy above.</p>}
+              {!paymentMethods.length && <p style={{ textAlign:'center',padding:36,color:'rgba(255,255,255,0.35)',fontSize:13 }}>No payment methods configured. Add Paddle above.</p>}
             </div>
           </div>
         ) : <div style={{ padding:40,textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:14 }}>Superadmin access required to manage payment methods.</div>

@@ -1,79 +1,72 @@
 # RankPilot payment providers
 
-## Current implementation status
+## Paddle Billing (primary provider)
 
-- Payment-method configuration is stored in PostgreSQL in `payment_methods`. The admin UI is available at Dashboard → Admin → Payment Methods and is superadmin-only.
-- Public pricing and billing pages load methods from `GET /api/payment-methods`. A method appears only when it is enabled, its server-side configuration is complete, and its adapter is marked ready.
-- Lemon Squeezy checkout is implemented using the server-side API. Paid plan entitlements are granted only after a valid signed subscription-invoice success/recovery event and a known, server-configured variant ID. Subscription-created events link the provider subscription but do not grant paid access on their own. Orders, invoices, refunds and webhook inbox status are recorded in the commerce ledger.
-- Safepay is catalogued as a candidate but its checkout/subscription webhook adapter is **not implemented** in this branch. It remains impossible to enable, even if credentials exist.
-- Manual bank transfer is listed as a possible provider but automatic/manual payment review workflow is not implemented. It remains impossible to enable.
-- New Stripe checkout is disabled. Legacy Stripe webhooks and billing portal remain for existing subscriptions during migration.
+Paddle is the planned primary Merchant of Record for global RankPilot SaaS subscriptions. The integration uses hosted Paddle checkout and server-side price selection. RankPilot only grants paid access after a verified Paddle webhook for a completed transaction. Subscription lifecycle events update the account status, scheduled cancellation date, and plan. Webhook event IDs are deduplicated and failed processing is allowed to retry.
 
-No provider is live until the relevant credentials are configured, migrations are applied, and sandbox checkout/webhook tests pass.
+### Required Render backend environment variables
 
-## Migrations
+Add these directly in Render → RankPilot backend → Environment. Never send secret values in chat or put them in Vercel public variables.
 
-Apply these migrations in order after backing up the database:
+- `PADDLE_API_KEY` — Paddle API key with customer and transaction permissions.
+- `PADDLE_WEBHOOK_SECRET` — endpoint secret from the Paddle notification destination.
+- `PADDLE_ENVIRONMENT` — `sandbox` during testing; change to `production` only after Paddle approves the account and live catalog is created.
+- `PADDLE_PRICE_STARTER_MONTHLY`
+- `PADDLE_PRICE_GROWTH_MONTHLY`
+- `PADDLE_PRICE_PRO_MONTHLY`
+- `PADDLE_PRICE_AGENCY_MONTHLY`
+- `PADDLE_PRICE_STARTER_ANNUAL`
+- `PADDLE_PRICE_GROWTH_ANNUAL`
+- `PADDLE_PRICE_PRO_ANNUAL`
+- `PADDLE_PRICE_AGENCY_ANNUAL`
+- `PADDLE_ADAPTER_READY=false` until all sandbox lifecycle tests pass.
+- `FRONTEND_URL=https://rankpilot-sync786.vercel.app`
 
-1. `backend/migrations/20261025_four_tier_pricing.sql` (required by the existing pricing PR).
-2. `backend/migrations/20261025_payment_methods.sql`.
-3. `backend/migrations/20261025_provider_billing_linkage.sql`.
+Add these public Paddle.js settings in Vercel → Project → Settings → Environment Variables (not in Render):
+- `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN` — Paddle sandbox client-side token while testing; replace with the live `live_...` token only for production.
+- `NEXT_PUBLIC_PADDLE_ENVIRONMENT=sandbox` while testing; change to `production` for live.
 
-Run them in staging first. Do not apply production migrations from an unreviewed pull request.
+The client-side token is designed to be public and is safe in a `NEXT_PUBLIC_` variable. Never expose `PADDLE_API_KEY` or `PADDLE_WEBHOOK_SECRET` to the frontend.
 
-## Lemon Squeezy setup
+The eight price IDs must be Paddle recurring price IDs beginning with `pri_`, with the matching billing interval. Sandbox and live Paddle catalogs have different IDs; never reuse sandbox IDs in production.
 
-Set the following environment variables on the **Render backend only**. Never put secret values in Vercel `NEXT_PUBLIC_*` variables or the database.
+### Paddle webhook destination
 
-- `LEMONSQUEEZY_API_KEY`
-- `LEMONSQUEEZY_STORE_ID`
-- `LEMONSQUEEZY_WEBHOOK_SECRET`
-- `LEMONSQUEEZY_VARIANT_STARTER_MONTHLY`
-- `LEMONSQUEEZY_VARIANT_GROWTH_MONTHLY`
-- `LEMONSQUEEZY_VARIANT_PRO_MONTHLY`
-- `LEMONSQUEEZY_VARIANT_AGENCY_MONTHLY`
-- `LEMONSQUEEZY_VARIANT_STARTER_ANNUAL`
-- `LEMONSQUEEZY_VARIANT_GROWTH_ANNUAL`
-- `LEMONSQUEEZY_VARIANT_PRO_ANNUAL`
-- `LEMONSQUEEZY_VARIANT_AGENCY_ANNUAL`
-- `LEMONSQUEEZY_TEST_MODE=true` while testing
-- `LEMONSQUEEZY_ADAPTER_READY=true` only after all sandbox checkout, webhook, cancellation, failure, and cross-account tests pass in a staging environment. It defaults to disabled.
-- `FRONTEND_URL=https://rankpilot-sync786.vercel.app` (use your actual production frontend origin)
+In Paddle, approve `https://rankpilot-sync786.vercel.app` under Website approval, then set the default payment link to `https://rankpilot-sync786.vercel.app/paddle-checkout` in Checkout settings. Sandbox and live environments need their own approved URL/default payment link.
 
-In Lemon Squeezy, create a webhook pointing to:
+Create an HTTPS webhook destination in Paddle → Developer tools / Events → Notifications:
 
-`https://rankpilot-ixnc.onrender.com/api/webhooks/lemon-squeezy`
+`https://rankpilot-ixnc.onrender.com/api/webhooks/paddle`
 
-Set the exact signing secret in `LEMONSQUEEZY_WEBHOOK_SECRET`. Subscribe to these exact event names: `order_created`, `order_refunded`, `subscription_created`, `subscription_updated`, `subscription_resumed`, `subscription_unpaused`, `subscription_cancelled`, `subscription_expired`, `subscription_paused`, `subscription_payment_success`, `subscription_payment_recovered`, `subscription_payment_failed`, and `subscription_payment_refunded`. Confirm the exact event names in the current Lemon Squeezy dashboard before production. The order and invoice events are required for the admin orders/transactions ledger.
+Subscribe to:
+- `transaction.completed`
+- `subscription.created`
+- `subscription.updated`
+- `subscription.canceled`
 
-After configuring the variables, create the Lemon Squeezy entry in Admin → Payment Methods. It starts disabled. The backend checks all credentials and eight monthly/annual variant IDs plus the explicit `LEMONSQUEEZY_ADAPTER_READY=true` gate before allowing the superadmin to enable it. Leave that flag unset until sandbox tests have passed. The frontend does not receive the API key or webhook secret.
+Copy that destination's endpoint secret into `PADDLE_WEBHOOK_SECRET`. The backend verifies the Paddle-Signature HMAC against the exact raw request body and rejects stale or invalid signatures.
 
-Official docs:
-- Supported countries and payout eligibility: https://docs.lemonsqueezy.com/help/getting-started/supported-countries
-- Create checkout: https://docs.lemonsqueezy.com/api/checkouts/create-checkout
-- Webhook signature/event setup: https://docs.lemonsqueezy.com/help/webhooks
+### Safe activation sequence
 
-## Safepay status
+1. Obtain Paddle seller approval and complete business/payout verification.
+2. Create the four RankPilot products and eight recurring prices in Paddle sandbox.
+3. Configure the sandbox API key, webhook secret, environment, and eight sandbox price IDs in Render; set the sandbox client token and environment in Vercel.
+4. Keep `PADDLE_ADAPTER_READY=false`; run checkout and webhook simulator tests for initial payment, renewal, failed payment, scheduled cancellation, immediate cancellation, and duplicate/out-of-order events.
+5. Verify the admin Orders and Transactions ledger and that access changes only from signed provider events.
+6. After sandbox verification, create the matching live catalog, live API key and live webhook destination; replace all sandbox values in Render.
+7. Set `PADDLE_ENVIRONMENT=production`, update the Vercel client token/environment to live, then set `PADDLE_ADAPTER_READY=true` and enable Paddle in Admin → Payment Methods.
 
-Safepay supports a sandbox and documents recurring subscriptions. However, this branch does not yet implement its subscription checkout URL flow, event signature verification, idempotent subscription webhook processing, or entitlement mapping. Its admin entry will therefore stay disabled. Do not set any readiness flag or manually edit the database to force it on.
+Paddle's live and sandbox keys, products, prices, and notification destinations are separate. Never enable production payments before live seller approval and live webhook testing.
 
-Official docs:
-- API reference and sandbox: https://apidocs.getsafepay.com/
-- Pricing and subscription overview: https://safepay.com.pk/pricing
+## Legacy billing
 
-## Required verification before launch
+Existing Lemon Squeezy code and subscription references are retained only for accounts already linked to that provider during migration. It is not the primary new-customer payment route. Existing Stripe billing webhooks remain for legacy subscriptions.
 
-1. Apply migrations in staging and confirm the public endpoint returns no methods by default.
-2. Add Lemon Squeezy in admin; confirm it starts disabled and cannot be enabled when any environment variable is missing.
-3. Use Lemon Squeezy test mode and test all four monthly and four annual variants.
-4. Confirm forged/missing signatures return 400 and never grant access.
-5. Confirm duplicate webhook events are idempotent, unknown variants never grant a paid plan, and cancellation/payment failure removes or suspends paid access as appropriate.
-6. Confirm users cannot select another account's ID, arbitrary variant ID, or arbitrary checkout URL.
-7. Confirm the public pricing page updates after the superadmin enables/disables the method without a frontend redeploy.
-8. Only after these tests and provider approval should live mode be enabled.
+## Security behavior
 
-The website intentionally fails closed: no configured/verified provider means no public payment method and no new checkout.
-
-
-## Subscription cancellation timing
-A signed Lemon Squeezy cancellation event with a future `ends_at` keeps the paid plan active until that date. The API checks the paid-through date on authenticated requests and downgrades the account to Free once it has passed. An immediate cancellation or expiry downgrades access at once. The migration adds `provider_subscription_ends_at`; apply the provider linkage migration before deploying this behavior.
+- Provider secrets remain server-side in Render.
+- Checkout price IDs are selected from server environment variables, never accepted from the browser.
+- The authenticated RankPilot user ID, selected plan, and interval are attached as server-created Paddle custom data.
+- A completed transaction must match one of the eight configured price IDs before paid access is granted.
+- Duplicate webhook event IDs are ignored; failed processing is returned as an error so Paddle can retry.
+- Customer card data is collected by Paddle hosted checkout; RankPilot does not store card numbers.

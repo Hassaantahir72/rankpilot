@@ -15,14 +15,24 @@ const hasLemonSqueezyConfig = () => Boolean(
   lemonVariantIds().every(id => typeof id === 'string' && /^\d+$/.test(id))
 );
 
+const paddlePriceIds = () => {
+  const ids = [];
+  for (const plan of ['STARTER','GROWTH','PRO','AGENCY']) for (const interval of ['MONTHLY','ANNUAL']) ids.push(process.env['PADDLE_PRICE_' + plan + '_' + interval]);
+  return ids;
+};
+const hasPaddleConfig = () => Boolean(process.env.PADDLE_API_KEY && process.env.PADDLE_WEBHOOK_SECRET &&
+  ['sandbox','production'].includes(process.env.PADDLE_ENVIRONMENT) &&
+  paddlePriceIds().every(id => typeof id === 'string' && /^pri_[a-z0-9]+$/i.test(id)));
+
 const PROVIDERS = {
-  safepay: {
-    displayName: 'Safepay',
-    description: 'Pakistan-focused payments',
-    requiredEnv: ['SAFEPAY_API_KEY','SAFEPAY_SECRET_KEY','SAFEPAY_WEBHOOK_SECRET'],
-    // Checkout and signed-webhook adapters are not implemented; this provider must remain disabled.
-    configured: () => Boolean(process.env.SAFEPAY_API_KEY && process.env.SAFEPAY_SECRET_KEY && process.env.SAFEPAY_WEBHOOK_SECRET),
-    adapterReady: () => false,
+  paddle: {
+    displayName: 'Paddle',
+    description: 'Global subscription checkout and billing',
+    requiredEnv: ['PADDLE_API_KEY','PADDLE_WEBHOOK_SECRET','PADDLE_ENVIRONMENT',
+      'PADDLE_PRICE_STARTER_MONTHLY','PADDLE_PRICE_GROWTH_MONTHLY','PADDLE_PRICE_PRO_MONTHLY','PADDLE_PRICE_AGENCY_MONTHLY',
+      'PADDLE_PRICE_STARTER_ANNUAL','PADDLE_PRICE_GROWTH_ANNUAL','PADDLE_PRICE_PRO_ANNUAL','PADDLE_PRICE_AGENCY_ANNUAL','FRONTEND_URL'],
+    configured: hasPaddleConfig,
+    adapterReady: () => process.env.PADDLE_ADAPTER_READY === 'true',
   },
   lemon_squeezy: {
     displayName: 'Lemon Squeezy',
@@ -60,7 +70,7 @@ const statusFor = (providerKey) => {
     adapterReady: Boolean(provider && provider.adapterReady()),
     ready: Boolean(provider && provider.configured() && provider.adapterReady()),
     missingEnv,
-    readinessFlagMissing: providerKey === 'lemon_squeezy' && process.env.LEMONSQUEEZY_ADAPTER_READY !== 'true',
+    readinessFlagMissing: (providerKey === 'paddle' && process.env.PADDLE_ADAPTER_READY !== 'true') || (providerKey === 'lemon_squeezy' && process.env.LEMONSQUEEZY_ADAPTER_READY !== 'true'),
   };
 };
 

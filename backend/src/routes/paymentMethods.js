@@ -11,8 +11,77 @@ router.post('/checkout', authMiddleware, requireVerified, async (req, res) => {
   const provider = req.body?.provider;
   const plan = req.body?.plan;
   const interval = req.body?.interval || 'monthly';
-  if (provider !== 'lemon_squeezy') return res.status(503).json({ error: 'This provider checkout integration is not available yet.' });
+  if (!['lemon_squeezy','paddle'].includes(provider)) return res.status(503).json({ error: 'This provider checkout integration is not available yet.' });
   if (!PLAN_IDS.includes(plan) || !INTERVALS.includes(interval)) return res.status(400).json({ error: 'Choose a valid plan and billing interval.' });
+  if (provider === 'paddle') {
+    const details = req.body?.billingDetails || {};
+    const billingName = typeof details.name === 'string' ? details.name.trim().slice(0,120) : '';
+    const billingEmail = typeof details.email === 'string' ? details.email.trim().toLowerCase().slice(0,254) : '';
+    const billingCountry = typeof details.country === 'string' ? details.country.trim().toUpperCase() : '';
+    if (!billingName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billingEmail) || !/^[A-Z]{2}$/.test(billingCountry)) {
+      return res.status(400).json({ error: 'Enter a valid billing name, email, and two-letter billing country code.' });
+    }
+    const priceId = process.env['PADDLE_PRICE_' + plan.toUpperCase() + '_' + interval.toUpperCase()];
+    if (process.env.PADDLE_ADAPTER_READY !== 'true' || !process.env.PADDLE_API_KEY ||
+        !process.env.PADDLE_WEBHOOK_SECRET || !priceId || !process.env.FRONTEND_URL ||
+        !['sandbox','production'].includes(process.env.PADDLE_ENVIRONMENT)) {
+      return res.status(503).json({ error: 'Paddle is not fully configured and verified for checkout yet.' });
+    }
+    try {
+      const method = await queryOne("SELECT id FROM payment_methods WHERE provider_key='paddle' AND enabled=TRUE");
+      if (!method) return res.status(503).json({ error: 'Paddle checkout is not enabled by the administrator.' });
+      const existing = await queryOne('SELECT stripe_subscription_id,provider_subscription_id,provider_customer_id,signup_plan,signup_interval FROM users WHERE id=$1', [req.user.id]);
+      if (existing?.signup_plan && (existing.signup_plan !== plan || (existing.signup_interval || 'monthly') !== interval)) {
+        return res.status(409).json({ error: 'This account has a different pending plan selection. Return to plan selection to change it safely.' });
+      }
+      if (existing?.stripe_subscription_id || existing?.provider_subscription_id) {
+        return res.status(409).json({ error: 'An existing subscription is linked to this account. Contact support to change providers.', code: 'SUBSCRIPTION_EXISTS' });
+      }
+      const frontend = new URL(process.env.FRONTEND_URL);
+      if (process.env.NODE_ENV === 'production' && frontend.protocol !== 'https:') return res.status(503).json({ error: 'Secure frontend URL is not configured.' });
+      const apiBase = process.env.PADDLE_ENVIRONMENT === 'sandbox' ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com';
+      const apiHeaders = { Authorization: 'Bearer ' + process.env.PADDLE_API_KEY, 'Content-Type': 'application/json', Accept: 'application/json' };
+      let customerId = existing?.provider_customer_id || null;
+      if (!customerId) {
+        const customerResponse = await fetch(apiBase + '/customers', {
+          method: 'POST', headers: apiHeaders,
+          body: JSON.stringify({ email: billingEmail, name: billingName }),
+        });
+        const customerPayload = await customerResponse.json().catch(() => ({}));
+        if (!customerResponse.ok || !customerPayload?.data?.id) {
+          console.error('Paddle customer creation failed:', customerResponse.status);
+          return res.status(502).json({ error: 'Could not prepare your billing profile with Paddle.' });
+        }
+        customerId = customerPayload.data.id;
+        await queryOne("UPDATE users SET provider_customer_id=$1 WHERE id=$2 AND (payment_provider IS NULL OR payment_provider='paddle') RETURNING id", [customerId,req.user.id]);
+      }
+      const transactionResponse = await fetch(apiBase + '/transactions', {
+        method: 'POST', headers: apiHeaders,
+        body: JSON.stringify({
+          items: [{ price_id: priceId, quantity: 1 }],
+          customer_id: customerId,
+          collection_mode: 'automatic',
+          custom_data: { rankpilot_user_id: String(req.user.id), plan, interval },
+          checkout: { url: frontend.origin + '/paddle-checkout' },
+        }),
+      });
+      const transactionPayload = await transactionResponse.json().catch(() => ({}));
+      if (!transactionResponse.ok) {
+        console.error('Paddle transaction creation failed:', transactionResponse.status);
+        return res.status(502).json({ error: 'Paddle could not create a secure checkout session.' });
+      }
+      const checkoutUrl = transactionPayload?.data?.checkout?.url;
+      let parsed;
+      try { parsed = new URL(checkoutUrl); } catch {}
+      if (!parsed || parsed.protocol !== 'https:' || parsed.origin !== frontend.origin || parsed.pathname !== '/paddle-checkout') {
+        return res.status(502).json({ error: 'Paddle returned an invalid checkout URL.' });
+      }
+      return res.json({ url: parsed.toString(), provider: 'paddle' });
+    } catch (err) {
+      console.error('Paddle checkout failed:', err.message);
+      return res.status(500).json({ error: 'Could not start Paddle checkout.' });
+    }
+  }
   const variantId = process.env[variantEnv(plan, interval)];
   const details = req.body?.billingDetails || {};
   const billingName = typeof details.name === 'string' ? details.name.trim().slice(0, 120) : '';
@@ -78,7 +147,18 @@ router.post('/checkout', authMiddleware, requireVerified, async (req, res) => {
 
 router.post('/portal', authMiddleware, requireVerified, async (req, res) => {
   try {
-    const user = await queryOne('SELECT provider_subscription_id,payment_provider FROM users WHERE id=$1', [req.user.id]);
+    const user = await queryOne('SELECT provider_subscription_id,payment_provider,provider_customer_id FROM users WHERE id=$1', [req.user.id]);
+    if (user?.payment_provider === 'paddle' && user.provider_customer_id) {
+      if (!process.env.PADDLE_API_KEY || !['sandbox','production'].includes(process.env.PADDLE_ENVIRONMENT)) return res.status(503).json({ error: 'Paddle billing management is not configured.' });
+      const apiBase = process.env.PADDLE_ENVIRONMENT === 'sandbox' ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com';
+      const response = await fetch(apiBase + '/customers/' + encodeURIComponent(user.provider_customer_id) + '/portal-sessions', { method: 'POST', headers: { Authorization: 'Bearer ' + process.env.PADDLE_API_KEY, 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({}) });
+      const payload = await response.json().catch(() => ({}));
+      const portalUrl = payload?.data?.urls?.general?.overview;
+      let parsed;
+      try { parsed = new URL(portalUrl); } catch {}
+      if (!response.ok || !parsed || parsed.protocol !== 'https:' || !parsed.hostname.endsWith('paddle.com')) return res.status(502).json({ error: 'Could not open the Paddle customer portal.' });
+      return res.json({ url: parsed.toString(), provider: 'paddle' });
+    }
     if (!user?.provider_subscription_id || user.payment_provider !== 'lemon_squeezy') {
       return res.status(409).json({ error: 'No Lemon Squeezy subscription is linked to this account.', code: 'LEGACY_BILLING' });
     }
