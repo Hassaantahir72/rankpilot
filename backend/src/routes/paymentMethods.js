@@ -62,6 +62,7 @@ router.post('/checkout', authMiddleware, requireVerified, async (req, res) => {
           customer_id: customerId,
           collection_mode: 'automatic',
           custom_data: { rankpilot_user_id: String(req.user.id), plan, interval },
+          checkout: { url: frontend.origin + '/paddle-checkout' },
         }),
       });
       const transactionPayload = await transactionResponse.json().catch(() => ({}));
