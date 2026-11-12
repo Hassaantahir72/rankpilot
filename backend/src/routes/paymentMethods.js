@@ -11,7 +11,7 @@ router.post('/checkout', authMiddleware, requireVerified, async (req, res) => {
   const provider = req.body?.provider;
   const plan = req.body?.plan;
   const interval = req.body?.interval || 'monthly';
-  if (provider !== 'lemon_squeezy') return res.status(503).json({ error: 'This provider checkout integration is not available yet.' });
+  if (!['lemon_squeezy','paddle'].includes(provider)) return res.status(503).json({ error: 'This provider checkout integration is not available yet.' });
   if (!PLAN_IDS.includes(plan) || !INTERVALS.includes(interval)) return res.status(400).json({ error: 'Choose a valid plan and billing interval.' });
   if (provider === 'paddle') {
     const details = req.body?.billingDetails || {};
