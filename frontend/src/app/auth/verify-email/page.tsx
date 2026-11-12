@@ -58,13 +58,15 @@ function VerifyEmailContent() {
         login(data.token, data.user);
         const selectedPlan = params.get('plan') || data.user?.signup_plan;
         const allowedPlans = ['starter', 'growth', 'pro', 'agency'];
-        if (type !== 'login' && selectedPlan && allowedPlans.includes(selectedPlan)) {
+        const hasPendingPaidPlan = selectedPlan && allowedPlans.includes(selectedPlan) &&
+          data.user?.plan === 'free' && data.user?.subscription_status === 'free';
+        if (hasPendingPaidPlan) {
           const selectedInterval = params.get('interval') === 'annual' || data.user?.signup_interval === 'annual' ? '&interval=annual' : '';
-          router.push(`/checkout?plan=${encodeURIComponent(selectedPlan)}${selectedInterval}`);
-        } else if (type !== 'login') {
-          router.push('/onboarding?flow=trial');
+          router.replace(`/checkout?plan=${encodeURIComponent(selectedPlan)}${selectedInterval}`);
+        } else if (!data.user?.onboarding_completed) {
+          router.replace(data.user?.plan === 'trial' ? '/onboarding?flow=trial' : '/onboarding');
         } else {
-          router.push('/dashboard');
+          router.replace('/dashboard');
         }
       }
     } catch (err: any) {
