@@ -23,6 +23,7 @@ const adminRoutes     = require('./routes/admin');
 const paymentMethodsController = require('./controllers/paymentMethodsController');
 const paymentMethodsRoutes = require('./routes/paymentMethods');
 const providerWebhookRoutes = require('./routes/providerWebhooks');
+const paddleWebhookRoutes = require('./routes/paddleWebhooks');
 const contactRoutes   = require('./routes/contact');
 const supportRoutes   = require('./routes/support');
 const featuresRoutes  = require('./routes/features');
@@ -60,6 +61,7 @@ app.use(cors({
 // ── Stripe webhook (raw body before JSON parser) ──────────────────
 app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }));
 app.use('/api/webhooks/lemon-squeezy', express.raw({ type: 'application/json' }));
+app.use('/api/webhooks/paddle', express.raw({ type: 'application/json' }));
 
 // ── BODY PARSER ───────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
@@ -95,6 +97,7 @@ app.use('/api/reports',   reportsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/webhooks',  webhookRoutes);
 app.use('/api/webhooks', providerWebhookRoutes);
+app.use('/api/webhooks', paddleWebhookRoutes);
 app.get('/api/payment-methods', paymentMethodsController.publicList);
 app.use('/api/payment-methods', paymentMethodsRoutes);
 app.use('/api/admin',     adminRoutes);
