@@ -15,10 +15,18 @@ const verifyPaddleSignature = (rawBody, header, secret, nowMs = Date.now()) => {
 };
 
 const minorAmount = (value, currency) => {
-  const n = Number(value);
+  if (value === null || value === undefined || value === '') return null;
+  const raw = String(value).trim();
+  if (!/^\\d+(?:\\.\\d+)?$/.test(raw)) return null;
+  const n = Number(raw);
   if (!Number.isFinite(n) || n < 0) return null;
+  // Paddle transaction and adjustment totals are already expressed in currency minor units.
+  // Accept decimal strings defensively for fixtures or provider payload variants.
+  if (/^\\d+$/.test(raw)) return Number.isSafeInteger(n) ? n : null;
   const zeroDecimal = new Set(['BIF','CLP','DJF','GNF','JPY','KMF','KRW','MGA','PYG','RWF','UGX','VND','VUV','XAF','XOF','XPF']);
-  return Math.round(n * (zeroDecimal.has(String(currency || '').toUpperCase()) ? 1 : 100));
+  const result = Math.round(n * (zeroDecimal.has(String(currency || '').toUpperCase()) ? 1 : 100));
+  return Number.isSafeInteger(result) ? result : null;
 };
+
 
 module.exports = { verifyPaddleSignature, minorAmount };
