@@ -41,7 +41,30 @@ const processJob = async (job) => {
   });
   const score = calculateScore(technicalIssues, crawlData);
 
-  for (const kw of keywords.slice(0, 100)) {
+  // Enforce the account-wide tracked-keyword allowance from the active plan.
+  // Existing tracked keywords continue to refresh after a downgrade; new ones stop at the cap.
+  const planLimit = await queryOne(
+    'SELECT pl.max_keywords FROM users u JOIN plan_limits pl ON pl.plan=u.plan WHERE u.id=$1',
+    [job.user_id]
+  );
+  const existingRows = await queryAll('SELECT keyword FROM keywords WHERE user_id=$1', [job.user_id]);
+  const existingKeywords = new Set(existingRows.map(row => row.keyword));
+  const keywordLimit = Number(planLimit?.max_keywords ?? 0);
+  let remainingSlots = keywordLimit === 9999 ? Number.POSITIVE_INFINITY : Math.max(0, keywordLimit - existingRows.length);
+  const seen = new Set();
+  const keywordsToSave = [];
+  for (const kw of keywords) {
+    const keyword = String(kw?.keyword || '').trim();
+    if (!keyword || seen.has(keyword)) continue;
+    seen.add(keyword);
+    if (existingKeywords.has(keyword)) {
+      keywordsToSave.push(kw);
+    } else if (remainingSlots > 0) {
+      keywordsToSave.push(kw);
+      remainingSlots -= 1;
+    }
+  }
+  for (const kw of keywordsToSave) {
     await query(
       `INSERT INTO keywords (id,website_id,user_id,keyword,search_volume,difficulty,cpc,intent,priority,created_at)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
