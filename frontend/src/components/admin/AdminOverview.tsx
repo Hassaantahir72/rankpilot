@@ -527,7 +527,7 @@ export default function AdminPage() {
                   </div>
                 </div>
               ))}
-              {!paymentMethods.length && <p style={{ textAlign:'center',padding:36,color:'rgba(255,255,255,0.35)',fontSize:13 }}>No payment methods configured. Add Safepay or Lemon Squeezy above.</p>}
+              {!paymentMethods.length && <p style={{ textAlign:'center',padding:36,color:'rgba(255,255,255,0.35)',fontSize:13 }}>No payment methods configured. Add Paddle above.</p>}
             </div>
           </div>
         ) : <div style={{ padding:40,textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:14 }}>Superadmin access required to manage payment methods.</div>
